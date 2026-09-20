@@ -41,5 +41,20 @@
   {"source":"commons","query":"radar to detect stealth aircraft cruise missiles and unmanned aerial vehicles","mode":"vector","expected":"commons:16269428","max_rank":5,"required":false},
   {"source":"commons","query":"tracked command vehicle for tactical air defense units","mode":"vector","expected":"commons:61066345","max_rank":5,"required":false},
   {"source":"commons","query":"anti ballistic missile radar outside Moscow","mode":"vector","expected":"commons:18427286","max_rank":5,"required":false},
-  {"source":"commons","query":"Repeynik radar","mode":"vector","expected":"commons:141117367","max_rank":5,"required":false}
+  {"source":"commons","query":"Repeynik radar","mode":"vector","expected":"commons:141117367","max_rank":5,"required":false},
+  {"source":"armyrecognition","kind":"radar","query":"92N6E Grave Stone radar","mode":"hybrid","expected":"armyrecognition:1a5ae47b92074b0e804c828f","max_rank":1},
+  {"source":"armyrecognition","kind":"radar","query":"Flap Lid B missile guidance radar","mode":"hybrid","expected":"armyrecognition:3bff31b536d17c06a088d107","max_rank":1},
+  {"source":"armyrecognition","kind":"radar","query":"ELM-2080S Green Pine","mode":"hybrid","expected":"armyrecognition:49725a6dc8904b9502d68192","max_rank":1},
+  {"source":"armyrecognition","kind":"radar","query":"50N6A Vityaz tracking radar","mode":"hybrid","expected":"armyrecognition:6ab9d4ffc0a40549969c546c","max_rank":1},
+  {"source":"armyrecognition","kind":"radar","query":"Korkut command control radar","mode":"hybrid","expected":"armyrecognition:94a5bcdfa32342efae111e37","max_rank":1},
+  {"source":"armyrecognition","kind":"radar","query":"Russian Pat Hand fire control radar","mode":"hybrid","expected":"armyrecognition:b3269428515f1c0315856b07","max_rank":1},
+  {"source":"armyrecognition","kind":"radar","query":"MPQ-64F1 NASAMS radar","mode":"hybrid","expected":"armyrecognition:ca84d1ed32a80525d6dc5f24","max_rank":1},
+  {"source":"armyrecognition","kind":"sensor","query":"MSP500 NASAMS electro optical sensor","mode":"hybrid","expected":"armyrecognition:e4a5aecde1b187a0deffbab3","max_rank":1},
+  {"source":"armyrecognition","kind":"radar","query":"30N6E2 Tomb Stone radar","mode":"hybrid","expected":"armyrecognition:f2ba8fa8fc8044ecbd820dd5","max_rank":1},
+  {"source":"armyrecognition","kind":"radar","query":"64N6E2 radar","mode":"hybrid","expected":"armyrecognition:f54c55c80e7b189b663a9343","max_rank":1},
+  {"source":"armyrecognition","kind":"radar","query":"Sola MMSR radar","mode":"hybrid","expected":"armyrecognition:fdb2e6c31dd2544dff57f2db","max_rank":1},
+  {"source":"armyrecognition","query":"Israeli early warning radar for the Arrow missile defense system","mode":"vector","expected":"armyrecognition:49725a6dc8904b9502d68192","max_rank":5,"required":false},
+  {"source":"armyrecognition","query":"Polish mobile radar that detects hovering helicopters","mode":"vector","expected":"armyrecognition:fdb2e6c31dd2544dff57f2db","max_rank":5,"required":false},
+  {"source":"armyrecognition","query":"optical tracking sensor with thermal and daylight cameras and a laser rangefinder","mode":"vector","expected":"armyrecognition:e4a5aecde1b187a0deffbab3","max_rank":5,"required":false},
+  {"source":"armyrecognition","query":"Vityaz tracking radar with limited low altitude coverage","mode":"vector","expected":"armyrecognition:6ab9d4ffc0a40549969c546c","max_rank":5,"required":false}
 ]

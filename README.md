@@ -52,9 +52,10 @@ uv run --no-sync pipeline-build crawl virtualglobetrotting --root ../pipeline-da
 uv run --no-sync pipeline-build crawl russianforces --root ../pipeline-data
 uv run --no-sync pipeline-build crawl wikipedia --root ../pipeline-data
 uv run --no-sync pipeline-build crawl commons --root ../pipeline-data
+uv run --no-sync pipeline-build crawl armyrecognition --root ../pipeline-data
 uv run --no-sync pipeline-build status radartutorial --root ../pipeline-data
 uv run --no-sync pipeline-build model --output build/model
-uv run --no-sync pipeline-build package --root ../pipeline-data --source radartutorial --source deagel --source virtualglobetrotting --source russianforces --source wikipedia --source commons --model build/model --cache build/entity-vector-cache --output build/dataset.zip
+uv run --no-sync pipeline-build package --root ../pipeline-data --source radartutorial --source deagel --source virtualglobetrotting --source russianforces --source wikipedia --source commons --source armyrecognition --model build/model --cache build/entity-vector-cache --output build/dataset.zip
 uv run --no-sync python tools/build_cli.py --bundle build/dataset.zip --output dist/pipelines
 uv run --no-sync python tools/accept_cli.py dist/pipelines build/dataset.zip
 uv run --no-sync python tools/evaluate_cli.py dist/pipelines --output build/retrieval-evaluation.json
@@ -184,6 +185,7 @@ of Git history. License notices remain embedded and available through the CLI.
 | [Russian Strategic Nuclear Forces](https://feeds.feedburner.com/russianforces/) | Named equipment and satellites mentioned in the rolling Atom feed | 57 entities with 15 full articles as evidence |
 | [Wikipedia: Military radars of China](https://en.wikipedia.org/wiki/Category:Military_radars_of_China) | English category members and their subcategories | 41 entities: 39 radars and two aircraft |
 | [Wikimedia Commons: Military radars of Russia](https://commons.wikimedia.org/wiki/Category:Military_radars_of_Russia) | Named equipment categories with category and media-description evidence | 151 equipment and site identities |
+| [Army Recognition: Air Defense Radars](https://www.armyrecognition.com/military-products/army/radars/air-defense-radars) | Equipment articles in category 139 | 11 entities: ten radars and one optical sensor |
 
 Radartutorial discovery follows English sitemaps, indexes, manufacturer names, and links.
 The crawler obeys robots.txt, limits concurrency to two, and applies delay/throttling.
@@ -546,7 +548,7 @@ items first. All six Commons named-item checks and the 20 existing required chec
 return their expected entity first.
 
 Networking-disabled container extraction passed. Repackaging unchanged snapshots preserved
-the dataset ID and reported `changed: false`. The combined six-source bundle contains
+the dataset ID and reported `changed: false`. The initial six-source bundle contained
 3,369 entities, 4,094 evidence pages, and 13,228 vectors. Windows acceptance verifies full
 exports for each source; an additional check round-trips all 198 Duga-1 evidence pages.
 The original `russian cheeseboard` query still returns 96L6E "Cheese Board" first in both
@@ -557,6 +559,92 @@ All five platform binaries were built. Windows and Linux amd64 passed bundle ver
 and export acceptance; Linux ran with networking disabled and a read-only filesystem.
 Linux arm64 passed verification under emulation. macOS builds were cross-compiled here;
 the release workflow requires native macOS acceptance before publication.
+
+### Army Recognition discovery and extraction
+
+The supplied `/military-products/air/fighter?task=view&id=139` URL displays **Air Defense
+Radars**, because its Joomla query parameters select category 139. Its 11 article links
+exactly matched the clean Air Defense Radars category URL used as the seed. Removing the
+parameters from the fighter URL changes its meaning: that separate aircraft catalog has
+12 cards on its first page and four pages of pagination. Only the verified category-139
+query combination maps to the radar seed; other queries are rejected.
+
+The military-product taxonomy offers category navigation and article cards, followed by
+detail pages with section anchors, galleries, and related products. This category needs
+no pagination or interactive filter. Direct HTTP returned complete category and article
+HTML, so production requires no browser, site search, or API. Robots permits these paths
+but excludes `?start=` pagination. A new pagination link causes a discovery error for
+review; the scraper does not rewrite parameters to fetch excluded pages. Related-product
+links, other categories, news, images, and external references do not expand this crawl.
+
+The September 20, 2026 UTC crawl saved the category and all 11 detail pages with HTTP 200.
+Five articles use legacy nested tables; six use sections named `desc`, `data`, `spec`,
+`details`, and `photos`. Extraction supports both. Colored specification rows are paired
+by column before layout tables are flattened, so adjacent labels do not acquire each
+other's values. Descriptions, variant qualifications, technical sections, specifications,
+visible article dates, captions, references, and gallery links remain in full Markdown.
+Every original response remains byte-for-byte exportable. Advertisements, shared menus,
+related products, counters, and internal navigation are excluded from extracted content.
+
+A [reviewed subject catalog](src/pipelines/sources/armyrecognition_subjects.json) assigns
+kinds and source-observed aliases to these pages. The MSP 500 NASAMS article describes an
+electro-optical sensor and uses `kind: sensor`; the other ten subjects use `kind: radar`.
+Catalog membership does not establish Russian origin. The 92N6 article's slug contains
+`96n6`, but its displayed title and aliases identify 92N6/92N6E. Slugs, related products,
+carrier vehicles, and comparison systems do not become aliases. Families with several
+variants remain one entity per source article. Newly discovered subjects require review
+before publication, and catalog/detail title mismatches fail extraction.
+
+Article IDs in JSON-LD are not consistently supplied. All records therefore use the first
+24 hexadecimal characters of SHA-256 over their canonical article URL, independent of
+optional JSON-LD and view counters. For example, MSP 500 is
+`armyrecognition:e4a5aecde1b187a0deffbab3`. IDs survive text and metadata changes; URL renames
+require explicit identity review. Canonical URL changes fail extraction rather than
+silently assigning an existing record to a different page.
+
+Facts preserve raw values and units, including `?`, approximations, and contradictory
+source claims. Numeric normalization is deliberately omitted. For example, the 50N6A
+article describes both 8x8 and 6x6 chassis and reports different road-range units in prose
+and specifications; both statements remain available. These are attributed source claims,
+not independently verified performance data. Copyright and the publisher's
+[reuse terms](https://www.armyrecognition.com/legal-information) accompany every evidence
+page. The site does not grant an open redistribution license; obtain the necessary rights
+before distributing its content in a public dataset or binary. Local scraping and binary
+evaluation do not establish those rights.
+
+Eight queries compared three inputs across all 11 entities using the pinned embedding
+model and pure cosine ranking, without the hybrid alias boost:
+
+| Embedding input | Vectors | Expected item first | Expected item in first five |
+| --- | --- | --- | --- |
+| Catalog snippets | 22 | 6/8 | 8/8 |
+| Full extracted Markdown | 130 | 8/8 | 8/8 |
+| Article text without image filenames (selected) | 90 | 8/8 | 8/8 |
+
+The selected input retains full technical prose and specifications without repetitive
+image filenames. The Arrow-system radar query improved from fifth with catalog snippets
+to first, and the Polish hovering-helicopter query improved from second to first. This
+small category-specific diagnostic is not a general accuracy estimate. The committed
+retrieval suite checks all 11 named items and four additional capability queries against
+the actual CLI, including source and sensor/radar filters.
+
+Repeat HTTP samples and production responses yielded identical extraction for every
+article despite changing transport bytes. A container with networking disabled reproduced
+the entity catalog and all 11 Markdown files exactly. Tests cover query semantics,
+pagination rejection, both article layouts, column pairing, uncertainty, alias boundaries,
+incomplete pages, ad/metadata changes, and byte-exact offline publication.
+
+The combined seven-source bundle contains 3,380 entities, 4,105 evidence pages, and 13,318
+vectors. All 37 required named-item queries across the seven sources return the expected
+item first, including all 11 new items. The four Army Recognition capability diagnostics
+also return their expected item first; six previously documented diagnostics in other
+sources still miss their thresholds. Windows acceptance round-trips all 11 new entities
+and their original HTML/Markdown, and the global `russian cheeseboard` query remains first
+in both modes. Networking-disabled repackaging reports `changed: false` with the same
+dataset ID. All five platform executables were built locally.
+Linux amd64 also passed verification, exact exports, and all 37 required retrieval checks
+with networking disabled and a read-only filesystem. Linux arm64 passed verification under emulation. macOS binaries
+were cross-compiled locally; the release workflow still requires native macOS acceptance.
 
 ### Add another website
 
@@ -651,6 +739,7 @@ pipelines search --source russianforces --kind radar "Razvyazka space surveillan
 pipelines search --source russianforces --kind spacecraft "Cosmos 2615"
 pipelines search --source wikipedia --kind radar "Dragon Eye"
 pipelines search --source commons --kind radar "1L122-2E"
+pipelines search --source armyrecognition --kind sensor "MSP500 NASAMS"
 pipelines search --mode vector --kind radar "detect aircraft approaching an airport"
 pipelines similar --limit 5 radartutorial:8bdc6ce92fea3ca62de71395
 pipelines get radartutorial:8bdc6ce92fea3ca62de71395
@@ -661,6 +750,7 @@ pipelines get virtualglobetrotting:311208
 pipelines get russianforces:sineva
 pipelines get wikipedia:51215241
 pipelines get commons:54320747
+pipelines get armyrecognition:e4a5aecde1b187a0deffbab3
 ```
 
 Search emits JSON with `dataset_id`, query/mode, and `results`. Each result includes its

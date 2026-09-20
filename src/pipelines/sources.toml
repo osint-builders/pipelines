@@ -15,3 +15,6 @@ adapter = "pipelines.sources.wikipedia:Wikipedia"
 
 [commons]
 adapter = "pipelines.sources.commons:Commons"
+
+[armyrecognition]
+adapter = "pipelines.sources.armyrecognition:ArmyRecognition"

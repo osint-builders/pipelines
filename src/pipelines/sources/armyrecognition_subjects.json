@@ -1,0 +1,13 @@
+{
+  "1s32-pat-hand-radar-h-band-fire-control-guidance-technical-data-sheet-pictures-video-12912156": {"kind":"radar","aliases":["1S32","Pat Hand"]},
+  "flap-lid-b-russia-uk": {"kind":"radar","aliases":["30N6","30N6E","5N63S","Flap Lid B"]},
+  "30n6e2-tomb-stone-russia-uk": {"kind":"radar","aliases":["30N6E2","Tomb Stone"]},
+  "50n6a-multi-function-mobile-tracking-radar-s-350": {"kind":"radar","aliases":["50N6A","MFMTR"]},
+  "64n6-tombstone-64n6e-64n6e2": {"kind":"radar","aliases":["64N6","64N6E","64N6E2","Tombstone"]},
+  "96n6-92n6e-grave-stone-radar": {"kind":"radar","aliases":["92N6","92N6E","Grave Stone"]},
+  "green-pine-elm-2080-elm-2080s": {"kind":"radar","aliases":["Green Pine","ELM-2080","ELM-2080S"]},
+  "korkut-command-control-radar": {"kind":"radar","aliases":["Korkut Command and Control Radar System"]},
+  "mpq-64f1-3d-radar-vehicle-nasams-technical-data-sheet-specifications-pictures-video-12712155": {"kind":"radar","aliases":["MPQ-64F1"]},
+  "nasams-electro-optical-sensor": {"kind":"sensor","aliases":["MSP 500","MSP500","Multi Sensor Platform MSP 500"]},
+  "mmsr-sola-poland-uk": {"kind":"radar","aliases":["Sola","MMSR","Mobile Multibeam Search Radar"]}
+}
