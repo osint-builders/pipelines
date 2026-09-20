@@ -28,3 +28,10 @@ class SupplementalDiscovery(Protocol):
 @runtime_checkable
 class PreparedSource(Protocol):
     def prepare(self, pages: Iterable[tuple[str, bytes]]) -> None: ...
+
+
+@runtime_checkable
+class AuthenticatedSource(Protocol):
+    def request_headers(self, url: str) -> dict[str, str]:
+        """Ephemeral credentials for an explicitly scoped crawl request only."""
+        ...

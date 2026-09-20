@@ -4,12 +4,12 @@ from urllib.parse import urlsplit
 
 from scrapy import Request, Spider
 from scrapy.crawler import Crawler, CrawlerProcess
-from scrapy.exceptions import IgnoreRequest
+from scrapy.exceptions import CloseSpider, IgnoreRequest
 from scrapy.http import Response
 from twisted.python.failure import Failure
 
 from pipelines.archive import Archive
-from pipelines.sources.base import Source, SupplementalDiscovery
+from pipelines.sources.base import AuthenticatedSource, Source, SupplementalDiscovery
 
 
 class ScopeMiddleware:
@@ -28,6 +28,8 @@ class ScopeMiddleware:
                 return
         if spider.source.normalize(request.url) != request.url:
             raise IgnoreRequest(f"Outside source scope: {request.url}")
+        if isinstance(spider.source, AuthenticatedSource):
+            request.headers.update(spider.source.request_headers(request.url))
 
 
 class ArchiveSpider(Spider):
@@ -84,11 +86,18 @@ class ArchiveSpider(Spider):
         headers = {
             key.decode("latin1"): b", ".join(values).decode("latin1")
             for key, values in response.headers.items()
+            if key.lower() not in {b"set-cookie", b"set-cookie2"}
         }
         headers["effective-url"] = response.url
         self.archive.save(
             original, response.status, response.body, content_type, headers
         )
+        if response.status in {401, 403} and isinstance(
+            self.source, AuthenticatedSource
+        ):
+            self.archive.fail(original, "Source rejected authentication")
+            self.archive.checkpoint()
+            raise CloseSpider("source-access-denied")
         if response.status != 200:
             return
         self.saved += 1
@@ -103,6 +112,10 @@ class ArchiveSpider(Spider):
             return
         try:
             discovered = self.source.discover(response.url, response.body)
+        except PermissionError:
+            self.archive.fail(original, "Source access expired or content restricted")
+            self.archive.checkpoint()
+            raise CloseSpider("source-access-denied") from None
         except Exception as exc:
             self.archive.fail(original, str(exc))
             self.archive.checkpoint()
@@ -123,6 +136,10 @@ class ArchiveSpider(Spider):
 
 
 def crawl(source: Source, archive: Archive) -> None:
+    if isinstance(source, AuthenticatedSource):
+        # Fail before starting a crawl if its local credentials are missing.
+        for seed in source.seeds:
+            source.request_headers(seed)
     discovery_urls = (
         source.discovery_seeds(archive.path)
         if isinstance(source, SupplementalDiscovery)

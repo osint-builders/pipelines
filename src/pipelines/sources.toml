@@ -27,3 +27,6 @@ adapter = "pipelines.sources.climateviewer:ClimateViewer"
 
 [cambridgepixel]
 adapter = "pipelines.sources.cambridgepixel:CambridgePixel"
+
+[militaryperiscope]
+adapter = "pipelines.sources.militaryperiscope:MilitaryPeriscope"
