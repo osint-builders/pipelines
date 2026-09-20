@@ -31,5 +31,15 @@
   {"source":"wikipedia","query":"naval radar with convex antenna covers on Type 052C destroyers","mode":"vector","expected":"wikipedia:51215241","max_rank":5,"required":false},
   {"source":"wikipedia","query":"airborne fire control radar manufactured at Pakistan Aeronautical Complex","mode":"vector","expected":"wikipedia:16289401","max_rank":5,"required":false},
   {"source":"wikipedia","query":"compact radar detecting hovering helicopters and low flying cruise missiles","mode":"vector","expected":"wikipedia:7044199","max_rank":5,"required":false},
-  {"source":"wikipedia","query":"Type 1478 airborne fire control radar","mode":"vector","expected":"wikipedia:16289401","max_rank":5,"required":false}
+  {"source":"wikipedia","query":"Type 1478 airborne fire control radar","mode":"vector","expected":"wikipedia:16289401","max_rank":5,"required":false},
+  {"source":"commons","kind":"radar","query":"1L122-2E mobile radar","mode":"hybrid","expected":"commons:54320747","max_rank":1},
+  {"source":"commons","query":"Repeynik radar","mode":"hybrid","expected":"commons:141117367","max_rank":1},
+  {"source":"commons","query":"96L6 radar","mode":"hybrid","expected":"commons:16269428","max_rank":1},
+  {"source":"commons","kind":"emitter","query":"MP-403 Side Globe radar jammer","mode":"hybrid","expected":"commons:64867255","max_rank":1},
+  {"source":"commons","kind":"site","query":"Don-2N missile defence radar","mode":"hybrid","expected":"commons:18427286","max_rank":1},
+  {"source":"commons","kind":"vehicle","query":"PPRU-1 command vehicle","mode":"hybrid","expected":"commons:61066345","max_rank":1},
+  {"source":"commons","query":"radar to detect stealth aircraft cruise missiles and unmanned aerial vehicles","mode":"vector","expected":"commons:16269428","max_rank":5,"required":false},
+  {"source":"commons","query":"tracked command vehicle for tactical air defense units","mode":"vector","expected":"commons:61066345","max_rank":5,"required":false},
+  {"source":"commons","query":"anti ballistic missile radar outside Moscow","mode":"vector","expected":"commons:18427286","max_rank":5,"required":false},
+  {"source":"commons","query":"Repeynik radar","mode":"vector","expected":"commons:141117367","max_rank":5,"required":false}
 ]

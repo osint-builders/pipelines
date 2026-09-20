@@ -7,7 +7,7 @@ from filelock import FileLock
 from pipelines.archive import Archive, atomic_json, run_id
 from pipelines.crawl import crawl
 from pipelines.model import SCHEMA_VERSION, Entity
-from pipelines.sources.base import Source
+from pipelines.sources.base import PreparedSource, Source
 
 
 def publish(source: Source, archive: Archive, source_dir: Path) -> Path:
@@ -23,6 +23,8 @@ def publish(source: Source, archive: Archive, source_dir: Path) -> Path:
         )
     labels: dict[str, list[str]] = {}
     pages = archive.pages("saved")
+    if isinstance(source, PreparedSource):
+        source.prepare((page["url"], archive.body(page)) for page in pages)
     for page in pages:
         for url, names in source.labels(page["url"], archive.body(page)).items():
             labels.setdefault(url, []).extend(names)

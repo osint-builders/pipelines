@@ -51,9 +51,10 @@ uv run --no-sync pipeline-build crawl deagel --root ../pipeline-data
 uv run --no-sync pipeline-build crawl virtualglobetrotting --root ../pipeline-data
 uv run --no-sync pipeline-build crawl russianforces --root ../pipeline-data
 uv run --no-sync pipeline-build crawl wikipedia --root ../pipeline-data
+uv run --no-sync pipeline-build crawl commons --root ../pipeline-data
 uv run --no-sync pipeline-build status radartutorial --root ../pipeline-data
 uv run --no-sync pipeline-build model --output build/model
-uv run --no-sync pipeline-build package --root ../pipeline-data --source radartutorial --source deagel --source virtualglobetrotting --source russianforces --source wikipedia --model build/model --cache build/entity-vector-cache --output build/dataset.zip
+uv run --no-sync pipeline-build package --root ../pipeline-data --source radartutorial --source deagel --source virtualglobetrotting --source russianforces --source wikipedia --source commons --model build/model --cache build/entity-vector-cache --output build/dataset.zip
 uv run --no-sync python tools/build_cli.py --bundle build/dataset.zip --output dist/pipelines
 uv run --no-sync python tools/accept_cli.py dist/pipelines build/dataset.zip
 uv run --no-sync python tools/evaluate_cli.py dist/pipelines --output build/retrieval-evaluation.json
@@ -182,6 +183,7 @@ of Git history. License notices remain embedded and available through the CLI.
 | [VirtualGlobetrotting Radar Sites](https://virtualglobetrotting.com/category/buildings/radar-sites/rss.xml) | Geographic records linked from the rolling RSS feed | 100 sites from 100 detail pages |
 | [Russian Strategic Nuclear Forces](https://feeds.feedburner.com/russianforces/) | Named equipment and satellites mentioned in the rolling Atom feed | 57 entities with 15 full articles as evidence |
 | [Wikipedia: Military radars of China](https://en.wikipedia.org/wiki/Category:Military_radars_of_China) | English category members and their subcategories | 41 entities: 39 radars and two aircraft |
+| [Wikimedia Commons: Military radars of Russia](https://commons.wikimedia.org/wiki/Category:Military_radars_of_Russia) | Named equipment categories with category and media-description evidence | 151 equipment and site identities |
 
 Radartutorial discovery follows English sitemaps, indexes, manufacturer names, and links.
 The crawler obeys robots.txt, limits concurrency to two, and applies delay/throttling.
@@ -450,12 +452,111 @@ named-item regressions, return the expected entity first. Numeric-designation fa
 remain visible as diagnostic cases in the CLI evaluator.
 
 Offline container extraction passed, and unchanged repackaging preserved the dataset ID.
-The combined five-source bundle contains 3,218 entities, 2,688 evidence pages, and 11,548
+The initial five-source bundle contained 3,218 entities, 2,688 evidence pages, and 11,548
 vectors. Tests cover category scope, pagination rejection, stable identity, redirects,
 alias exclusions, variant qualifications, legacy and current HTML layouts, missing
 provenance, and exact archived bytes. Additional Wikipedia categories can be added as
 reviewed seeds in the adapter; review their entity kinds and exclusions before expanding
 scope. The shared builder and consumer CLI need no source-specific changes.
+
+### Wikimedia Commons discovery and extraction
+
+The `commons` source recursively follows **Military radars of Russia**, its category
+membership lists, and linked file-description pages. The root has 72 subcategories and
+47 directly listed files. Evaluation of the complete reachable graph found 196 categories
+and 1,374 distinct file-description URLs. Parent categories, search results, user pages,
+global navigation, linked Wikipedia articles, and image binaries do not expand the crawl.
+
+Static `/wiki/Category:` and `/wiki/File:` HTML supplies category membership, descriptions,
+rendered Wikidata infoboxes, page/revision IDs, and attribution. A browser is unnecessary.
+The category offers search, category-tree navigation, WikiMap/KML, PetScan, and a dynamic
+"Search depicted" tool; those are not required for this bounded crawl. Robots evaluation
+allows the ordinary HTML pages and excludes `/w/api.php` and `/w/index.php` query routes.
+Discovery recognizes supported category continuation links and fails on unsupported
+pagination rather than silently truncating a collection. None of the 196 evaluated
+category pages needed pagination. Structured file data loaded by JavaScript is outside
+this adapter's captured content; the raw HTML and rendered description are retained.
+
+Commons organizes media, so photographs do not become equipment identities. The
+[reviewed category catalog](src/pipelines/sources/commons_categories.json) distinguishes
+151 named subjects, 31 context categories, and 14 broad or ambiguous collections. Subjects
+include 134 radars, seven sites, four equipment records, three emitters, two command
+vehicles, and one sensor. IDs are the subject category's native numeric page ID, such as
+`commons:54320747` for 1L122-2E. Newly encountered category IDs require classification
+before publication. The catalog records category roles and types; titles, descriptions,
+visible aliases, and evidence come from the archived pages.
+The main entity URL selects its subject category even when a context page is processed
+first. Shared media descriptions remain independently addressable by evidence ID.
+
+An offline preparation pass resolves the category graph before extracting each page.
+Museum, exhibition, and service-context categories attach evidence to their named parent
+subject. Distinct named model categories remain separate; if a file belongs to both a
+family and its specific variant, the specific variant takes precedence. Files depicting
+multiple named subjects can be evidence for each, with identical full content. General
+collection files stay in the archive unless membership in a reviewed subject establishes
+their association. The mixed "Kasta 2E2 and Kavosh" collection does not establish that all
+its photographs depict the same model, so that grouping alone assigns no entity.
+
+The root also contains Soviet equipment, foreign-service collections, museums, and sites
+outside Russia. Category membership is retained as qualified provenance; it does not
+become an assertion of Russian origin, current location, or operator. Ship photographs
+can show several radar systems, and source identifications may be uncertain. Search
+results represent the category subject and its supporting pages, not independently
+verified object recognition. Category descriptions and file captions retain qualifications.
+
+Full Markdown preserves category descriptions, media descriptions, licenses, source and
+author details, file history, and rendered metadata. Original response HTML exports byte
+for byte. File dates are explicitly media metadata, not equipment service dates. Every
+page records a revision link, contributor-history link, its CC BY-SA page-text license,
+and the Markdown conversion. Media license labels and links are separate facts where
+present. Media bytes remain external links and keep their individual licenses.
+
+Search text uses equipment identity, English category descriptions and rendered infoboxes,
+and English file captions. Older descriptions written as prose or lists are supported.
+Full evidence keeps the original multilingual text and is marked `mul`; explicitly
+non-English sections are excluded from embeddings, while untagged source captions may
+contain mixed languages. Hidden multilingual label caches are not aliases. License text,
+file history, EXIF, and navigation stay out of embeddings to avoid repeated boilerplate.
+
+The September 20, 2026 UTC crawl saved all 1,570 discovered pages with HTTP 200 responses.
+The published snapshot retains 182 category pages and 1,224 file-description pages as
+evidence; 164 collection or unassigned pages remain in the original crawl archive.
+Forty-four evidence pages are shared by multiple subjects. Duga-1 retains 198 pages.
+All retained file pages supplied media-license metadata. For 235 files without usable
+English descriptions, embedding input falls back to the equipment identity while the
+original multilingual content remains exportable.
+
+Eight distinct queries compared three representations across all 151 subjects using the
+pinned model and pure cosine ranking:
+
+| Embedding input | Vectors | Expected item first | Expected item in first five |
+| --- | --- | --- | --- |
+| Category descriptions only | 333 | 6/8 | 6/8 |
+| Full extracted page Markdown | 11,994 | 5/8 | 6/8 |
+| Category descriptions and file captions (selected) | 1,680 | 6/8 | 6/8 |
+
+The selected representation keeps caption information that category-only indexing would
+omit, with about one-seventh the vectors of full-page indexing. This small diagnostic
+set is not a general accuracy estimate. Repeynik ranks seventh in pure vector mode and
+first through its captured alias in hybrid mode. A broad query about detecting stealth
+aircraft, cruise missiles, and unmanned vehicles places 96L6 at rank 45 despite the source
+describing that capability. These misses remain visible in the evaluator. The tracked
+air-defense command-vehicle and Moscow missile-defense queries return their expected
+items first. All six Commons named-item checks and the 20 existing required checks
+return their expected entity first.
+
+Networking-disabled container extraction passed. Repackaging unchanged snapshots preserved
+the dataset ID and reported `changed: false`. The combined six-source bundle contains
+3,369 entities, 4,094 evidence pages, and 13,228 vectors. Windows acceptance verifies full
+exports for each source; an additional check round-trips all 198 Duga-1 evidence pages.
+The original `russian cheeseboard` query still returns 96L6E "Cheese Board" first in both
+hybrid and vector modes. Source tests cover membership scope, pagination rejection,
+context and variant grouping, shared evidence, category review, legacy layouts, English
+selection, separate media/text licensing, preferred subject URLs, and offline replay.
+All five platform binaries were built. Windows and Linux amd64 passed bundle verification
+and export acceptance; Linux ran with networking disabled and a read-only filesystem.
+Linux arm64 passed verification under emulation. macOS builds were cross-compiled here;
+the release workflow requires native macOS acceptance before publication.
 
 ### Add another website
 
@@ -473,6 +574,7 @@ needed in the shared builder, bundle format, or consumer CLI.
 | `labels(url, body)` | Explicit catalog names keyed by canonical item URL, or `{}` |
 | `extract(url, body, names)` | Zero or more entities derived from the current archived page |
 | `discovery_seeds(archive_directory)` (optional) | Discovery captured once per archive, including rendered catalogs or previous feed membership |
+| `prepare(pages)` (optional) | Resolve relationships from an iterable of archived `(url, bytes)` pairs before per-page extraction; no network requests |
 
 Use [Entity and Evidence](src/pipelines/model.py) for extraction. Each emitted entity needs
 a stable key, canonical title, kind, and one evidence record for the current
@@ -493,6 +595,10 @@ full evidence. An optional `Entity.url` may select an anchor within a retained p
 Implement the separate `SupplementalDiscovery` protocol for discovery state not available
 in ordinary archived HTML, such as browser-rendered catalogs or prior feed membership;
 offline extraction never invokes that capability.
+Implement `PreparedSource` when extraction depends on relationships between archived
+pages. Commons uses it to associate media descriptions with equipment categories. The
+builder invokes it for both fresh crawls and offline replay; ordinary adapters need no
+preparation method. Keep this pass deterministic and confined to the supplied archive.
 
 Supported kinds are `radar`, `emitter`, `sensor`, `vehicle`, `aircraft`, `spacecraft`, `vessel`, `weapon`, `site`,
 `equipment`, and `item`. Categories provide source-specific distinctions. Country and
@@ -544,6 +650,7 @@ pipelines search --source virtualglobetrotting --kind site "Bullen Point Alaska 
 pipelines search --source russianforces --kind radar "Razvyazka space surveillance radar"
 pipelines search --source russianforces --kind spacecraft "Cosmos 2615"
 pipelines search --source wikipedia --kind radar "Dragon Eye"
+pipelines search --source commons --kind radar "1L122-2E"
 pipelines search --mode vector --kind radar "detect aircraft approaching an airport"
 pipelines similar --limit 5 radartutorial:8bdc6ce92fea3ca62de71395
 pipelines get radartutorial:8bdc6ce92fea3ca62de71395
@@ -553,6 +660,7 @@ pipelines get deagel:a000516-003
 pipelines get virtualglobetrotting:311208
 pipelines get russianforces:sineva
 pipelines get wikipedia:51215241
+pipelines get commons:54320747
 ```
 
 Search emits JSON with `dataset_id`, query/mode, and `results`. Each result includes its

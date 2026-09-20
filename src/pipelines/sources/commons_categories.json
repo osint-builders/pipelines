@@ -1,0 +1,937 @@
+{
+  "5895255": {
+    "title": "P-18",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "7718374": {
+    "title": "PRV-17",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "9787258": {
+    "title": "P-40 Radar",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "9787518": {
+    "title": "ST-68U",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "9787561": {
+    "title": "1S91",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "9787618": {
+    "title": "P-37",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "9787650": {
+    "title": "P-12",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "9787661": {
+    "title": "P-15",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "9788625": {
+    "title": "Zoopark radar system",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "9788891": {
+    "title": "5N62",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "9789079": {
+    "title": "SNR-75",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "9789160": {
+    "title": "SNR-125",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "9789249": {
+    "title": "PRV-16",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "9789307": {
+    "title": "64N6",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "9955018": {
+    "title": "76N6",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "9955153": {
+    "title": "30N6",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "9964524": {
+    "title": "PRV-11",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "10047132": {
+    "title": "S-300 components in Technical museum Togliatti",
+    "role": "collection"
+  },
+  "10048157": {
+    "title": "Radars in Technical museum Togliatti",
+    "role": "collection"
+  },
+  "10142975": {
+    "title": "P-14",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "10143018": {
+    "title": "PRV-9",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "10168790": {
+    "title": "P-80",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "10168962": {
+    "title": "P-19",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "10320410": {
+    "title": "59N6-E",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "10403768": {
+    "title": "Fregat radar station",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "10549023": {
+    "title": "Radar systems in the Muzeum Polskiej Techniki Wojskowej",
+    "role": "collection"
+  },
+  "11062076": {
+    "title": "9S18",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "11842428": {
+    "title": "World War II radars of the Soviet Union",
+    "role": "collection"
+  },
+  "12846712": {
+    "title": "1S32",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "16269428": {
+    "title": "96L6",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "16659666": {
+    "title": "1S91 in Romanian service",
+    "role": "context"
+  },
+  "18014132": {
+    "title": "Daryal radar",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "18189842": {
+    "title": "Hen House radar",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "18233911": {
+    "title": "RSBN",
+    "role": "entity",
+    "kind": "emitter"
+  },
+  "18300707": {
+    "title": "SON-9",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "18427286": {
+    "title": "Don-2N radar",
+    "role": "entity",
+    "kind": "site"
+  },
+  "18438063": {
+    "title": "Dunai radar",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "19036945": {
+    "title": "5N63",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "19040236": {
+    "title": "P-35",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "19040249": {
+    "title": "PRV-10",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "19322224": {
+    "title": "39N6 Kasta-2E",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "19322231": {
+    "title": "35N6 Kasta-2",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "19322240": {
+    "title": "Kasta-2",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "19324412": {
+    "title": "Land Roll engagement radar",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "20095832": {
+    "title": "1S91 in Serbian service",
+    "role": "context"
+  },
+  "20096325": {
+    "title": "SNR-125 in Serbian service",
+    "role": "context"
+  },
+  "20264627": {
+    "title": "1S91 in Polish service",
+    "role": "context"
+  },
+  "20264692": {
+    "title": "9S19",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "20264761": {
+    "title": "9S32",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "20266577": {
+    "title": "9S15",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "20323950": {
+    "title": "Voronezh radar",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "20551993": {
+    "title": "Agata radars",
+    "role": "context"
+  },
+  "20552304": {
+    "title": "Karolina radars",
+    "role": "context"
+  },
+  "20553325": {
+    "title": "Maria radars",
+    "role": "context"
+  },
+  "20557611": {
+    "title": "RPK-1 Vaza in Polish service",
+    "role": "context"
+  },
+  "20557813": {
+    "title": "Monika radars",
+    "role": "context"
+  },
+  "27446113": {
+    "title": "P-40 in Serbian service",
+    "role": "context"
+  },
+  "27455652": {
+    "title": "P-12 in Serbian service",
+    "role": "context"
+  },
+  "27455958": {
+    "title": "PRV-16B in Serbian service",
+    "role": "context"
+  },
+  "27794038": {
+    "title": "1S32M in Polish service",
+    "role": "context"
+  },
+  "29339374": {
+    "title": "1RL232 Leopard",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "31659094": {
+    "title": "5N87",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "31661288": {
+    "title": "Nebo-M",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "31661698": {
+    "title": "Nebo-SV",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "31662012": {
+    "title": "5N84A",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "33625106": {
+    "title": "P-18 in Serbian service",
+    "role": "context"
+  },
+  "37438161": {
+    "title": "N010 Juk",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "40439085": {
+    "title": "SBR-3",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "40439108": {
+    "title": "PSNR-5",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "46460643": {
+    "title": "Duga-1 radar",
+    "role": "entity",
+    "kind": "site"
+  },
+  "46634588": {
+    "title": "Usolye-Sibirskoye radar",
+    "role": "entity",
+    "kind": "site"
+  },
+  "49483601": {
+    "title": "30N6E2",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "49483644": {
+    "title": "35D6 ST-68UM",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "49483718": {
+    "title": "96L6E",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "49631446": {
+    "title": "50N6E",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "49965788": {
+    "title": "Aistyonok radar",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "49967218": {
+    "title": "92N2",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "49967512": {
+    "title": "9S19M2",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "50459827": {
+    "title": "Ka band radar",
+    "role": "collection"
+  },
+  "50459867": {
+    "title": "1L121E",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "50460120": {
+    "title": "1L260-E",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "50476380": {
+    "title": "Irbis-E",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "52017380": {
+    "title": "48Ya6-K1 Podliot-K1",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "52017394": {
+    "title": "1L125E",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "54320747": {
+    "title": "1L122-2E",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "54320786": {
+    "title": "1L122E",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "56335440": {
+    "title": "RUS-1 Reven",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "56829960": {
+    "title": "Faltset",
+    "role": "entity",
+    "kind": "vehicle"
+  },
+  "59753955": {
+    "title": "Kredo radar",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "59753967": {
+    "title": "Fara-PV",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "59753975": {
+    "title": "FARA-1",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "59754031": {
+    "title": "UAABS",
+    "role": "entity",
+    "kind": "equipment"
+  },
+  "61066345": {
+    "title": "PPRU-1",
+    "role": "entity",
+    "kind": "vehicle"
+  },
+  "61683738": {
+    "title": "1B77 Ulybka-M",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "64043299": {
+    "title": "Ship radars of the Russian and Soviet Navy",
+    "role": "collection"
+  },
+  "64798094": {
+    "title": "Monolit-B",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "64798523": {
+    "title": "9S36",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "64798693": {
+    "title": "Scrum Half",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "64798926": {
+    "title": "9S35",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "64837441": {
+    "title": "N011",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "64846966": {
+    "title": "MR-103",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "64847003": {
+    "title": "MR-104",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "64847300": {
+    "title": "3R41",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "64847311": {
+    "title": "MR-145",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "64847330": {
+    "title": "MR-800",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "64847791": {
+    "title": "5P-10",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "64848021": {
+    "title": "MR-123",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "64848408": {
+    "title": "MR-90 Orekh",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "64848436": {
+    "title": "MR-184",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "64851446": {
+    "title": "Mars-Passat",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "64852702": {
+    "title": "Nebo-M RLM-D",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "64852716": {
+    "title": "Nebo-M RLM-S",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "64852724": {
+    "title": "Nebo-M RLM-M",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "64852746": {
+    "title": "Nebo-M KU-RLK",
+    "role": "entity",
+    "kind": "equipment"
+  },
+  "64857575": {
+    "title": "92N6",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "64866601": {
+    "title": "4R90",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "64866609": {
+    "title": "MR-310",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "64866624": {
+    "title": "MR-500",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "64866722": {
+    "title": "MR-105",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "64867255": {
+    "title": "MP-403",
+    "role": "entity",
+    "kind": "emitter"
+  },
+  "64867315": {
+    "title": "MP-404",
+    "role": "entity",
+    "kind": "emitter"
+  },
+  "64867530": {
+    "title": "MR-1164",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "64867935": {
+    "title": "MPZ-301",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "64868325": {
+    "title": "MR-600",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "64868471": {
+    "title": "MR-350",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "64872576": {
+    "title": "MR-320",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "64873163": {
+    "title": "MP-401",
+    "role": "entity",
+    "kind": "equipment"
+  },
+  "64873285": {
+    "title": "MP-407",
+    "role": "entity",
+    "kind": "equipment"
+  },
+  "64884845": {
+    "title": "E-801M Oko",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "64919001": {
+    "title": "1RL239",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "64920529": {
+    "title": "RP-21 Sapfir",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "64922582": {
+    "title": "SRD-5",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "65001937": {
+    "title": "PRS-3A Argon",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "65025785": {
+    "title": "RP-22",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "67286655": {
+    "title": "Military radars of Russia",
+    "role": "collection"
+  },
+  "67385541": {
+    "title": "1L111M",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "71768207": {
+    "title": "1L220UK Zoopark-3",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "71768427": {
+    "title": "1L219 Zoopark",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "72271750": {
+    "title": "RSP-7",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "72787164": {
+    "title": "9S36M",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "74577288": {
+    "title": "NO25E",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "75691290": {
+    "title": "RUS-2 (Redut-1) Monument at Toksovo",
+    "role": "context"
+  },
+  "77643373": {
+    "title": "55Zh6U Nebo-U",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "80864573": {
+    "title": "P-18 in Ukrainian service",
+    "role": "context"
+  },
+  "84724716": {
+    "title": "N036 Byelka",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "88901561": {
+    "title": "Gabala Radar Station",
+    "role": "entity",
+    "kind": "site"
+  },
+  "93656041": {
+    "title": "Radeskan",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "94268754": {
+    "title": "PRV-13",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "96781889": {
+    "title": "3R95",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "100885367": {
+    "title": "RUS-2 Redut",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "100899216": {
+    "title": "RPK-1 Vaza",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "100908590": {
+    "title": "P-20",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "100911183": {
+    "title": "P-37 1RL139 in the Saratov Military Glory Museum",
+    "role": "context"
+  },
+  "113386977": {
+    "title": "PSNR-1",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "115907049": {
+    "title": "1RL232 Leopard at Aalborg Forsvars- og Garnisonsmuseum",
+    "role": "context"
+  },
+  "115907211": {
+    "title": "1RL232 Leopard in museums",
+    "role": "context"
+  },
+  "116638815": {
+    "title": "9S18 in the Ilmatorjuntamuseo",
+    "role": "context"
+  },
+  "116640123": {
+    "title": "P-12 in the Ilmatorjuntamuseo",
+    "role": "context"
+  },
+  "116640165": {
+    "title": "P-15 in the Ilmatorjuntamuseo",
+    "role": "context"
+  },
+  "116640247": {
+    "title": "P-18 in the Ilmatorjuntamuseo",
+    "role": "context"
+  },
+  "116640322": {
+    "title": "P-18 in Finnish service",
+    "role": "context"
+  },
+  "116646320": {
+    "title": "SNR-125 in the Ilmatorjuntamuseo",
+    "role": "context"
+  },
+  "120053314": {
+    "title": "Volna (MRLS)",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "120054261": {
+    "title": "Radar seekers of Russia",
+    "role": "collection"
+  },
+  "123895256": {
+    "title": "P-12 in Iranian service",
+    "role": "context"
+  },
+  "123895397": {
+    "title": "Kasta 2E2 and Kavosh radars in Iranian service",
+    "role": "collection"
+  },
+  "128140024": {
+    "title": "Military radars of the Soviet Union",
+    "role": "collection"
+  },
+  "134527045": {
+    "title": "P-10",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "134527222": {
+    "title": "P-8",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "134540405": {
+    "title": "P-3",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "134541348": {
+    "title": "P-30 radar",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "141117367": {
+    "title": "Burdock",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "143110977": {
+    "title": "SON-4",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "146001450": {
+    "title": "RP-23 Sapfir",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "147071103": {
+    "title": "P-40 Radar in the Saratov Military Glory Museum",
+    "role": "context"
+  },
+  "147720726": {
+    "title": "30N6E2 at the Army-2015",
+    "role": "context"
+  },
+  "147744203": {
+    "title": "96L6E at the Army-2015",
+    "role": "context"
+  },
+  "147744295": {
+    "title": "35D6 ST-68UM at the Army-2015",
+    "role": "context"
+  },
+  "151859649": {
+    "title": "96L6-AP",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "153513190": {
+    "title": "1L22",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "153750680": {
+    "title": "Sobolyatnik radar",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "153751117": {
+    "title": "Fara radar",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "154380521": {
+    "title": "SON-30",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "166020362": {
+    "title": "5N62 in the Army History Museum and Park in Kecel",
+    "role": "context"
+  },
+  "166072727": {
+    "title": "SDR-2MP",
+    "role": "entity",
+    "kind": "sensor"
+  },
+  "166089036": {
+    "title": "Mukachevo Radar Station",
+    "role": "entity",
+    "kind": "site"
+  },
+  "166089580": {
+    "title": "Pechora Radar Station",
+    "role": "entity",
+    "kind": "site"
+  },
+  "166090028": {
+    "title": "Volga Radar Station",
+    "role": "entity",
+    "kind": "site"
+  },
+  "166125098": {
+    "title": "39N6E Kasta-2E2",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "166142794": {
+    "title": "64L6 Gamma-S1",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "166145509": {
+    "title": "Military aircraft radars of Russia",
+    "role": "collection"
+  },
+  "166146204": {
+    "title": "Military aircraft radars of the Soviet Union",
+    "role": "collection"
+  },
+  "166152168": {
+    "title": "Portable battlefield radars of Russia",
+    "role": "collection"
+  },
+  "166152498": {
+    "title": "Military radars of the Soviet Union in museums",
+    "role": "collection"
+  },
+  "166153619": {
+    "title": "Nebo radars",
+    "role": "entity",
+    "kind": "radar"
+  },
+  "166154344": {
+    "title": "Nebo-T",
+    "role": "entity",
+    "kind": "radar"
+  }
+}

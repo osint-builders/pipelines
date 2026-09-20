@@ -1,6 +1,5 @@
 """Category-scoped English Wikipedia entities with revision-attributed evidence."""
 
-import json
 import re
 from copy import copy
 from urllib.parse import parse_qsl, quote, unquote, urlencode, urljoin, urlsplit
@@ -9,24 +8,13 @@ from bs4 import BeautifulSoup, Tag
 from markdownify import markdownify
 
 from pipelines.model import Entity, EntityKind, Evidence, Fact
+from pipelines.sources.mediawiki import config, text
 
 ORIGIN = "https://en.wikipedia.org"
 ROOT_CATEGORY = "Category:Military_radars_of_China"
 # These category members describe an organization and a national system, not items.
 NON_ITEMS = {82932384, 62003409}
 LAYOUT = "script, style, form, .navbox, .navbar, .vertical-navbox, .sidebar, .hatnote, .mw-editsection, .mw-cite-backlink, #toc, .toc, .sistersitebox, .sisterproject, .noprint"
-
-
-def text(node: Tag) -> str:
-    return " ".join(node.stripped_strings)
-
-
-def config(soup: BeautifulSoup, name: str) -> object:
-    for script in soup.find_all("script"):
-        match = re.search(r'"' + re.escape(name) + r'"\s*:\s*', script.text)
-        if match:
-            return json.JSONDecoder().raw_decode(script.text[match.end() :])[0]
-    raise ValueError(f"Missing Wikipedia metadata: {name}")
 
 
 def field_text(node: Tag) -> str:

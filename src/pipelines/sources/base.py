@@ -1,3 +1,4 @@
+from collections.abc import Iterable
 from pathlib import Path
 from typing import Protocol, runtime_checkable
 
@@ -22,3 +23,8 @@ class Source(Protocol):
 @runtime_checkable
 class SupplementalDiscovery(Protocol):
     def discovery_seeds(self, directory: Path) -> list[str]: ...
+
+
+@runtime_checkable
+class PreparedSource(Protocol):
+    def prepare(self, pages: Iterable[tuple[str, bytes]]) -> None: ...

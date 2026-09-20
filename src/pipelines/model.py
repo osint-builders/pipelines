@@ -104,6 +104,8 @@ class Entity:
             raise ValueError(f"Conflicting entity identity: {self.key}")
         self.aliases = sorted(set(self.aliases + other.aliases))
         self.categories = sorted(set(self.categories + other.categories))
+        if not self.url and other.url:
+            self.url = other.url
         known = {page.id: page for page in self.evidence}
         for page in other.evidence:
             if page.id in known and known[page.id] != page:

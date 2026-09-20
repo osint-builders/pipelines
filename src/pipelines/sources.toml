@@ -12,3 +12,6 @@ adapter = "pipelines.sources.russianforces:RussianForces"
 
 [wikipedia]
 adapter = "pipelines.sources.wikipedia:Wikipedia"
+
+[commons]
+adapter = "pipelines.sources.commons:Commons"
