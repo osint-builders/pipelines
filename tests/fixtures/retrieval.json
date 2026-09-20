@@ -56,5 +56,17 @@
   {"source":"armyrecognition","query":"Israeli early warning radar for the Arrow missile defense system","mode":"vector","expected":"armyrecognition:49725a6dc8904b9502d68192","max_rank":5,"required":false},
   {"source":"armyrecognition","query":"Polish mobile radar that detects hovering helicopters","mode":"vector","expected":"armyrecognition:fdb2e6c31dd2544dff57f2db","max_rank":5,"required":false},
   {"source":"armyrecognition","query":"optical tracking sensor with thermal and daylight cameras and a laser rangefinder","mode":"vector","expected":"armyrecognition:e4a5aecde1b187a0deffbab3","max_rank":5,"required":false},
-  {"source":"armyrecognition","query":"Vityaz tracking radar with limited low altitude coverage","mode":"vector","expected":"armyrecognition:6ab9d4ffc0a40549969c546c","max_rank":5,"required":false}
+  {"source":"armyrecognition","query":"Vityaz tracking radar with limited low altitude coverage","mode":"vector","expected":"armyrecognition:6ab9d4ffc0a40549969c546c","max_rank":5,"required":false},
+  {"source":"fandom","kind":"radar","query":"Russian Woodpecker radar","mode":"hybrid","expected":"fandom:344747","max_rank":1},
+  {"source":"fandom","kind":"radar","query":"Spoon Rest D radar","mode":"hybrid","expected":"fandom:130998","max_rank":1},
+  {"source":"fandom","kind":"radar","query":"Zaslon Flash Dance radar","mode":"hybrid","expected":"fandom:70536","max_rank":1},
+  {"source":"fandom","kind":"radar","query":"N001 Mech radar","mode":"hybrid","expected":"fandom:90269","max_rank":1},
+  {"source":"fandom","kind":"radar","query":"MR-103 Bars Muff Cob naval radar","mode":"hybrid","expected":"fandom:320530","max_rank":1},
+  {"source":"fandom","kind":"radar","query":"Bars airborne radar","mode":"hybrid","expected":"fandom:48592","max_rank":1},
+  {"source":"fandom","kind":"site","query":"Gabala Radar Station","mode":"hybrid","expected":"fandom:126803","max_rank":1},
+  {"source":"fandom","kind":"radar","query":"Irbis-E radar","mode":"hybrid","expected":"fandom:144911","max_rank":1},
+  {"source":"fandom","query":"Soviet over the horizon radar that made a repetitive tapping noise on shortwave radio","mode":"vector","expected":"fandom:344747","max_rank":5,"required":false},
+  {"source":"fandom","query":"early warning radar station in Azerbaijan that Russia leased until 2012","mode":"vector","expected":"fandom:126803","max_rank":5,"required":false},
+  {"source":"fandom","query":"shipboard fire control radar guiding AK-725 naval guns","mode":"vector","expected":"fandom:320530","max_rank":5,"required":false},
+  {"source":"fandom","query":"fighter radar with passive electronically scanned array developed for the Su-35","mode":"vector","expected":"fandom:144911","max_rank":5,"required":false}
 ]

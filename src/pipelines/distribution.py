@@ -1,5 +1,6 @@
 """Produce a portable, immutable dataset from already published source snapshots."""
 
+import base64
 import hashlib
 import json
 import re
@@ -53,6 +54,7 @@ def plain_text(markdown: str) -> str:
 def collect(root: Path, sources: list[str]) -> tuple[list[dict], dict[str, bytes]]:
     entities: list[dict] = []
     html: dict[str, bytes] = {}
+    provenance: dict[str, tuple] = {}
     for source in sorted(set(sources)):
         if not re.fullmatch(r"[a-z0-9_-]+", source):
             raise ValueError("Invalid source ID")
@@ -67,7 +69,7 @@ def collect(root: Path, sources: list[str]) -> tuple[list[dict], dict[str, bytes
             for entity in records:
                 for evidence in entity["evidence"]:
                     page = db.execute(
-                        "SELECT file, sha256, status FROM pages WHERE url=?",
+                        "SELECT file, sha256, status, content_type FROM pages WHERE url=?",
                         (evidence["url"],),
                     ).fetchone()
                     if page is None or page[2] != 200:
@@ -75,15 +77,53 @@ def collect(root: Path, sources: list[str]) -> tuple[list[dict], dict[str, bytes
                             f"Missing successful archive response: {evidence['url']}"
                         )
                     key = f"{source}/{evidence['id']}"
+                    capture = (
+                        evidence.get("html_origin"),
+                        evidence.get("source_response"),
+                    )
+                    if key in provenance and provenance[key] != capture:
+                        raise ValueError("Conflicting provenance for shared evidence")
+                    provenance[key] = capture
                     if key not in html:
                         path = (archive / page[0]).resolve()
                         if not path.is_relative_to(archive.resolve()):
                             raise ValueError("Archive path escapes its directory")
-                        html[key] = path.read_bytes()
-                    if (
-                        sha256(html[key]) != evidence["html_sha256"]
-                        or page[1] != evidence["html_sha256"]
-                    ):
+                        response_body = path.read_bytes()
+                        if evidence.get("html_origin") == "api-rendered":
+                            response = evidence.get("source_response", {})
+                            if (
+                                response.get("url") != evidence["url"]
+                                or response.get("content_type") != page[3]
+                                or response.get("sha256") != page[1]
+                                or sha256(response_body) != page[1]
+                                or base64.b64decode(
+                                    response.get("body_base64", ""), validate=True
+                                )
+                                != response_body
+                            ):
+                                raise ValueError(
+                                    "API response checksum or provenance mismatch"
+                                )
+                            rendered = (
+                                source_dir
+                                / "published"
+                                / "snapshots"
+                                / manifest["snapshot"]
+                                / "html"
+                                / f"{evidence['id']}.html"
+                            )
+                            html[key] = rendered.read_bytes()
+                        else:
+                            if (
+                                "source_response" in evidence
+                                or "html_origin" in evidence
+                                or sha256(response_body) != page[1]
+                            ):
+                                raise ValueError(
+                                    "Archive checksum or provenance mismatch"
+                                )
+                            html[key] = response_body
+                    if sha256(html[key]) != evidence["html_sha256"]:
                         raise ValueError(f"HTML checksum mismatch: {evidence['url']}")
                 entities.append(entity)
     entities.sort(key=lambda entity: entity["id"])
@@ -97,7 +137,7 @@ def stable_content(value: object) -> object:
         return {
             key: stable_content(item)
             for key, item in value.items()
-            if key not in {"retrieved_at", "html_sha256"}
+            if key not in {"retrieved_at", "html_sha256", "source_response"}
         }
     if isinstance(value, list):
         return [stable_content(item) for item in value]

@@ -18,3 +18,6 @@ adapter = "pipelines.sources.commons:Commons"
 
 [armyrecognition]
 adapter = "pipelines.sources.armyrecognition:ArmyRecognition"
+
+[fandom]
+adapter = "pipelines.sources.fandom:Fandom"

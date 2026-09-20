@@ -1,0 +1,314 @@
+{
+  "1236129": {
+    "title": "1L121-E",
+    "entity": "1236129",
+    "kind": "radar"
+  },
+  "741213": {
+    "title": "5N65 radar",
+    "entity": "741213",
+    "kind": "radar",
+    "aliases": [
+      "5N65",
+      "Flat Twin",
+      "RSN-225"
+    ]
+  },
+  "106290": {
+    "title": "Armavir Radar Station",
+    "entity": "106290",
+    "kind": "site"
+  },
+  "106919": {
+    "title": "Balkhash Radar Station",
+    "entity": "106919",
+    "kind": "site"
+  },
+  "48592": {
+    "title": "Bars radar",
+    "entity": "48592",
+    "kind": "radar"
+  },
+  "262041": {
+    "title": "Byelka (radar)",
+    "entity": "262041",
+    "kind": "radar"
+  },
+  "123203": {
+    "title": "Daryal radar",
+    "entity": "123203",
+    "kind": "radar"
+  },
+  "18715": {
+    "title": "Dnestr radar",
+    "entity": "18715",
+    "kind": "radar"
+  },
+  "113768": {
+    "title": "Don-2N radar",
+    "entity": "113768",
+    "kind": "radar"
+  },
+  "344747": {
+    "title": "Duga radar",
+    "entity": "344747",
+    "kind": "radar",
+    "aliases": [
+      "Duga",
+      "Duga-3",
+      "Russian Woodpecker",
+      "Steel Yard"
+    ]
+  },
+  "258807": {
+    "title": "Duga-3",
+    "entity": "344747",
+    "kind": "radar"
+  },
+  "83375": {
+    "title": "Dunay radar",
+    "entity": "83375",
+    "kind": "radar"
+  },
+  "123536": {
+    "title": "Fan Song",
+    "entity": "123536",
+    "kind": "radar"
+  },
+  "126803": {
+    "title": "Gabala Radar Station",
+    "entity": "126803",
+    "kind": "site"
+  },
+  "85337": {
+    "title": "Hantsavichy Radar Station",
+    "entity": "85337",
+    "kind": "site"
+  },
+  "144911": {
+    "title": "Irbis-E",
+    "entity": "144911",
+    "kind": "radar"
+  },
+  "148616": {
+    "title": "Kasta 2E",
+    "entity": "148616",
+    "kind": "radar",
+    "aliases": [
+      "Kasta 2E",
+      "Casta 2E",
+      "Flat Face E"
+    ]
+  },
+  "149744": {
+    "title": "Lekhtusi Radar Station",
+    "entity": "149744",
+    "kind": "site"
+  },
+  "330183": {
+    "title": "Mech radar",
+    "entity": "90269",
+    "kind": "radar"
+  },
+  "153349": {
+    "title": "Mishelevka Radar Station",
+    "entity": "153349",
+    "kind": "site"
+  },
+  "320530": {
+    "title": "Muff Cob",
+    "entity": "320530",
+    "kind": "radar",
+    "aliases": [
+      "MR-103 Bars",
+      "Muff Cob"
+    ]
+  },
+  "157454": {
+    "title": "Mukachevo Radar Station",
+    "entity": "157454",
+    "kind": "site"
+  },
+  "259990": {
+    "title": "Myech",
+    "entity": "90269",
+    "kind": "radar"
+  },
+  "90269": {
+    "title": "Myech radar",
+    "entity": "90269",
+    "kind": "radar",
+    "aliases": [
+      "N001",
+      "Mech",
+      "Myech"
+    ]
+  },
+  "155571": {
+    "title": "N019 Radar",
+    "entity": "155571",
+    "kind": "radar",
+    "aliases": [
+      "N019",
+      "Rubin"
+    ]
+  },
+  "281631": {
+    "title": "Rubin (radar)",
+    "entity": "155571",
+    "kind": "radar"
+  },
+  "156686": {
+    "title": "Olenegorsk Radar Station",
+    "entity": "156686",
+    "kind": "site"
+  },
+  "131004": {
+    "title": "P-3 radar",
+    "entity": "131004",
+    "kind": "radar"
+  },
+  "131017": {
+    "title": "P-8 radar",
+    "entity": "131017",
+    "kind": "radar"
+  },
+  "130990": {
+    "title": "P-10 radar",
+    "entity": "130990",
+    "kind": "radar"
+  },
+  "130991": {
+    "title": "P-12 radar",
+    "entity": "130991",
+    "kind": "radar"
+  },
+  "130993": {
+    "title": "P-14 radar",
+    "entity": "130993",
+    "kind": "radar"
+  },
+  "130995": {
+    "title": "P-15 radar",
+    "entity": "130995",
+    "kind": "radar"
+  },
+  "130998": {
+    "title": "P-18 radar",
+    "entity": "130998",
+    "kind": "radar",
+    "aliases": [
+      "P-18",
+      "1RL131",
+      "Terek",
+      "Spoon Rest D"
+    ]
+  },
+  "131000": {
+    "title": "P-19 radar",
+    "entity": "131000",
+    "kind": "radar"
+  },
+  "131001": {
+    "title": "P-20 radar",
+    "entity": "131001",
+    "kind": "radar"
+  },
+  "131005": {
+    "title": "P-30 radar",
+    "entity": "131005",
+    "kind": "radar"
+  },
+  "131006": {
+    "title": "P-35 radar",
+    "entity": "131006",
+    "kind": "radar"
+  },
+  "131009": {
+    "title": "P-40 radar",
+    "entity": "131009",
+    "kind": "radar"
+  },
+  "131015": {
+    "title": "P-70 radar",
+    "entity": "131015",
+    "kind": "radar"
+  },
+  "134983": {
+    "title": "Pechora Radar Station",
+    "entity": "134983",
+    "kind": "site"
+  },
+  "134430": {
+    "title": "Pionersky Radar Station",
+    "entity": "134430",
+    "kind": "site"
+  },
+  "120319": {
+    "title": "RP-21 Sapfir",
+    "entity": "120319",
+    "kind": "radar"
+  },
+  "138404": {
+    "title": "Russian Woodpecker",
+    "entity": "344747",
+    "kind": "radar"
+  },
+  "119908": {
+    "title": "Sevastopol Radar Station",
+    "entity": "119908",
+    "kind": "site"
+  },
+  "271080": {
+    "title": "Shipka (military base)",
+    "entity": "271080",
+    "kind": "site"
+  },
+  "284439": {
+    "title": "Skrunda-1",
+    "entity": "284439",
+    "kind": "site"
+  },
+  "68537": {
+    "title": "Voronezh radar",
+    "entity": "68537",
+    "kind": "radar"
+  },
+  "70410": {
+    "title": "Yeniseysk-15",
+    "entity": "70410",
+    "kind": "site"
+  },
+  "260863": {
+    "title": "Zaslon",
+    "entity": "70536",
+    "kind": "radar"
+  },
+  "70536": {
+    "title": "Zaslon radar",
+    "entity": "70536",
+    "kind": "radar",
+    "aliases": [
+      "Zaslon",
+      "BRLS-8B",
+      "Flash Dance",
+      "SBI-16",
+      "RP-31",
+      "N007",
+      "S-800"
+    ]
+  },
+  "260876": {
+    "title": "Zhuk (radar)",
+    "entity": "70600",
+    "kind": "radar"
+  },
+  "70600": {
+    "title": "Zhuk radar",
+    "entity": "70600",
+    "kind": "radar",
+    "aliases": [
+      "Zhuk"
+    ]
+  }
+}

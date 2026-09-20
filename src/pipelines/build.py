@@ -1,3 +1,5 @@
+import base64
+import hashlib
 import json
 import re
 from pathlib import Path
@@ -50,7 +52,11 @@ def publish(source: Source, archive: Archive, source_dir: Path) -> Path:
                 )
             evidence = entity.evidence[0]
             evidence.retrieved_at = page["fetched_at"]
-            evidence.html_sha256 = page["sha256"]
+            evidence.html_sha256 = (
+                hashlib.sha256(evidence.rendered_html.encode()).hexdigest()
+                if evidence.rendered_html
+                else page["sha256"]
+            )
             entity.validate()
             if entity.key in entities:
                 entities[entity.key].merge(entity)
@@ -78,13 +84,41 @@ def publish(source: Source, archive: Archive, source_dir: Path) -> Path:
     markdown_dir = snapshot / "markdown"
     markdown_dir.mkdir()
     evidence_text: dict[str, str] = {}
+    evidence_html: dict[str, str] = {}
+    archived_pages = {page["url"]: page for page in pages}
     with (snapshot / "entities.jsonl").open(
         "w", encoding="utf-8", newline="\n"
     ) as catalog:
         for entity in sorted(entities.values(), key=lambda item: item.key):
             metadata = entity.metadata(source.id)
             for page in metadata["evidence"]:
-                markdown = f"# {page['title']}\n\nSource: {page['url']}\n\n{page['attribution']}\n\n{page.pop('markdown')}\n"
+                if "rendered_html" in page:
+                    rendered = page.pop("rendered_html")
+                    if (
+                        page["id"] in evidence_html
+                        and evidence_html[page["id"]] != rendered
+                    ):
+                        raise ValueError(
+                            "Conflicting rendered HTML for shared evidence"
+                        )
+                    evidence_html[page["id"]] = rendered
+                    html_dir = snapshot / "html"
+                    html_dir.mkdir(exist_ok=True)
+                    (html_dir / f"{page['id']}.html").write_text(
+                        rendered, encoding="utf-8", newline="\n"
+                    )
+                    response = archived_pages[page["url"]]
+                    page["html_origin"] = "api-rendered"
+                    page["source_response"] = {
+                        "url": response["url"],
+                        "content_type": response["content_type"],
+                        "sha256": response["sha256"],
+                        "body_base64": base64.b64encode(
+                            archive.body(response)
+                        ).decode(),
+                    }
+                display_url = page.get("canonical_url", page["url"])
+                markdown = f"# {page['title']}\n\nSource: {display_url}\n\n{page['attribution']}\n\n{page.pop('markdown')}\n"
                 if (
                     page["id"] in evidence_text
                     and evidence_text[page["id"]] != markdown

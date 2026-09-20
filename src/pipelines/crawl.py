@@ -98,10 +98,16 @@ class ArchiveSpider(Spider):
             self.logger.warning(
                 "Archived %s pages; %s URLs discovered", self.saved, len(self.scheduled)
             )
-        if not any(kind in content_type.lower() for kind in ("html", "xml")):
+        if not any(kind in content_type.lower() for kind in ("html", "xml", "json")):
             self.archive.fail(original, f"Unexpected content type: {content_type}")
             return
-        for url in self.source.discover(response.url, response.body):
+        try:
+            discovered = self.source.discover(response.url, response.body)
+        except Exception as exc:
+            self.archive.fail(original, str(exc))
+            self.archive.checkpoint()
+            raise
+        for url in discovered:
             request = self.request(url)
             if request is not None:
                 yield request

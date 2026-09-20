@@ -44,7 +44,8 @@ class Archive:
         self, url: str, status: int, body: bytes, content_type: str, headers: dict
     ) -> None:
         digest = hashlib.sha256(body).hexdigest()
-        file = f"html/{hashlib.sha256(url.encode()).hexdigest()}.html"
+        suffix = "json" if "json" in content_type.lower() else "html"
+        file = f"html/{hashlib.sha256(url.encode()).hexdigest()}.{suffix}"
         target = self.path / file
         temporary = target.with_suffix(".tmp")
         with temporary.open("wb") as handle:

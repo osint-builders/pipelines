@@ -50,6 +50,8 @@ class Evidence:
     retrieved_at: str = ""
     html_sha256: str = ""
     search_text: str = ""
+    canonical_url: str = ""
+    rendered_html: str = ""
 
     @property
     def id(self) -> str:
@@ -82,6 +84,11 @@ class Entity:
         if len({page.id for page in self.evidence}) != len(self.evidence):
             raise ValueError("Duplicate evidence page")
         urls = {page.url for page in self.evidence}
+        for page in self.evidence:
+            if page.canonical_url:
+                if urlsplit(page.canonical_url).scheme not in {"https", "http"}:
+                    raise ValueError("Invalid canonical evidence URL")
+                urls.add(page.canonical_url)
         if self.url and self.url.split("#")[0] not in urls:
             raise ValueError("Entity URL must reference retained evidence")
         if any(fact.evidence.split("#")[0] not in urls for fact in self.facts):
@@ -97,6 +104,10 @@ class Entity:
             data["id"] = page.id
             if not page.search_text:
                 data.pop("search_text")
+            if not page.canonical_url:
+                data.pop("canonical_url")
+            if not page.rendered_html:
+                data.pop("rendered_html")
         return value
 
     def merge(self, other: "Entity") -> None:

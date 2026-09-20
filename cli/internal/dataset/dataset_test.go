@@ -4,6 +4,7 @@ import (
 	"archive/zip"
 	"bytes"
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
@@ -16,7 +17,7 @@ import (
 const firstID = "sample:000000000000000000000001"
 const secondID = "sample:sensor-2"
 
-func fixture(t *testing.T, corrupt bool) *Dataset {
+func fixture(t *testing.T, corrupt bool, transform ...func(map[string]any)) *Dataset {
 	t.Helper()
 	entities := []Entity{{ID: firstID, Title: "96L6E Cheese Board", Source: "sample", Kind: "radar", Aliases: []string{"Cheese Board"}}, {ID: secondID, Title: "Weather sensor", Source: "sample", Kind: "sensor", Aliases: []string{"Weather sensor"}}}
 	chunks := []Chunk{{Entity: 0, Text: "Air defense radar"}, {Entity: 0, Text: "Second section"}, {Entity: 1, Text: "Precipitation measurement"}}
@@ -36,6 +37,9 @@ func fixture(t *testing.T, corrupt bool) *Dataset {
 			html := []byte{255, 0, 13, 10}
 			htmlHash := sha256.Sum256(html)
 			page := map[string]any{"id": pageID, "url": url, "markdown": "Full content", "html_sha256": hex.EncodeToString(htmlHash[:])}
+			for _, modify := range transform {
+				modify(page)
+			}
 			pages = append(pages, page)
 			members["html/sample/"+pageID+".html"] = html
 		}
@@ -70,6 +74,37 @@ func fixture(t *testing.T, corrupt bool) *Dataset {
 		t.Fatal(err)
 	}
 	return d
+}
+
+func TestAPIResponseExportValidatesOriginalCapture(t *testing.T) {
+	apiBody := []byte(`{"parse":{"text":{"*":"<p>Full article</p>"}}}`)
+	digest := sha256.Sum256(apiBody)
+	valid := func(page map[string]any) {
+		page["html_origin"] = "api-rendered"
+		page["source_response"] = map[string]any{"url": page["url"], "content_type": "application/json", "sha256": hex.EncodeToString(digest[:]), "body_base64": base64.StdEncoding.EncodeToString(apiBody)}
+	}
+	d := fixture(t, false, valid)
+	raw, err := d.Export(firstID, "json", "")
+	if err != nil || !bytes.Contains(raw, []byte(base64.StdEncoding.EncodeToString(apiBody))) {
+		t.Fatal(string(raw), err)
+	}
+	if err := d.Verify(); err != nil {
+		t.Fatal(err)
+	}
+	for _, field := range []string{"url", "content_type", "sha256", "body_base64"} {
+		t.Run(field, func(t *testing.T) {
+			d := fixture(t, false, valid, func(page map[string]any) { delete(page["source_response"].(map[string]any), field) })
+			if _, err := d.Export(firstID, "json", ""); err == nil {
+				t.Fatal("invalid provenance accepted")
+			}
+		})
+	}
+	for _, origin := range []any{nil, "unknown"} {
+		d := fixture(t, false, valid, func(page map[string]any) { page["html_origin"] = origin })
+		if _, err := d.Export(firstID, "html", ""); err == nil {
+			t.Fatal("invalid origin accepted")
+		}
+	}
 }
 
 func TestHybridAliasAndPureVectorHaveDistinctResults(t *testing.T) {

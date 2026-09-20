@@ -1,6 +1,7 @@
 """Build one portable binary from a verified dataset and the current Go source."""
 
 import argparse
+import base64
 import hashlib
 import json
 import os
@@ -57,7 +58,7 @@ def verify_bundle(bundle: Path) -> dict:
                 return {
                     key: stable_content(item)
                     for key, item in value.items()
-                    if key not in {"retrieved_at", "html_sha256"}
+                    if key not in {"retrieved_at", "html_sha256", "source_response"}
                 }
             if isinstance(value, list):
                 return [stable_content(item) for item in value]
@@ -78,6 +79,24 @@ def verify_bundle(bundle: Path) -> dict:
                 raw = archive.read("html/" + name + ".html")
                 if hashlib.sha256(raw).hexdigest() != page["html_sha256"]:
                     raise ValueError("Original HTML does not match entity provenance")
+                response = page.get("source_response")
+                if page.get("html_origin") == "api-rendered":
+                    if (
+                        not response
+                        or response.get("url") != page["url"]
+                        or not response.get("content_type")
+                        or hashlib.sha256(
+                            base64.b64decode(
+                                response.get("body_base64", ""), validate=True
+                            )
+                        ).hexdigest()
+                        != response.get("sha256")
+                    ):
+                        raise ValueError(
+                            "API response does not match entity provenance"
+                        )
+                elif response is not None or "html_origin" in page:
+                    raise ValueError("Unexpected API response provenance")
                 evidence_pages.add(name)
         if len(evidence_pages) != manifest["evidence_pages"]:
             raise ValueError("Evidence count mismatch")

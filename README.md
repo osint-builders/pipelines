@@ -4,7 +4,7 @@ Scrape equipment websites and distribute their data as a single offline search C
 Users can find radars, emitters, vehicles, sites, and other items by name or meaning, follow a
 stable entity ID, and retrieve the complete scraped evidence behind that item.
 
-The executable embeds the dataset, original HTML, Markdown, vectors, and query embedding
+The executable embeds the dataset, HTML, original responses, Markdown, vectors, and query embedding
 model. It requires no API key, Python installation, model download, or writable cache.
 The Python scraper and release tools run separately from consuming applications.
 
@@ -12,7 +12,7 @@ The Python scraper and release tools run separately from consuming applications.
 
 ```mermaid
 flowchart LR
-    A[Explicit crawl] --> B[Original HTML archive]
+    A[Explicit crawl] --> B[Original response archive]
     B --> C[Source adapter: entities and evidence]
     C --> D[Validated Markdown snapshot]
     D --> E[Embedding index and full-content bundle]
@@ -53,9 +53,10 @@ uv run --no-sync pipeline-build crawl russianforces --root ../pipeline-data
 uv run --no-sync pipeline-build crawl wikipedia --root ../pipeline-data
 uv run --no-sync pipeline-build crawl commons --root ../pipeline-data
 uv run --no-sync pipeline-build crawl armyrecognition --root ../pipeline-data
+uv run --no-sync pipeline-build crawl fandom --root ../pipeline-data
 uv run --no-sync pipeline-build status radartutorial --root ../pipeline-data
 uv run --no-sync pipeline-build model --output build/model
-uv run --no-sync pipeline-build package --root ../pipeline-data --source radartutorial --source deagel --source virtualglobetrotting --source russianforces --source wikipedia --source commons --source armyrecognition --model build/model --cache build/entity-vector-cache --output build/dataset.zip
+uv run --no-sync pipeline-build package --root ../pipeline-data --source radartutorial --source deagel --source virtualglobetrotting --source russianforces --source wikipedia --source commons --source armyrecognition --source fandom --model build/model --cache build/entity-vector-cache --output build/dataset.zip
 uv run --no-sync python tools/build_cli.py --bundle build/dataset.zip --output dist/pipelines
 uv run --no-sync python tools/accept_cli.py dist/pipelines build/dataset.zip
 uv run --no-sync python tools/evaluate_cli.py dist/pipelines --output build/retrieval-evaluation.json
@@ -80,11 +81,16 @@ To change extraction without crawling again, use the archive ID reported by `sta
 uv run --no-sync pipeline-build extract radartutorial ARCHIVE_ID --root ../pipeline-data
 ```
 
-Source storage is `DATA_ROOT/SOURCE/archives/CRAWL_ID/` for original HTML and a SQLite crawl
+Source storage is `DATA_ROOT/SOURCE/archives/CRAWL_ID/` for original responses and a SQLite crawl
 manifest, and `DATA_ROOT/SOURCE/published/snapshots/SNAPSHOT_ID/` for `entities.jsonl`, full
 Markdown by evidence ID, and snapshot metadata. `published/current.json` selects the
 current snapshot. The archive database is producer bookkeeping; runtime lookup uses the
 embedded entity catalog and vectors.
+
+API sources save original JSON as `.json` files in the archive's `html/` response directory.
+Their published snapshots additionally contain derived `html/EVIDENCE_ID.html` files.
+Each derived HTML page retains the API's exact article fragment inside a minimal document;
+the original response is separately preserved in entity metadata and CLI JSON exports.
 
 A per-source lock prevents concurrent writers. Publication checks archive completeness,
 HTML hashes, entity validity, minimum corpus size, and unexpected shrinkage before
@@ -158,7 +164,7 @@ only a manual dispatch trigger; ordinary CI never publishes a dataset or executa
 The release gate compares the new content fingerprint with the latest CLI release.
 Unchanged content skips building and publishing. The fingerprint includes extracted entity
 metadata, full Markdown, and selected search text, but excludes retrieval timestamps and
-raw HTML hashes. Repeated Deagel responses contain changing Blazor transport bytes even
+raw HTML hashes and API response envelopes. Repeated Deagel responses contain changing Blazor transport bytes even
 when the extracted content is identical. HTML checksums still protect archived bytes and
 bundle integrity; transport-only changes do not trigger a release. Model/recipe hashes are
 tracked separately; code-only and model-only changes do not trigger a CLI release.
@@ -186,6 +192,7 @@ of Git history. License notices remain embedded and available through the CLI.
 | [Wikipedia: Military radars of China](https://en.wikipedia.org/wiki/Category:Military_radars_of_China) | English category members and their subcategories | 41 entities: 39 radars and two aircraft |
 | [Wikimedia Commons: Military radars of Russia](https://commons.wikimedia.org/wiki/Category:Military_radars_of_Russia) | Named equipment categories with category and media-description evidence | 151 equipment and site identities |
 | [Army Recognition: Air Defense Radars](https://www.armyrecognition.com/military-products/army/radars/air-defense-radars) | Equipment articles in category 139 | 11 entities: ten radars and one optical sensor |
+| [Fandom Military Wiki: Russian and Soviet military radars](https://military-history.fandom.com/wiki/Category:Russian_and_Soviet_military_radars) | Reviewed category articles from the public MediaWiki API | 46 entities: 32 radars and 14 sites, with 53 article pages |
 
 Radartutorial discovery follows English sitemaps, indexes, manufacturer names, and links.
 The crawler obeys robots.txt, limits concurrency to two, and applies delay/throttling.
@@ -634,7 +641,7 @@ the entity catalog and all 11 Markdown files exactly. Tests cover query semantic
 pagination rejection, both article layouts, column pairing, uncertainty, alias boundaries,
 incomplete pages, ad/metadata changes, and byte-exact offline publication.
 
-The combined seven-source bundle contains 3,380 entities, 4,105 evidence pages, and 13,318
+The initial seven-source bundle contained 3,380 entities, 4,105 evidence pages, and 13,318
 vectors. All 37 required named-item queries across the seven sources return the expected
 item first, including all 11 new items. The four Army Recognition capability diagnostics
 also return their expected item first; six previously documented diagnostics in other
@@ -645,6 +652,92 @@ dataset ID. All five platform executables were built locally.
 Linux amd64 also passed verification, exact exports, and all 37 required retrieval checks
 with networking disabled and a read-only filesystem. Linux arm64 passed verification under emulation. macOS binaries
 were cross-compiled locally; the release workflow still requires native macOS acceptance.
+
+### Fandom Military Wiki discovery and extraction
+
+The `fandom` source covers the supplied **Russian and Soviet military radars** category.
+On September 20, 2026 UTC, ordinary article/category HTML, `robots.txt`, and the
+`index.php?action=render` route returned HTTP 403 challenges. An ordinary agent-browser
+session also reached human verification. No challenge was solved or bypassed. The public
+`api.php` endpoint independently served HTTP 200 JSON with the normal project user agent,
+without cookies or authentication, so production uses that endpoint and needs no browser.
+Robots enforcement remains enabled; the robots response was unavailable, not a successfully
+read allow policy. The shared crawler's unavailable-robots behavior applied to these API
+requests, with its usual delay, throttle, and concurrency limits.
+
+Discovery uses MediaWiki's [categorymembers API](https://www.mediawiki.org/wiki/API:Categorymembers)
+with `cmtitle`, `cmlimit=500`, and the server's continuation tokens. The live category listed
+53 articles with no subcategories. A second evaluation using ten results per request
+followed six pages and returned exactly the same 53 IDs, without duplicates or omissions.
+The adapter validates pagination completeness and rejects cycles, unsupported namespaces,
+API errors, and unreviewed membership changes. Article references, search results, parent
+categories, other wikis, media, and external links never expand this crawl.
+
+The [parse API](https://www.mediawiki.org/wiki/API:Parsing_wikitext) supplies full rendered
+article HTML, page IDs, revision IDs, and categories. A query for page information confirmed
+that similarly named category entries were separate pages, not redirects. The
+[reviewed identity catalog](src/pipelines/sources/fandom_pages.json) groups the Mech/Myech,
+Duga/Russian Woodpecker, N019/Rubin, Zaslon, and Zhuk duplicates into 46 subjects while
+retaining all 53 articles. Airborne Bars and naval MR-103 Bars/Muff Cob remain separate.
+IDs use the preferred article's native page ID, such as `fandom:344747` for Duga and
+`fandom:130998` for P-18. New or renamed members require catalog review; changed parse
+identities fail rather than silently following a different subject.
+
+The production crawl saved 55 successful responses: category membership, wiki license
+metadata, and 53 articles. Extraction retains descriptions, specifications, infobox values,
+captions, references, original qualifications, and imported attribution notices. Infobox
+facts keep their source units and wording without inferring current operating status or
+normalized performance values. Aliases come from the introductory subject names and
+reviewed names actually present in the source. Captions, comparisons, and equipment
+mentioned later in an article do not become aliases.
+
+Every evidence record links its canonical article, revision, and contributor history.
+The captured rights API reports `CC-BY-SA` and links to [Fandom licensing](https://www.fandom.com/licensing);
+it supplies no version number. Imported Wikipedia/GFDL notices are retained as written,
+and media may have separate terms. The exact JSON capture and exact API HTML fragment
+remain exportable. Full Markdown uses stable file-description links in place of thumbnail
+delivery URLs, preserving captions and removing layout controls. In repeat evaluation,
+P-15's unchanged revision alternated between thumbnails and broken-image notices;
+normalizing those links and excluding maintenance categories made all 53 extracted
+records stable across the two captures. Original rendering differences remain in the archive.
+
+Embeddings use article prose, technical sections, infoboxes, and captions. References,
+license boilerplate, maintenance notices, image filenames, and navigation are omitted
+from search text while remaining available in the full evidence. Offline extraction was
+verified in a container with networking disabled. Fixture tests cover scope, continuation,
+identity review, duplicate grouping, alias exclusions, original response preservation,
+derived HTML integrity, transient image failures, and content-change gating.
+
+Eight distinct queries compared representations across the 46 subjects using the pinned
+model and pure cosine ranking, with a source filter:
+
+| Embedding input | Vectors | Expected item first | Expected item in first five |
+| --- | --- | --- | --- |
+| Lead paragraphs only | 124 | 8/8 | 8/8 |
+| Full extracted Markdown | 682 | 8/8 | 8/8 |
+| Article body without references and boilerplate (selected) | 418 | 8/8 | 8/8 |
+
+The selected representation retains technical sections beyond the introduction, using
+fewer vectors than full-page embedding. This small diagnostic does not establish general
+accuracy. Queries include Russian Woodpecker, Spoon Rest D, Flash Dance, N001 Mech, and
+descriptions of Duga's shortwave interference, Gabala's location, naval gun control, and
+the Su-35 radar. Twelve Fandom cases are retained in the CLI evaluator, including separate
+Bars/Muff Cob identities and source/kind filters.
+
+The combined eight-source bundle contains 3,426 entities, 4,158 evidence pages, and 13,736
+vectors. The 53 original API article captures round-trip independently of their derived
+HTML, and full Markdown remains available for every article, including duplicate pages.
+All twelve Fandom CLI queries pass, along with all 45 required checks across the eight
+sources. Six existing optional semantic cases remain misses in the diagnostic report.
+The unfiltered `russian cheeseboard` query still returns 96L6E first in both search modes.
+Unchanged repackaging reports `changed: false` and preserves the dataset ID.
+
+Verification included 119 Python tests, lint/type checks, Go tests/vet, and all five binary
+builds. Windows and Linux amd64 passed bundle verification and exact export acceptance;
+Linux ran with networking disabled and a read-only filesystem. Linux arm64 verification
+passed under emulation. macOS binaries were cross-compiled locally; release publication
+still requires their native acceptance jobs. API errors returned with HTTP 200 are marked
+as failed captures so an explicit crawl retry can fetch them again.
 
 ### Add another website
 
@@ -680,6 +773,12 @@ text. Facts point to retained evidence URLs or anchors, and aliases name the ite
 Set `Evidence.search_text` to an item's own section when shared-page text would confuse
 sibling variants. Leave it empty to embed full Markdown. This never replaces the retained
 full evidence. An optional `Entity.url` may select an anchor within a retained page.
+For an API that returns rendered HTML, set `Evidence.rendered_html` and the human-facing
+`Evidence.canonical_url`, keeping `Evidence.url` equal to the captured API request. The
+shared builder writes the derived HTML and attaches `html_origin: "api-rendered"` plus
+`source_response` with its URL, content type, SHA-256, and exact `body_base64`. Producer
+and consumer integrity checks validate both representations. Ordinary HTML adapters
+leave these optional fields empty and retain their existing exports.
 Implement the separate `SupplementalDiscovery` protocol for discovery state not available
 in ordinary archived HTML, such as browser-rendered catalogs or prior feed membership;
 offline extraction never invokes that capability.
@@ -740,6 +839,7 @@ pipelines search --source russianforces --kind spacecraft "Cosmos 2615"
 pipelines search --source wikipedia --kind radar "Dragon Eye"
 pipelines search --source commons --kind radar "1L122-2E"
 pipelines search --source armyrecognition --kind sensor "MSP500 NASAMS"
+pipelines search --source fandom --kind radar "Russian Woodpecker"
 pipelines search --mode vector --kind radar "detect aircraft approaching an airport"
 pipelines similar --limit 5 radartutorial:8bdc6ce92fea3ca62de71395
 pipelines get radartutorial:8bdc6ce92fea3ca62de71395
@@ -751,6 +851,7 @@ pipelines get russianforces:sineva
 pipelines get wikipedia:51215241
 pipelines get commons:54320747
 pipelines get armyrecognition:e4a5aecde1b187a0deffbab3
+pipelines get fandom:344747
 ```
 
 Search emits JSON with `dataset_id`, query/mode, and `results`. Each result includes its
@@ -764,6 +865,9 @@ attributes or confidence. The current dataset returns 96L6E "Cheese Board" first
 `get` defaults to JSON with the complete entity and all evidence pages, including full
 Markdown, provenance, and HTML. Non-UTF-8 HTML is represented by `html_base64`. Markdown
 output joins all retained pages; `--evidence PAGE_ID` selects one. HTML output preserves
-original response bytes and requires an evidence ID when the entity has multiple pages.
+captured HTML bytes for ordinary pages, or the derived article document for API sources,
+and requires an evidence ID when the entity has multiple pages. API evidence is marked
+`html_origin: "api-rendered"`; JSON output also includes the exact original response in
+`source_response.body_base64`, its content type and checksum, and `canonical_url`.
 Commands return nonzero on failure with a JSON `error` on stderr. All consumer operations
 work offline and never start a crawl or update the dataset.

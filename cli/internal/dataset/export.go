@@ -84,6 +84,27 @@ func (d *Dataset) Export(id, format, evidenceID string) ([]byte, error) {
 		if hex.EncodeToString(hash[:]) != page["html_sha256"] {
 			return nil, errors.New("evidence HTML checksum mismatch")
 		}
+		if page["html_origin"] == "api-rendered" {
+			response, ok := page["source_response"].(map[string]any)
+			contentType, typeOK := response["content_type"].(string)
+			if !ok || response["url"] != url || !typeOK || contentType == "" {
+				return nil, errors.New("invalid API response provenance")
+			}
+			encoded, ok := response["body_base64"].(string)
+			if !ok {
+				return nil, errors.New("missing API response body")
+			}
+			body, err := base64.StdEncoding.Strict().DecodeString(encoded)
+			if err != nil {
+				return nil, errors.New("invalid API response body")
+			}
+			digest := sha256.Sum256(body)
+			if hex.EncodeToString(digest[:]) != response["sha256"] {
+				return nil, errors.New("API response checksum mismatch")
+			}
+		} else if page["source_response"] != nil || page["html_origin"] != nil {
+			return nil, errors.New("unexpected API response provenance")
+		}
 		if utf8.Valid(html) {
 			page["html"] = string(html)
 		} else {
