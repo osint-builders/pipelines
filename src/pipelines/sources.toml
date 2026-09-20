@@ -3,3 +3,6 @@ adapter = "pipelines.sources.radartutorial:Radartutorial"
 
 [deagel]
 adapter = "pipelines.sources.deagel:Deagel"
+
+[virtualglobetrotting]
+adapter = "pipelines.sources.virtualglobetrotting:VirtualGlobetrotting"

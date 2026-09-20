@@ -1,7 +1,7 @@
 # pipelines
 
 Scrape equipment websites and distribute their data as a single offline search CLI.
-Users can find radars, emitters, vehicles, and other items by name or meaning, follow a
+Users can find radars, emitters, vehicles, sites, and other items by name or meaning, follow a
 stable entity ID, and retrieve the complete scraped evidence behind that item.
 
 The executable embeds the dataset, original HTML, Markdown, vectors, and query embedding
@@ -48,9 +48,10 @@ uv sync --frozen --extra build --extra vector
 uv run --no-sync pipeline-build sources
 uv run --no-sync pipeline-build crawl radartutorial --root ../pipeline-data
 uv run --no-sync pipeline-build crawl deagel --root ../pipeline-data
+uv run --no-sync pipeline-build crawl virtualglobetrotting --root ../pipeline-data
 uv run --no-sync pipeline-build status radartutorial --root ../pipeline-data
 uv run --no-sync pipeline-build model --output build/model
-uv run --no-sync pipeline-build package --root ../pipeline-data --source radartutorial --source deagel --model build/model --cache build/vector-cache --output build/dataset.zip
+uv run --no-sync pipeline-build package --root ../pipeline-data --source radartutorial --source deagel --source virtualglobetrotting --model build/model --cache build/vector-cache --output build/dataset.zip
 uv run --no-sync python tools/build_cli.py --bundle build/dataset.zip --output dist/pipelines
 uv run --no-sync python tools/accept_cli.py dist/pipelines build/dataset.zip
 uv run --no-sync python tools/evaluate_cli.py dist/pipelines --output build/retrieval-evaluation.json
@@ -87,7 +88,7 @@ atomically replacing the current pointer. Failed runs preserve the previous snap
 Archives and historical snapshots are retained. Older page-based snapshots can be migrated
 by extracting their saved archive again; another crawl is unnecessary.
 
-For containerized Radartutorial crawling or offline extraction of either source:
+For containerized Radartutorial/VirtualGlobetrotting crawling or offline extraction of any source:
 
 ```sh
 docker build --tag osint-pipelines:local .
@@ -176,6 +177,7 @@ of Git history. License notices remain embedded and available through the CLI.
 | --- | --- | --- |
 | [Radartutorial](https://www.radartutorial.eu/index.en.html) | English equipment catalog pages | 1,735 entities: 1,710 radar and 25 equipment |
 | [Deagel Armies](https://www.deagel.com/Armies/) | English land equipment and its variants, across all four status filters | 1,285 entities from 797 family pages |
+| [VirtualGlobetrotting Radar Sites](https://virtualglobetrotting.com/category/buildings/radar-sites/rss.xml) | Geographic records linked from the rolling RSS feed | 100 sites from 100 detail pages |
 
 Radartutorial discovery follows English sitemaps, indexes, manufacturer names, and links.
 The crawler obeys robots.txt, limits concurrency to two, and applies delay/throttling.
@@ -230,13 +232,82 @@ Repeat-response checks also confirmed identical extraction despite different tra
 bytes. Automated tests cover both streamed and rendered pages, stable IDs, table fidelity,
 scope exclusions, robots rejection, cached discovery, and offline re-extraction.
 
-The combined 3,020-entity executable contains 10,972 vectors and 2,532 evidence pages.
-All six named-item regression queries returned their expected entity first. In the full
+The initial Deagel/Radartutorial evaluation used 3,020 entities, 10,972 vectors, and 2,532
+evidence pages. All six named-item regression queries returned their expected entity first. In the full
 Deagel corpus, the range/target-count radar query ranked its expected variant fourth,
 while the generic sound-and-infrared query placed Penicillin outside the first 20.
 These diagnostic misses are reported explicitly rather than treated as successful
 retrieval. Exact HTML/Markdown exports passed for both sources, and packaging the
 unchanged snapshots returned `changed: false` with the same dataset ID.
+
+### VirtualGlobetrotting discovery and extraction
+
+The [Radar Sites RSS feed](https://virtualglobetrotting.com/category/buildings/radar-sites/rss.xml)
+is the discovery boundary. It currently exposes the 100 most recent records, including
+GeoRSS points and descriptions. The category page reports 497 entries with thumbnail,
+list, and map views; sorting by title, latest, views, or rating; and Google/Bing imagery
+filters. The linked Earth/KML export contains only the first 25 entries. Neither feed
+nor KML is a complete category export. The site's robots.txt excludes search, AJAX,
+nearby/archive views, and category pagination; the adapter does not request those URLs.
+
+The scraper archives RSS and follows only its canonical detail links. These pages expose
+the description (when supplied), numeric map ID, coordinates, locality/region/country, contributor,
+publication/modification dates, categories, references, and comments directly in HTML.
+No browser is required by the scraper. An agent-browser comparison of Bullen Point
+confirmed the same description, place name, and coordinates as the HTTP response.
+The RSS feed is useful for discovery; detail pages provide the additional metadata and
+complete record evidence. In this crawl, RSS descriptions matched detail prose exactly;
+the benefit of fetching detail pages was their IDs, place names, references, and comments.
+
+IDs use the site's numeric map ID, for example `virtualglobetrotting:311208` for Bullen
+Point. A renamed slug does not change that ID. Records use `kind: site`: they describe
+geographic observations or facilities, which may contain several systems, historic
+equipment, or a source-reported event. They are not automatically merged with equipment
+models or other map records at similar coordinates. Latitude/longitude are validated
+numeric facts in degrees, and contributor dates preserve the age of the source's claims.
+The CLI does not currently provide distance/radius search.
+
+Search embeddings use the record title, place, categories, and description. Complete
+record Markdown also retains dates, coordinates, references, map links, and attributed
+comments. Raw HTML remains byte-for-byte exportable. Navigation, neighboring sites,
+view counters, ratings, and forms are excluded from Markdown and embeddings. Comments
+remain in the evidence but do not influence similarity ranking. Imagery and external
+references remain links; the crawler does not fetch them. Source descriptions are
+community contributions, retained with their original attribution and rights.
+
+Each explicit refresh fetches the current RSS members and previously published detail
+URLs. The latter are saved with a checksum in the new archive, so resuming a crawl uses
+the same membership and older records are not lost merely because they leave the rolling
+feed. Discovery does not run during offline extraction or consumer CLI use. The initial
+dataset covers the feed's 100 records, not all 497 category entries.
+
+The September 20, 2026 UTC crawl saved all 100 detail pages and the RSS response with
+HTTP 200. All 100 titles and coordinate pairs agreed between RSS and HTML. Eleven
+records legitimately contain no description; their available metadata is retained without
+inventing prose. Repeated titles remain separate records under their numeric IDs. The
+saved archive was re-extracted in a container with networking disabled, and unchanged
+repackaging retained the same dataset ID.
+
+Eight source-filtered queries compared three representations using the pinned model and
+pure vector ranking. These are small diagnostic evaluations, not a general accuracy claim:
+
+| Embedding input | Vectors for 100 sites | Expected item first | Expected item in first five |
+| --- | --- | --- | --- |
+| RSS text and coordinates | 200 | 4/8 | 4/8 |
+| Full extracted record | 305 | 6/8 | 7/8 |
+| Title, place, categories, and description (selected) | 200 | 6/8 | 7/8 |
+
+The selected representation adds location context without embedding comments or link
+lists. The Santa Teresa/New Mexico query improved from rank 72 with RSS-only text to
+rank 1. Tradeoffs remain: the Apple Orchard Mountain dome query ranked 20 with focused
+text versus 3 with full evidence, while the Cyprus mountain query improved from 24 to 3.
+Both are retained as diagnostic cases in the CLI evaluation suite. All four new named-site
+regressions returned their expected result first; all six earlier named-item cases still
+passed. Raw HTML and Markdown round trips passed for all three sources.
+
+The combined dataset contains 3,120 entities, 2,632 evidence pages, and 11,172 vectors.
+The new `site` filter works alongside existing entity kinds; source and kind filters are
+checked by the executable evaluation, and the release workflow runs these checks.
 
 ### Add another website
 
@@ -272,7 +343,7 @@ full evidence. An optional `Entity.url` may select an anchor within a retained p
 Implement the separate `SupplementalDiscovery` protocol only when ordinary archived HTML
 cannot expose the complete catalog; offline extraction never invokes that capability.
 
-Supported kinds are `radar`, `emitter`, `sensor`, `vehicle`, `aircraft`, `vessel`, `weapon`,
+Supported kinds are `radar`, `emitter`, `sensor`, `vehicle`, `aircraft`, `vessel`, `weapon`, `site`,
 `equipment`, and `item`. Categories provide source-specific distinctions. Country and
 manufacturer facts need source evidence; cross-source entity resolution and attachment
 OCR are not implemented.
@@ -318,12 +389,14 @@ is currently no structured country or numeric-fact filter.
 ```sh
 pipelines search "russian cheeseboard"
 pipelines search --source deagel "M142 HIMARS wheeled rocket artillery launcher"
+pipelines search --source virtualglobetrotting --kind site "Bullen Point Alaska radar"
 pipelines search --mode vector --kind radar "detect aircraft approaching an airport"
 pipelines similar --limit 5 radartutorial:8bdc6ce92fea3ca62de71395
 pipelines get radartutorial:8bdc6ce92fea3ca62de71395
 pipelines get --format markdown radartutorial:8bdc6ce92fea3ca62de71395
 pipelines get --format html radartutorial:8bdc6ce92fea3ca62de71395
 pipelines get deagel:a000516-003
+pipelines get virtualglobetrotting:311208
 ```
 
 Search emits JSON with `dataset_id`, query/mode, and `results`. Each result includes its

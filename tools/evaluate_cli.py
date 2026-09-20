@@ -26,7 +26,7 @@ def evaluate(binary: Path, cases: Path) -> dict:
             skipped.append(case)
             continue
         start = time.perf_counter()
-        response = run(
+        args = [
             "search",
             "--source",
             case["source"],
@@ -34,11 +34,15 @@ def evaluate(binary: Path, cases: Path) -> dict:
             case["mode"],
             "--limit",
             "20",
-            case["query"],
-        )
+        ]
+        if case.get("kind"):
+            args.extend(["--kind", case["kind"]])
+        response = run(*args, case["query"])
         items = response["results"]
         if any(item["source"] != case["source"] for item in items):
             raise ValueError("Source filter leaked an unrelated entity")
+        if case.get("kind") and any(item["kind"] != case["kind"] for item in items):
+            raise ValueError("Kind filter leaked an unrelated entity")
         rank = next(
             (i + 1 for i, item in enumerate(items) if item["id"] == case["expected"]),
             None,

@@ -6,5 +6,13 @@
   {"source":"deagel","query":"Russian T-90M main battle tank","mode":"hybrid","expected":"deagel:a000369-003","max_rank":1},
   {"source":"deagel","query":"1B75 acoustic counter battery sensor","mode":"hybrid","expected":"deagel:a003449-001","max_rank":1},
   {"source":"deagel","query":"passive artillery locator using sound and infrared sensors","mode":"vector","expected":"deagel:a003449-001","max_rank":5,"required":false},
-  {"source":"deagel","query":"radar tracking 200 aerial targets with 700 kilometer detection range","mode":"vector","expected":"deagel:a003156-002","max_rank":5,"required":false}
+  {"source":"deagel","query":"radar tracking 200 aerial targets with 700 kilometer detection range","mode":"vector","expected":"deagel:a003156-002","max_rank":5,"required":false},
+  {"source":"virtualglobetrotting","kind":"site","query":"Bullen Point Alaska short range radar","mode":"hybrid","expected":"virtualglobetrotting:311208","max_rank":1},
+  {"source":"virtualglobetrotting","query":"NOAA NEXRAD KEPZ","mode":"hybrid","expected":"virtualglobetrotting:304336","max_rank":1},
+  {"source":"virtualglobetrotting","query":"CASBE Bethune Weather Radar","mode":"hybrid","expected":"virtualglobetrotting:261428","max_rank":1},
+  {"source":"virtualglobetrotting","query":"Former Bedford Air Force Station","mode":"hybrid","expected":"virtualglobetrotting:258274","max_rank":1},
+  {"source":"virtualglobetrotting","query":"weather monitoring radar in Santa Teresa New Mexico","mode":"vector","expected":"virtualglobetrotting:304336","max_rank":5,"required":false},
+  {"source":"virtualglobetrotting","query":"Cold War distant early warning radar on Cape Sarichef Alaska","mode":"vector","expected":"virtualglobetrotting:234674","max_rank":5,"required":false},
+  {"source":"virtualglobetrotting","query":"radar inside a protective dome on Apple Orchard Mountain","mode":"vector","expected":"virtualglobetrotting:258274","max_rank":5,"required":false},
+  {"source":"virtualglobetrotting","query":"fire lookout tower with radar on a Cyprus mountain summit","mode":"vector","expected":"virtualglobetrotting:260383","max_rank":5,"required":false}
 ]

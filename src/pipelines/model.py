@@ -25,6 +25,7 @@ class EntityKind(StrEnum):
     WEAPON = "weapon"
     EQUIPMENT = "equipment"
     ITEM = "item"
+    SITE = "site"
 
 
 @dataclass
