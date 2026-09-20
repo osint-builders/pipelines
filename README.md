@@ -914,6 +914,57 @@ macOS binaries were cross-compiled locally and still require native release acce
 Offline replay produced identical entity, Markdown, and HTML files. Unchanged packaging
 reports `changed: false`, preserving the dataset ID and the data-driven release gate.
 
+### CMANO DB evaluation (blocked)
+
+[CMANO DB](https://cmano-db.com/) is under evaluation and is **not an installed source
+or part of the bundled dataset**. The September 20, 2026 UTC evaluation could inspect
+publicly indexed navigation and listings, but could not capture usable original pages
+from the producer environment. No CMANO entities, embeddings, or release assets were
+generated. The existing ten-source bundle remains unchanged.
+
+| Evaluation | Observed result |
+| --- | --- |
+| Publicly indexed homepage | Category, Country/Type, and Item selectors; database version 511; separate Cold War database link |
+| Publicly indexed lists | Aircraft, ship, submarine, facility, weapon, and sensor lists; aircraft country groupings and sensor type groupings |
+| Publicly indexed search page | Type selector and text query field; result behavior not verified |
+| Producer HTTP request | HTTP 403 with `Cf-Mitigated: challenge`; response is a verification page, not catalog HTML |
+| agent-browser | Cloudflare human-verification screen; local browser diagnostics passed |
+| In-app browser | HTTP 522 origin-server timeout reported by Cloudflare |
+| robots.txt and sampled sensor detail | Requests timed out; robots policy and detail structure remain unverified |
+
+The indexed listing renderer resolved some relative links into duplicated paths such as
+`/sensor/sensor/5474/`; the returned page contained only site layout. Such responses
+cannot establish entity identity or extraction fidelity. An accessible original listing
+must establish its base URL and canonical detail links before discovery is implemented.
+Search-engine excerpts are research evidence, not substitutes for archived source bytes.
+
+The proposed adapter would enumerate the six modern-database lists, retain each native
+category and numeric record ID in a key such as `cmano:sensor-5474`, and preserve country,
+date, and configuration variants as separate records. The separate Cold War database
+would require an explicit scope decision and database-qualified identities. Sensor types
+would distinguish radars, passive sensors, and emitters using source metadata; facility
+entries must not be assumed to identify real geographic sites. Component references
+would remain relationships/links, not aliases of their host platform.
+
+These are Command simulation records. Every entity must identify that provenance and
+the captured database version, retain hypothetical/generic labels where present, and
+avoid presenting simulation parameters as independently verified operational facts.
+The intended output is complete archived HTML plus extracted Markdown, with focused
+identity and specification text for vector search. Attribution and redistribution terms
+still need review from accessible source pages.
+
+Resume evaluation when ordinary access is available or an authorized original-data
+export is supplied. Verify robots policy, listing completeness, pagination, and original
+detail responses across all six types before registering the adapter. Compare direct
+HTML with rendered details, test malformed/challenge/layout-only responses, replay
+extraction offline, and evaluate named-item and semantic queries plus complete CLI
+exports. Do not publish an empty or partial snapshot, or add a placeholder adapter that
+appears to support this source. Human-verification and origin failures were not bypassed.
+
+After this documentation update, all 153 Python tests passed and the existing Windows
+CLI passed `verify` with 4,194 entities, 4,926 evidence pages, and four embedding parity
+probes. These checks validate the existing dataset, not CMANO extraction or retrieval.
+
 ### Add another website
 
 Implement the [Source protocol](src/pipelines/sources/base.py) in
