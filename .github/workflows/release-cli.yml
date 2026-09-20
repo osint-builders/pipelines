@@ -1,0 +1,110 @@
+name: Release CLI
+
+on:
+  workflow_dispatch:
+    inputs:
+      input_tag:
+        description: Verified data input tag (data- followed by the full content SHA-256)
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-cli
+  cancel-in-progress: false
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    outputs:
+      changed: ${{ steps.gate.outputs.changed }}
+      tag: ${{ steps.gate.outputs.tag }}
+      bundle_sha256: ${{ steps.gate.outputs.bundle_sha256 }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - id: gate
+        env:
+          GH_TOKEN: ${{ github.token }}
+          INPUT_TAG: ${{ inputs.input_tag }}
+        run: python tools/release.py gate --repo "$GITHUB_REPOSITORY" --tag "$INPUT_TAG"
+      - if: steps.gate.outputs.changed == 'true'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: verified-dataset
+          path: build/release/
+          compression-level: 0
+          retention-days: 2
+
+  binary:
+    needs: gate
+    if: needs.gate.outputs.changed == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-latest
+            target: linux-amd64
+          - runner: ubuntu-24.04-arm
+            target: linux-arm64
+          - runner: macos-15-intel
+            target: darwin-amd64
+          - runner: macos-15
+            target: darwin-arm64
+          - runner: windows-latest
+            target: windows-amd64.exe
+    runs-on: ${{ matrix.runner }}
+    env:
+      CGO_ENABLED: "0"
+      EXPECTED_BUNDLE_SHA256: ${{ needs.gate.outputs.bundle_sha256 }}
+      TARGET: ${{ matrix.target }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
+        with:
+          go-version-file: cli/go.mod
+          cache-dependency-path: cli/go.sum
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: verified-dataset
+          path: build/release/
+      - run: python tools/check_bundle_hash.py build/release/dataset.zip
+      - working-directory: cli
+        run: go test -tags NODOWNLOAD ./...
+      - run: python tools/build_cli.py --bundle build/release/dataset.zip --output "dist/pipelines-$TARGET"
+      - run: python tools/accept_cli.py "dist/pipelines-$TARGET" build/release/dataset.zip
+      - run: python tools/evaluate_cli.py "dist/pipelines-$TARGET"
+      - if: matrix.target == 'linux-amd64'
+        run: docker run --rm --network none --read-only --mount "type=bind,source=$PWD/dist,target=/binaries,readonly" debian:bookworm-slim /binaries/pipelines-linux-amd64 verify
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: binary-${{ matrix.target }}
+          path: dist/pipelines-*
+          compression-level: 0
+          retention-days: 7
+
+  publish:
+    needs: [gate, binary]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          pattern: binary-*
+          path: dist/
+          merge-multiple: true
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: verified-dataset
+          path: build/release/
+      - run: cp build/release/dataset-manifest.json dist/dataset-manifest.json
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ needs.gate.outputs.tag }}
+        run: python tools/release.py publish --repo "$GITHUB_REPOSITORY" --tag "$RELEASE_TAG" --directory dist

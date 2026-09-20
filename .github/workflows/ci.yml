@@ -24,9 +24,30 @@ jobs:
       - run: uv sync --frozen --extra build
       - run: uv run --no-sync ruff check .
       - run: uv run --no-sync ruff format --check .
-      - run: uv run --no-sync mypy src tests
+      - run: uv run --no-sync mypy src tests tools
       - run: uv run --no-sync pytest
       - run: uv build
+
+  go:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-15]
+    runs-on: ${{ matrix.os }}
+    env:
+      CGO_ENABLED: "0"
+    defaults:
+      run:
+        working-directory: cli
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
+        with:
+          go-version-file: cli/go.mod
+          cache-dependency-path: cli/go.sum
+      - run: go test -tags NODOWNLOAD ./...
+      - run: go vet -tags NODOWNLOAD ./...
+      - run: go build -tags NODOWNLOAD ./cmd/pipelines
 
   docker:
     runs-on: ubuntu-latest

@@ -1,3 +1,5 @@
 [radartutorial]
 adapter = "pipelines.sources.radartutorial:Radartutorial"
-description = "English radar equipment records and tutorials"
+
+[deagel]
+adapter = "pipelines.sources.deagel:Deagel"

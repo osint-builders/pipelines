@@ -1,7 +1,5 @@
-import importlib
 import json
 import socket
-import sqlite3
 from pathlib import Path
 
 import pytest
@@ -9,7 +7,7 @@ from filelock import FileLock, Timeout
 
 from pipelines.archive import Archive
 from pipelines.build import build, publish
-from pipelines.reader import Dataset, search_all, status
+from pipelines.snapshot import load_snapshot, status
 from pipelines.sources.radartutorial import ORIGIN, Radartutorial, normalize_fact
 
 URL = f"{ORIGIN}/19.kartei/03.atc/en/karte005.en.html"
@@ -28,7 +26,7 @@ and <span class="explan" title="pulsecompressed long-range mode">55 us</span></t
 
 
 class SmallSource(Radartutorial):
-    minimum_documents = 1
+    minimum_entities = 1
     seeds: tuple[str, ...] = (URL,)
 
 
@@ -43,22 +41,25 @@ def archived(tmp_path: Path) -> tuple[SmallSource, Archive, Path]:
 
 
 def test_extract_keeps_evidence_and_removes_layout_duplicates() -> None:
-    document = SmallSource().extract(URL, HTML, ["ASR-12"])
+    document = SmallSource().extract(URL, HTML, ["ASR-12"])[0]
     assert document is not None
     assert document.title == "ASR 12"
-    assert document.names == ["ASR 12", "ASR-12"]
+    assert document.aliases == ["ASR 12", "ASR-12"]
     assert document.facts[0].values == [2.7, 2.9]
     assert document.facts[0].evidence == URL
     assert "Short-range mode" in document.facts[1].raw
-    assert "long-range mode" in document.markdown
+    assert "long-range mode" in document.evidence[0].markdown
     assert len(document.facts) == 2
-    assert "Unrelated navigation" not in document.markdown
-    assert "Duplicate print" not in document.markdown
-    assert document.markdown.count("ASR 12") == 1
-    assert "Individual image copyright" in document.markdown
-    assert "Image copyright ACME 2026" in document.markdown
-    assert "https://www.radartutorial.eu/19.kartei/diagram.png" in document.markdown
-    assert document.links == [
+    assert "Unrelated navigation" not in document.evidence[0].markdown
+    assert "Duplicate print" not in document.evidence[0].markdown
+    assert document.evidence[0].markdown.count("ASR 12") == 1
+    assert "Individual image copyright" in document.evidence[0].markdown
+    assert "Image copyright ACME 2026" in document.evidence[0].markdown
+    assert (
+        "https://www.radartutorial.eu/19.kartei/diagram.png"
+        in document.evidence[0].markdown
+    )
+    assert document.evidence[0].links == [
         f"{ORIGIN}/19.kartei/03.atc/en/manual.pdf",
         f"{ORIGIN}/19.kartei/03.atc/en/picture.jpg",
     ]
@@ -104,7 +105,7 @@ def test_scope_discovery_and_noindex() -> None:
             HTML.replace(b"<head>", b'<head><meta name="robots" content="noindex">'),
             [],
         )
-        is None
+        == []
     )
 
 
@@ -123,14 +124,14 @@ def test_script_navigation_links_are_discovered_without_execution() -> None:
     url = f"{ORIGIN}/19.kartei/en/ka02.en.html"
     body = b'<script>var page=new Array("../03.atc/en/karte005.en.html");</script>'
     assert source.discover(url, body) == [URL]
-    assert source.extract(url, body, []) is None
+    assert source.extract(url, body, []) == []
 
 
 def test_malformed_language_comment_does_not_hide_the_article() -> None:
     broken = HTML.replace(
         b"<nav>Unrelated navigation", b"<nav><!-- Unclosed language menu"
     )
-    document = SmallSource().extract(URL, broken, [])
+    document = SmallSource().extract(URL, broken, [])[0]
     assert document is not None
     assert document.title == "ASR 12"
     assert document.facts[0].raw == "2.7-2.9 GHz"
@@ -140,35 +141,36 @@ def test_unclosed_mobile_heading_does_not_delete_the_article() -> None:
     broken = HTML.replace(
         b'<h4 class="hh_yes">ASR 12</h4>', b'<h5 class="hh_yes">ASR 12'
     )
-    document = SmallSource().extract(URL, broken, [])
+    document = SmallSource().extract(URL, broken, [])[0]
     assert document is not None
-    assert "airport surveillance radar" in document.markdown
+    assert "airport surveillance radar" in document.evidence[0].markdown
     assert len(document.facts) == 2
 
 
-def test_image_only_help_page_is_preserved() -> None:
-    body = b'<html><title>Help - Radartutorial</title><body><a href="javascript:close()"><img src="help.png"></a></body></html>'
-    document = SmallSource().extract(f"{ORIGIN}/html/help02.en.html", body, [])
-    assert document is not None
-    assert document.title == "Help"
-    assert f"{ORIGIN}/html/help.png" in document.markdown
-    assert "javascript" not in document.markdown
+def test_tutorial_help_and_event_pages_are_not_entities() -> None:
+    source = SmallSource()
+    for path in (
+        "/html/help02.en.html",
+        "/01.basics/en/rb01.en.html",
+        "/19.kartei/13.labs/en/karte001.en.html",
+    ):
+        assert source.extract(ORIGIN + path, HTML, []) == []
 
 
 def test_scientific_subscripts_and_exponents_are_preserved() -> None:
     body = HTML.replace(b"2.7-2.9 GHz", b"10<sup>3</sup> Hz").replace(
         b"Frequency:", b"f<sub>0</sub>:"
     )
-    document = SmallSource().extract(URL, body, [])
+    document = SmallSource().extract(URL, body, [])[0]
     assert document is not None
-    assert "<sup>3</sup>" in document.markdown
-    assert "<sub>0</sub>" in document.markdown
+    assert "<sup>3</sup>" in document.evidence[0].markdown
+    assert "<sub>0</sub>" in document.evidence[0].markdown
     assert document.facts[0].name == "f _(0)"
     assert document.facts[0].raw == "10 ^(3) Hz"
     assert document.facts[0].values == []
 
 
-def test_archive_offline_rebuild_search_and_read(
+def test_archive_offline_extract_retains_entity_and_full_evidence(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     source, archive, source_dir = archived(tmp_path)
@@ -176,45 +178,37 @@ def test_archive_offline_rebuild_search_and_read(
     archive.close()
 
     def no_network(*args: object, **kwargs: object) -> None:
-        raise AssertionError("Offline rebuild attempted network access")
+        raise AssertionError("Offline extraction attempted network access")
 
     monkeypatch.setattr(socket, "socket", no_network)
     snapshot = build(source, tmp_path, archive_id="fixture")
-    with Dataset(source_dir / "published") as dataset:
-        assert dataset.search("ASR-12")[0]["title"] == "ASR 12"
-        assert dataset.search("pulse compression")[0]["url"] == URL
-        assert dataset.search("ASR 12", kind="article") == []
-        assert dataset.search("", category="03.atc")[0]["url"] == URL
-        assert dataset.search("-") == []
-        assert dataset.search('" nonexistent OR *') == []
-        hit = dataset.search("airport")[0]
-        document = dataset.read(hit["id"])
-        assert dataset.read_url(URL + "#technical-data")["id"] == hit["id"]
-        assert "Short-range mode" in document["markdown"]
-        assert document["facts"][0]["raw"] == "2.7-2.9 GHz"
-        assert dataset.facets()["kinds"] == [{"value": "radar", "count": 1}]
-        assert search_all([dataset], "ASR 12")[0]["id"] == hit["id"]
-        with pytest.raises(sqlite3.OperationalError, match="readonly"):
-            dataset.db.execute("DELETE FROM documents")
-    assert (snapshot / "documents.jsonl").is_file()
+    manifest, entities = load_snapshot(source_dir)
+    assert manifest["entities"] == 1
+    assert entities[0]["title"] == "ASR 12"
+    assert entities[0]["kind"] == "radar"
+    assert "Short-range mode" in entities[0]["evidence"][0]["markdown"]
+    assert entities[0]["facts"][0]["raw"] == "2.7-2.9 GHz"
+    assert (snapshot / "entities.jsonl").is_file()
+    assert not (snapshot / "index.sqlite").exists()
 
 
-def test_failed_build_keeps_current_and_reader_pins_snapshot(tmp_path: Path) -> None:
+def test_failed_publication_preserves_current_and_previous_snapshot(
+    tmp_path: Path,
+) -> None:
     source, archive, source_dir = archived(tmp_path)
-    publish(source, archive, source_dir)
-    current = source_dir / "published" / "current.json"
+    first = publish(source, archive, source_dir)
+    current = source_dir / "published/current.json"
     before = current.read_bytes()
-    with Dataset(source_dir / "published") as reader:
-        source.minimum_documents = 2
-        with pytest.raises(RuntimeError, match="at least"):
-            publish(source, archive, source_dir)
-        assert current.read_bytes() == before
-        source.minimum_documents = 1
-        archive.save(URL, 200, HTML.replace(b"ASR 12", b"ASR 13"), "text/html", {})
+    old_entities = (first / "entities.jsonl").read_bytes()
+    source.minimum_entities = 2
+    with pytest.raises(RuntimeError, match="at least"):
         publish(source, archive, source_dir)
-        assert reader.search("ASR 12")[0]["title"] == "ASR 12"
-        with Dataset(source_dir / "published") as newer:
-            assert newer.search("ASR 13")[0]["title"] == "ASR 13"
+    assert current.read_bytes() == before
+    source.minimum_entities = 1
+    archive.save(URL, 200, HTML.replace(b"ASR 12", b"ASR 13"), "text/html", {})
+    publish(source, archive, source_dir)
+    assert (first / "entities.jsonl").read_bytes() == old_entities
+    assert load_snapshot(source_dir)[1][0]["title"] == "ASR 13"
     archive.close()
 
 
@@ -236,24 +230,33 @@ def test_corruption_pending_work_and_writer_lock_are_rejected(tmp_path: Path) ->
 
 def test_missing_snapshot_read_does_not_create_data(tmp_path: Path) -> None:
     with pytest.raises(FileNotFoundError):
-        Dataset(tmp_path / "missing")
+        load_snapshot(tmp_path / "missing")
     assert list(tmp_path.iterdir()) == []
     assert status(tmp_path / "missing") == {"published": None, "work": None}
     assert list(tmp_path.iterdir()) == []
 
 
-def test_missing_archive_reindex_does_not_fetch(tmp_path: Path) -> None:
+def test_missing_archive_extraction_does_not_fetch(tmp_path: Path) -> None:
     with pytest.raises(FileNotFoundError):
         build(SmallSource(), tmp_path, archive_id="missing")
     assert not (tmp_path / "radartutorial" / "archives").exists()
 
 
 def test_broken_pointer_is_rejected(tmp_path: Path) -> None:
-    (tmp_path / "current.json").write_text(
-        json.dumps({"schema_version": 1, "snapshot": "../../private"})
+    published = tmp_path / "published"
+    published.mkdir()
+    (published / "current.json").write_text(
+        json.dumps(
+            {
+                "schema_version": 2,
+                "source": tmp_path.name,
+                "snapshot": "../../private",
+                "archive": "fixture",
+            }
+        )
     )
     with pytest.raises(ValueError, match="snapshot"):
-        Dataset(tmp_path)
+        load_snapshot(tmp_path)
 
 
 def test_complete_marker_is_required_even_if_no_requests_are_pending(
@@ -266,45 +269,19 @@ def test_complete_marker_is_required_even_if_no_requests_are_pending(
     archive.close()
 
 
-def test_index_failure_cannot_replace_published_snapshot(
+def test_failed_markdown_write_cannot_replace_snapshot(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     source, archive, source_dir = archived(tmp_path)
     publish(source, archive, source_dir)
-    current = source_dir / "published" / "current.json"
+    current = source_dir / "published/current.json"
     before = current.read_bytes()
 
-    def fail_index(path: Path, documents: list) -> None:
-        raise OSError("Simulated full disk while writing the index")
+    def fail_write(*args: object, **kwargs: object) -> int:
+        raise OSError("Simulated full disk")
 
-    monkeypatch.setattr(
-        importlib.import_module("pipelines.build"), "create_index", fail_index
-    )
+    monkeypatch.setattr(Path, "write_text", fail_write)
     with pytest.raises(OSError, match="full disk"):
         publish(source, archive, source_dir)
     assert current.read_bytes() == before
-    with Dataset(source_dir / "published") as reader:
-        assert reader.search("ASR 12")[0]["title"] == "ASR 12"
-    archive.close()
-
-
-def test_search_prioritizes_exact_names_and_paginates_documents(tmp_path: Path) -> None:
-    source, archive, source_dir = archived(tmp_path)
-    other_url = URL.replace("karte005", "karte006")
-    other = HTML.replace(b"ASR 12</h4>", b"Other system</h4>").replace(
-        b"solid state", b"solid state, comparable to ASR 12,"
-    )
-    archive.add(other_url)
-    archive.save(other_url, 200, other, "text/html", {})
-    publish(source, archive, source_dir)
-    with Dataset(source_dir / "published") as dataset:
-        hits = dataset.search("ASR 12")
-        assert [hit["title"] for hit in hits] == ["ASR 12", "Other system"]
-        assert (
-            dataset.search("surveillance", limit=1)[0]["id"]
-            != dataset.search("surveillance", limit=1, offset=1)[0]["id"]
-        )
-        assert len(dataset.search("surveil", prefix=True)) == 2
-        with pytest.raises(ValueError, match="Limit"):
-            dataset.search("radar", limit=1000)
     archive.close()

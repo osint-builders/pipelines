@@ -13,10 +13,10 @@ def test_module_entry_point_reports_missing_dataset_without_creating_it(
             sys.executable,
             "-m",
             "pipelines",
-            "--root",
-            str(root),
             "status",
             "radartutorial",
+            "--root",
+            str(root),
         ],
         capture_output=True,
         text=True,
@@ -30,7 +30,7 @@ def test_module_entry_point_reports_missing_dataset_without_creating_it(
 def test_unknown_source_cannot_create_a_build_directory(tmp_path: Path) -> None:
     root = tmp_path / "data"
     result = subprocess.run(
-        [sys.executable, "-m", "pipelines", "--root", str(root), "build", "unknown"],
+        [sys.executable, "-m", "pipelines", "crawl", "unknown", "--root", str(root)],
         capture_output=True,
         text=True,
         timeout=15,
@@ -40,21 +40,17 @@ def test_unknown_source_cannot_create_a_build_directory(tmp_path: Path) -> None:
     assert not root.exists()
 
 
-def test_reader_import_needs_only_the_standard_library() -> None:
-    source = Path(__file__).resolve().parents[1] / "src"
+def test_producer_only_exposes_entity_build_commands() -> None:
     result = subprocess.run(
-        [
-            sys.executable,
-            "-S",
-            "-c",
-            "import sys; sys.path.insert(0, sys.argv[1]); import pipelines; "
-            "assert not {'scrapy', 'bs4', 'markdownify', 'filelock'} & sys.modules.keys(); "
-            "print(pipelines.Dataset.__name__)",
-            str(source),
-        ],
+        [sys.executable, "-m", "pipelines", "--help"],
         capture_output=True,
         text=True,
         check=True,
-        timeout=15,
     )
-    assert result.stdout.strip() == "Dataset"
+    assert "pipeline-build" in result.stdout
+    assert "crawl,extract,status,model,package" in result.stdout
+    for obsolete in ("search", "read", "reindex"):
+        failed = subprocess.run(
+            [sys.executable, "-m", "pipelines", obsolete], capture_output=True
+        )
+        assert failed.returncode != 0

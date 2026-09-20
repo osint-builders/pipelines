@@ -5,7 +5,7 @@ from urllib.parse import quote, unquote, urljoin, urlsplit, urlunsplit
 from bs4 import BeautifulSoup, Tag
 from markdownify import markdownify
 
-from pipelines.model import Document, Fact
+from pipelines.model import Entity, EntityKind, Evidence, Fact, evidence_id
 
 ORIGIN = "https://www.radartutorial.eu"
 
@@ -65,7 +65,7 @@ def normalize_fact(name: str, raw: str, evidence: str) -> Fact:
 class Radartutorial:
     id = "radartutorial"
     version = "1"
-    minimum_documents = 2000
+    minimum_entities = 1500
     seeds: tuple[str, ...] = (
         f"{ORIGIN}/sitemap.en.xml",
         f"{ORIGIN}/index.en.html",
@@ -140,20 +140,17 @@ class Radartutorial:
                 labels.setdefault(target, []).append(label)
         return labels
 
-    def extract(self, url: str, body: bytes, names: list[str]) -> Document | None:
-        if (
-            url.endswith(".xml")
-            or "/logos/" in url
-            or url.endswith("/19.kartei/en/ka02.en.html")
-        ):
-            return None
+    def extract(self, url: str, body: bytes, names: list[str]) -> list[Entity]:
+        if not re.search(r"/19\.kartei/[^/]+/en/karte\d+\.en\.html$", url):
+            return []
+        # This inventory URL is an event report, not an equipment record.
+        if url.endswith("/13.labs/en/karte001.en.html"):
+            return []
         soup = parse_html(body)
         robots = soup.find("meta", attrs={"name": re.compile("^robots$", re.I)})
         if robots and "noindex" in str(robots.get("content", "")).lower():
-            return None
+            return []
         content = soup.select_one("div.content")
-        if content is None and re.search(r"/html/help\d+\.en\.html$", url):
-            content = soup.body
         if content is None:
             raise ValueError(f"Missing content container: {url}")
         heading = content.select_one(
@@ -230,20 +227,34 @@ class Radartutorial:
         markdown = re.sub(r"\n{3,}", "\n\n", markdown).strip()
         if len(markdown) < 40:
             raise ValueError(f"Empty extracted content: {url}")
-        kind = "radar" if re.search(r"/karte\d+\.en\.html$", url) else "article"
-        category = urlsplit(url).path.split("/")[2 if kind == "radar" else 1]
+        category = urlsplit(url).path.split("/")[2]
+        kind = (
+            EntityKind.EQUIPMENT
+            if category in {"12.ecm", "13.labs"}
+            else EntityKind.RADAR
+        )
         links = sorted({str(anchor["href"]) for anchor in content.select("a[href]")})
-        return Document(
+        page = Evidence(
             url=url,
             title=title,
             markdown=markdown,
-            kind=kind,
-            names=sorted(set([title, *names])),
-            categories=[category],
-            facts=facts,
             links=links,
             attribution=(
                 "Radartutorial / Christian Wolff. Text licensing and individual image credits: "
                 "https://www.radartutorial.eu/html/copyright.en.html"
             ),
         )
+        aliases = {title, *names}
+        for name in list(aliases):
+            aliases.update(re.findall(r'[“"«]([^”"»]+)[”"»]', name))
+        return [
+            Entity(
+                key=evidence_id(url),
+                title=title,
+                kind=kind,
+                evidence=[page],
+                aliases=sorted(aliases),
+                categories=[category],
+                facts=facts,
+            )
+        ]

@@ -9,7 +9,7 @@ from scrapy.http import Response
 from twisted.python.failure import Failure
 
 from pipelines.archive import Archive
-from pipelines.sources.base import Source
+from pipelines.sources.base import Source, SupplementalDiscovery
 
 
 class ScopeMiddleware:
@@ -33,12 +33,15 @@ class ScopeMiddleware:
 class ArchiveSpider(Spider):
     name = "reference_archive"
 
-    def __init__(self, source: Source, archive: Archive) -> None:
+    def __init__(
+        self, source: Source, archive: Archive, discovery_urls: list[str] | None = None
+    ) -> None:
         super().__init__()
         self.source = source
         self.archive = archive
         self.scheduled: set[str] = set()
         self.saved = 0
+        self.discovery_urls = discovery_urls or []
 
     def request(self, url: str) -> Request | None:
         if url in self.scheduled:
@@ -63,6 +66,7 @@ class ArchiveSpider(Spider):
             for page in self.archive.pages("saved", "unavailable", "excluded")
         )
         pending.update(self.source.seeds)
+        pending.update(self.discovery_urls)
         # Replaying saved discovery repairs a crash between saving and scheduling links.
         for page in saved:
             pending.update(self.source.discover(page["url"], self.archive.body(page)))
@@ -113,6 +117,11 @@ class ArchiveSpider(Spider):
 
 
 def crawl(source: Source, archive: Archive) -> None:
+    discovery_urls = (
+        source.discovery_seeds(archive.path)
+        if isinstance(source, SupplementalDiscovery)
+        else []
+    )
     process = CrawlerProcess(
         {
             "USER_AGENT": "OSINTBuildersPipelines/0.1 (+https://github.com/osint-builders/pipelines)",
@@ -135,7 +144,9 @@ def crawl(source: Source, archive: Archive) -> None:
         }
     )
     crawler = process.create_crawler(ArchiveSpider)
-    process.crawl(crawler, source=source, archive=archive)
+    process.crawl(
+        crawler, source=source, archive=archive, discovery_urls=discovery_urls
+    )
     process.start()
     if crawler.stats.get_value("finish_reason") != "finished":
         raise RuntimeError(

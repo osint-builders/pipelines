@@ -1,0 +1,10 @@
+[
+  {"source":"radartutorial","query":"russian cheeseboard","mode":"hybrid","expected":"radartutorial:8bdc6ce92fea3ca62de71395","max_rank":1},
+  {"source":"deagel","query":"russian cheeseboard","mode":"hybrid","expected":"deagel:a003156-001","max_rank":1},
+  {"source":"deagel","query":"American M1A2 Abrams main battle tank","mode":"hybrid","expected":"deagel:a000516-003","max_rank":1},
+  {"source":"deagel","query":"M142 HIMARS wheeled rocket artillery launcher","mode":"hybrid","expected":"deagel:a000521-001","max_rank":1},
+  {"source":"deagel","query":"Russian T-90M main battle tank","mode":"hybrid","expected":"deagel:a000369-003","max_rank":1},
+  {"source":"deagel","query":"1B75 acoustic counter battery sensor","mode":"hybrid","expected":"deagel:a003449-001","max_rank":1},
+  {"source":"deagel","query":"passive artillery locator using sound and infrared sensors","mode":"vector","expected":"deagel:a003449-001","max_rank":5,"required":false},
+  {"source":"deagel","query":"radar tracking 200 aerial targets with 700 kilometer detection range","mode":"vector","expected":"deagel:a003156-002","max_rank":5,"required":false}
+]

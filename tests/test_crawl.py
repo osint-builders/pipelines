@@ -8,13 +8,14 @@ from urllib.parse import urlsplit
 
 from pipelines.archive import Archive, atomic_json
 from pipelines.build import build
-from pipelines.reader import Dataset
+from pipelines.model import Entity, EntityKind, Evidence
+from pipelines.snapshot import load_snapshot
 from pipelines.sources.radartutorial import Radartutorial
 
 
 class FixtureSource(Radartutorial):
     id = "fixture"
-    minimum_documents = 2
+    minimum_entities = 1
 
     def __init__(self, origin: str) -> None:
         self.origin = origin
@@ -31,13 +32,33 @@ class FixtureSource(Radartutorial):
             return None
         return self.origin + parts.path
 
+    @override
+    def extract(self, url: str, body: bytes, names: list[str]) -> list[Entity]:
+        if not url.endswith("/radar.en.html"):
+            return []
+        return [
+            Entity(
+                key="weather-1",
+                title="Fixture radar",
+                kind=EntityKind.RADAR,
+                evidence=[
+                    Evidence(url=url, title="Fixture radar", markdown=body.decode())
+                ],
+            )
+        ]
+
 
 class BrokenDiscovery(FixtureSource):
-    minimum_documents = 1
+    minimum_entities = 1
 
     @override
     def discover(self, url: str, body: bytes) -> list[str]:
         raise ValueError("Simulated adapter discovery failure")
+
+
+class SupplementalFixture(FixtureSource):
+    def discovery_seeds(self, directory: Path) -> list[str]:
+        return [self.origin + "/radar.en.html"]
 
 
 def test_discovery_failure_during_resume_cannot_publish(tmp_path: Path) -> None:
@@ -79,7 +100,7 @@ def test_real_crawl_obeys_robots_and_resumes_after_failure(tmp_path: Path) -> No
                 body = b"User-agent: *\nDisallow: /denied.en.html\n"
             elif self.path == "/index.en.html":
                 body = b"""<div class="content"><h2>Fixture index</h2><p>A useful collection of local radar documents.</p>
-                <a href="radar.en.html">Radar</a><a href="denied.en.html">Denied</a>
+                <a href="denied.en.html">Denied</a>
                 <a href="redirect.en.html">Redirect</a><a href="https://example.invalid/index.en.html">External</a></div>"""
             elif self.path == "/radar.en.html":
                 status = 503 if broken else 200
@@ -108,7 +129,7 @@ def test_real_crawl_obeys_robots_and_resumes_after_failure(tmp_path: Path) -> No
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
     origin = f"http://127.0.0.1:{server.server_port}"
-    command = [sys.executable, __file__, origin, str(tmp_path)]
+    command = [sys.executable, __file__, origin, str(tmp_path), "supplemental"]
     try:
         first = subprocess.run(command, capture_output=True, text=True, timeout=60)
         assert first.returncode != 0, first.stdout + first.stderr
@@ -122,9 +143,9 @@ def test_real_crawl_obeys_robots_and_resumes_after_failure(tmp_path: Path) -> No
         assert "/denied.en.html" not in requests
         assert "/outside/target.en.html" not in requests
         assert not (tmp_path / "fixture" / "work.json").exists()
-        with Dataset(tmp_path / "fixture" / "published") as dataset:
-            assert dataset.search("weather")[0]["title"] == "Fixture radar"
-            archive_id = dataset.manifest["archive"]
+        manifest, entities = load_snapshot(tmp_path / "fixture")
+        assert entities[0]["title"] == "Fixture radar"
+        archive_id = manifest["archive"]
         archive = Archive(tmp_path / "fixture" / "archives" / archive_id)
         assert archive.counts() == {"excluded": 2, "saved": 2}
         archive.close()
@@ -137,7 +158,7 @@ def test_real_crawl_obeys_robots_and_resumes_after_failure(tmp_path: Path) -> No
 if __name__ == "__main__":
     source = (
         BrokenDiscovery(sys.argv[1])
-        if len(sys.argv) > 3
-        else FixtureSource(sys.argv[1])
+        if len(sys.argv) > 3 and sys.argv[3] == "broken"
+        else SupplementalFixture(sys.argv[1])
     )
     build(source, Path(sys.argv[2]))

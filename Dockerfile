@@ -6,4 +6,4 @@ COPY README.md ./
 COPY src ./src
 RUN uv sync --frozen --extra build --no-dev
 ENV PYTHONUNBUFFERED=1
-ENTRYPOINT ["/builder/.venv/bin/pipelines"]
+ENTRYPOINT ["/builder/.venv/bin/pipeline-build"]

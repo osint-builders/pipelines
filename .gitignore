@@ -17,4 +17,7 @@ Thumbs.db
 **/archives/
 **/published/
 *.sqlite
+cli/internal/assets/data/*.zip
+cli/internal/assets/data/THIRD-PARTY-NOTICES.txt
+cli/pipelines*
 *.sqlite-*

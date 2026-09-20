@@ -1,75 +1,13 @@
 import json
 import re
-import sqlite3
-from contextlib import closing
 from pathlib import Path
 
 from filelock import FileLock
 
 from pipelines.archive import Archive, atomic_json, run_id
 from pipelines.crawl import crawl
-from pipelines.model import SCHEMA_VERSION, Document
+from pipelines.model import SCHEMA_VERSION, Entity
 from pipelines.sources.base import Source
-
-
-def name_key(value: str) -> str:
-    return "".join(character for character in value.casefold() if character.isalnum())
-
-
-def create_index(path: Path, documents: list[Document]) -> None:
-    with closing(sqlite3.connect(path)) as db, db:
-        db.executescript("""
-            CREATE TABLE documents(id TEXT PRIMARY KEY, url TEXT UNIQUE, title TEXT,
-                kind TEXT, language TEXT, metadata TEXT);
-            CREATE INDEX document_kind ON documents(kind);
-            CREATE TABLE names(name TEXT, document_id TEXT);
-            CREATE INDEX exact_names ON names(name);
-            CREATE TABLE categories(category TEXT, document_id TEXT);
-            CREATE INDEX category_filter ON categories(category, document_id);
-            CREATE TABLE facts(document_id TEXT, name TEXT, raw TEXT, metadata TEXT);
-            CREATE INDEX fact_names ON facts(name, document_id);
-            CREATE VIRTUAL TABLE sections USING fts5(document_id UNINDEXED,
-                title, names, body, tokenize='unicode61 remove_diacritics 2', prefix='2 3');
-        """)
-        for document in documents:
-            metadata = document.metadata()
-            metadata.pop("markdown")
-            db.execute(
-                "INSERT INTO documents VALUES(?,?,?,?,?,?)",
-                (
-                    document.id,
-                    document.url,
-                    document.title,
-                    document.kind,
-                    document.language,
-                    json.dumps(metadata, ensure_ascii=False),
-                ),
-            )
-            db.executemany(
-                "INSERT INTO names VALUES(?,?)",
-                ((name_key(name), document.id) for name in set(document.names)),
-            )
-            db.executemany(
-                "INSERT INTO categories VALUES(?,?)",
-                ((category, document.id) for category in document.categories),
-            )
-            db.executemany(
-                "INSERT INTO facts VALUES(?,?,?,?)",
-                (
-                    (document.id, fact["name"], fact["raw"], json.dumps(fact))
-                    for fact in metadata["facts"]
-                ),
-            )
-            sections = re.split(r"\n(?=#{1,6} )", document.markdown)
-            for section in sections:
-                db.execute(
-                    "INSERT INTO sections VALUES(?,?,?,?)",
-                    (document.id, document.title, " ".join(document.names), section),
-                )
-        db.execute("INSERT INTO sections(sections) VALUES ('optimize')")
-        if db.execute("PRAGMA integrity_check").fetchone()[0] != "ok":
-            raise RuntimeError("Index integrity check failed")
-        db.execute("INSERT INTO sections(sections) VALUES ('integrity-check')")
 
 
 def publish(source: Source, archive: Archive, source_dir: Path) -> Path:
@@ -78,7 +16,7 @@ def publish(source: Source, archive: Archive, source_dir: Path) -> Path:
     completion = archive.path / "complete.json"
     if (
         not completion.is_file()
-        or json.loads(completion.read_text(encoding="utf-8"))["source"] != source.id
+        or json.loads(completion.read_text())["source"] != source.id
     ):
         raise RuntimeError(
             "Archive has no completion record; finish the explicit scrape first"
@@ -88,7 +26,7 @@ def publish(source: Source, archive: Archive, source_dir: Path) -> Path:
     for page in pages:
         for url, names in source.labels(page["url"], archive.body(page)).items():
             labels.setdefault(url, []).extend(names)
-    documents: list[Document] = []
+    entities: dict[str, Entity] = {}
     excluded: list[str] = []
     for page in pages:
         headers = json.loads(page["headers"])
@@ -98,50 +36,75 @@ def publish(source: Source, archive: Archive, source_dir: Path) -> Path:
         ):
             excluded.append(page["url"])
             continue
-        document = source.extract(
+        extracted = source.extract(
             page["url"], archive.body(page), labels.get(page["url"], [])
         )
-        if document is None:
+        if not extracted:
             excluded.append(page["url"])
-        else:
-            document.retrieved_at = page["fetched_at"]
-            document.html_sha256 = page["sha256"]
-            documents.append(document)
-    if len(documents) < source.minimum_documents:
+        for entity in extracted:
+            if len(entity.evidence) != 1 or entity.evidence[0].url != page["url"]:
+                raise ValueError(
+                    "Adapter evidence must reference the current archived page"
+                )
+            evidence = entity.evidence[0]
+            evidence.retrieved_at = page["fetched_at"]
+            evidence.html_sha256 = page["sha256"]
+            entity.validate()
+            if entity.key in entities:
+                entities[entity.key].merge(entity)
+            else:
+                entities[entity.key] = entity
+    if len(entities) < source.minimum_entities:
         raise RuntimeError(
-            f"Only {len(documents)} documents; expected at least {source.minimum_documents}"
+            f"Only {len(entities)} entities; expected at least {source.minimum_entities}"
         )
     published = source_dir / "published"
     published.mkdir(exist_ok=True)
     current = published / "current.json"
     if current.exists():
-        previous = json.loads(current.read_text(encoding="utf-8"))
-        if len(documents) < previous["documents"] * 0.9:
-            raise RuntimeError("Corpus shrank by more than 10%; refusing replacement")
+        previous = json.loads(current.read_text())
+        if (
+            previous["schema_version"] == SCHEMA_VERSION
+            and len(entities) < previous["entities"] * 0.9
+        ):
+            raise RuntimeError(
+                "Entity corpus shrank by more than 10%; refusing replacement"
+            )
     snapshot_id = run_id()
     snapshot = published / "snapshots" / snapshot_id
     snapshot.mkdir(parents=True)
     markdown_dir = snapshot / "markdown"
     markdown_dir.mkdir()
-    with (snapshot / "documents.jsonl").open("w", encoding="utf-8") as catalog:
-        for document in documents:
-            (markdown_dir / f"{document.id}.md").write_text(
-                f"# {document.title}\n\nSource: {document.url}\n\n{document.attribution}\n\n{document.markdown}\n",
-                encoding="utf-8",
-            )
-            metadata = document.metadata()
-            metadata.pop("markdown")
+    evidence_text: dict[str, str] = {}
+    with (snapshot / "entities.jsonl").open(
+        "w", encoding="utf-8", newline="\n"
+    ) as catalog:
+        for entity in sorted(entities.values(), key=lambda item: item.key):
+            metadata = entity.metadata(source.id)
+            for page in metadata["evidence"]:
+                markdown = f"# {page['title']}\n\nSource: {page['url']}\n\n{page['attribution']}\n\n{page.pop('markdown')}\n"
+                if (
+                    page["id"] in evidence_text
+                    and evidence_text[page["id"]] != markdown
+                ):
+                    raise ValueError(
+                        "Entities must retain the same full content for shared evidence"
+                    )
+                evidence_text[page["id"]] = markdown
+                (markdown_dir / f"{page['id']}.md").write_text(
+                    markdown, encoding="utf-8", newline="\n"
+                )
             catalog.write(json.dumps(metadata, ensure_ascii=False) + "\n")
-    create_index(snapshot / "index.sqlite", documents)
     manifest = {
         "schema_version": SCHEMA_VERSION,
         "source": source.id,
         "adapter_version": source.version,
         "snapshot": snapshot_id,
         "archive": archive.path.name,
-        "documents": len(documents),
+        "entities": len(entities),
+        "evidence_pages": len(evidence_text),
         "crawl": archive.counts(),
-        "excluded_from_index": excluded,
+        "excluded_from_entities": excluded,
     }
     atomic_json(snapshot / "manifest.json", manifest)
     atomic_json(current, manifest)

@@ -1,13 +1,14 @@
-from typing import Protocol
+from pathlib import Path
+from typing import Protocol, runtime_checkable
 
-from pipelines.model import Document
+from pipelines.model import Entity
 
 
 class Source(Protocol):
     id: str
     version: str
     seeds: tuple[str, ...]
-    minimum_documents: int
+    minimum_entities: int
 
     def normalize(self, url: str) -> str | None: ...
 
@@ -15,4 +16,9 @@ class Source(Protocol):
 
     def labels(self, url: str, body: bytes) -> dict[str, list[str]]: ...
 
-    def extract(self, url: str, body: bytes, names: list[str]) -> Document | None: ...
+    def extract(self, url: str, body: bytes, names: list[str]) -> list[Entity]: ...
+
+
+@runtime_checkable
+class SupplementalDiscovery(Protocol):
+    def discovery_seeds(self, directory: Path) -> list[str]: ...

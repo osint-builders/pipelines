@@ -1,7 +1,7 @@
 [project]
 name = "osint-pipelines"
 version = "0.1.0"
-description = "Independent reference-data builders and offline search"
+description = "Website adapters and entity datasets for the offline pipelines CLI"
 readme = "README.md"
 requires-python = ">=3.13,<3.14"
 dependencies = []
@@ -17,12 +17,13 @@ build = [
   "markdownify>=1.2,<2",
   "scrapy>=2.19,<3",
 ]
+vector = ["filelock>=3.20,<4", "numpy>=2.3,<3", "onnxruntime>=1.24,<2", "tokenizers>=0.22,<1"]
 
 [dependency-groups]
 dev = ["pytest>=9.1,<10", "mypy>=2.3,<3", "ruff>=0.16,<0.17"]
 
 [project.scripts]
-pipelines = "pipelines.__main__:main"
+pipeline-build = "pipelines.__main__:main"
 
 [build-system]
 requires = ["hatchling"]
@@ -36,6 +37,7 @@ package = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["tools"]
 
 [tool.ruff]
 target-version = "py313"

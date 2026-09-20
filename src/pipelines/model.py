@@ -1,11 +1,30 @@
 import hashlib
+import re
 from dataclasses import asdict, dataclass, field
+from enum import StrEnum
+from urllib.parse import urlsplit
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 
-def document_id(url: str) -> str:
+def evidence_id(url: str) -> str:
     return hashlib.sha256(url.encode()).hexdigest()[:24]
+
+
+def valid_key(value: str) -> bool:
+    return re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,127}", value) is not None
+
+
+class EntityKind(StrEnum):
+    RADAR = "radar"
+    EMITTER = "emitter"
+    SENSOR = "sensor"
+    VEHICLE = "vehicle"
+    AIRCRAFT = "aircraft"
+    VESSEL = "vessel"
+    WEAPON = "weapon"
+    EQUIPMENT = "equipment"
+    ITEM = "item"
 
 
 @dataclass
@@ -19,23 +38,77 @@ class Fact:
 
 
 @dataclass
-class Document:
+class Evidence:
     url: str
     title: str
     markdown: str
-    kind: str = "article"
     language: str = "en"
-    names: list[str] = field(default_factory=list)
-    categories: list[str] = field(default_factory=list)
-    facts: list[Fact] = field(default_factory=list)
     links: list[str] = field(default_factory=list)
     attribution: str = ""
     retrieved_at: str = ""
     html_sha256: str = ""
+    search_text: str = ""
 
     @property
     def id(self) -> str:
-        return document_id(self.url)
+        return evidence_id(self.url)
 
-    def metadata(self) -> dict:
-        return {"id": self.id, **asdict(self)}
+
+@dataclass
+class Entity:
+    key: str
+    title: str
+    kind: EntityKind
+    evidence: list[Evidence]
+    aliases: list[str] = field(default_factory=list)
+    categories: list[str] = field(default_factory=list)
+    facts: list[Fact] = field(default_factory=list)
+    url: str = ""
+
+    def validate(self) -> None:
+        if not valid_key(self.key) or not self.title.strip():
+            raise ValueError("Entity requires a safe source-native key and a title")
+        EntityKind(self.kind)
+        if not self.evidence:
+            raise ValueError("Entity requires source evidence")
+        for page in self.evidence:
+            if (
+                urlsplit(page.url).scheme not in {"https", "http"}
+                or not page.markdown.strip()
+            ):
+                raise ValueError("Entity evidence requires a URL and full Markdown")
+        if len({page.id for page in self.evidence}) != len(self.evidence):
+            raise ValueError("Duplicate evidence page")
+        urls = {page.url for page in self.evidence}
+        if self.url and self.url.split("#")[0] not in urls:
+            raise ValueError("Entity URL must reference retained evidence")
+        if any(fact.evidence.split("#")[0] not in urls for fact in self.facts):
+            raise ValueError("Entity facts must reference retained evidence")
+
+    def metadata(self, source: str) -> dict:
+        self.validate()
+        value = asdict(self)
+        value.pop("key")
+        value.update(id=f"{source}:{self.key}", source=source, source_id=self.key)
+        value["url"] = self.url or self.evidence[0].url
+        for page, data in zip(self.evidence, value["evidence"], strict=True):
+            data["id"] = page.id
+            if not page.search_text:
+                data.pop("search_text")
+        return value
+
+    def merge(self, other: "Entity") -> None:
+        if (self.key, self.kind, self.title) != (other.key, other.kind, other.title):
+            raise ValueError(f"Conflicting entity identity: {self.key}")
+        self.aliases = sorted(set(self.aliases + other.aliases))
+        self.categories = sorted(set(self.categories + other.categories))
+        known = {page.id: page for page in self.evidence}
+        for page in other.evidence:
+            if page.id in known and known[page.id] != page:
+                raise ValueError(f"Conflicting evidence for entity: {self.key}")
+            known[page.id] = page
+        self.evidence = sorted(known.values(), key=lambda page: page.url)
+        for fact in other.facts:
+            if fact not in self.facts:
+                self.facts.append(fact)
+        self.validate()
