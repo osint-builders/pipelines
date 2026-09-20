@@ -22,5 +22,14 @@
   {"source":"russianforces","kind":"spacecraft","query":"Cosmos 2615","mode":"hybrid","expected":"russianforces:cosmos-2615","max_rank":1},
   {"source":"russianforces","query":"space surveillance radar that began operation in Chekhov in 2023","mode":"vector","expected":"russianforces:razvyazka","max_rank":5,"required":false},
   {"source":"russianforces","query":"radar in Olenegorsk with uncertain operating status","mode":"vector","expected":"russianforces:voronezh-dm1","max_rank":5,"required":false},
-  {"source":"russianforces","query":"satellite with NORAD identifier 68826","mode":"vector","expected":"russianforces:cosmos-2615","max_rank":5,"required":false}
+  {"source":"russianforces","query":"satellite with NORAD identifier 68826","mode":"vector","expected":"russianforces:cosmos-2615","max_rank":5,"required":false},
+  {"source":"wikipedia","kind":"radar","query":"Dragon Eye naval radar","mode":"hybrid","expected":"wikipedia:51215241","max_rank":1},
+  {"source":"wikipedia","query":"Type 1478 airborne fire control radar","mode":"hybrid","expected":"wikipedia:16289401","max_rank":1},
+  {"source":"wikipedia","query":"Rice Screen radar","mode":"hybrid","expected":"wikipedia:5704192","max_rank":1},
+  {"source":"wikipedia","query":"LLQ302 air defense radar","mode":"hybrid","expected":"wikipedia:7286252","max_rank":1},
+  {"source":"wikipedia","kind":"aircraft","query":"Mainring early warning aircraft","mode":"hybrid","expected":"wikipedia:9460059","max_rank":1},
+  {"source":"wikipedia","query":"naval radar with convex antenna covers on Type 052C destroyers","mode":"vector","expected":"wikipedia:51215241","max_rank":5,"required":false},
+  {"source":"wikipedia","query":"airborne fire control radar manufactured at Pakistan Aeronautical Complex","mode":"vector","expected":"wikipedia:16289401","max_rank":5,"required":false},
+  {"source":"wikipedia","query":"compact radar detecting hovering helicopters and low flying cruise missiles","mode":"vector","expected":"wikipedia:7044199","max_rank":5,"required":false},
+  {"source":"wikipedia","query":"Type 1478 airborne fire control radar","mode":"vector","expected":"wikipedia:16289401","max_rank":5,"required":false}
 ]

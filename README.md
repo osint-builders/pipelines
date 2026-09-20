@@ -50,9 +50,10 @@ uv run --no-sync pipeline-build crawl radartutorial --root ../pipeline-data
 uv run --no-sync pipeline-build crawl deagel --root ../pipeline-data
 uv run --no-sync pipeline-build crawl virtualglobetrotting --root ../pipeline-data
 uv run --no-sync pipeline-build crawl russianforces --root ../pipeline-data
+uv run --no-sync pipeline-build crawl wikipedia --root ../pipeline-data
 uv run --no-sync pipeline-build status radartutorial --root ../pipeline-data
 uv run --no-sync pipeline-build model --output build/model
-uv run --no-sync pipeline-build package --root ../pipeline-data --source radartutorial --source deagel --source virtualglobetrotting --source russianforces --model build/model --cache build/entity-vector-cache --output build/dataset.zip
+uv run --no-sync pipeline-build package --root ../pipeline-data --source radartutorial --source deagel --source virtualglobetrotting --source russianforces --source wikipedia --model build/model --cache build/entity-vector-cache --output build/dataset.zip
 uv run --no-sync python tools/build_cli.py --bundle build/dataset.zip --output dist/pipelines
 uv run --no-sync python tools/accept_cli.py dist/pipelines build/dataset.zip
 uv run --no-sync python tools/evaluate_cli.py dist/pipelines --output build/retrieval-evaluation.json
@@ -89,7 +90,7 @@ atomically replacing the current pointer. Failed runs preserve the previous snap
 Archives and historical snapshots are retained. Older page-based snapshots can be migrated
 by extracting their saved archive again; another crawl is unnecessary.
 
-For containerized Radartutorial, VirtualGlobetrotting, or RussianForces crawling, or offline extraction of any source:
+For containerized crawling of sources other than Deagel, or offline extraction of any source:
 
 ```sh
 docker build --tag osint-pipelines:local .
@@ -180,6 +181,7 @@ of Git history. License notices remain embedded and available through the CLI.
 | [Deagel Armies](https://www.deagel.com/Armies/) | English land equipment and its variants, across all four status filters | 1,285 entities from 797 family pages |
 | [VirtualGlobetrotting Radar Sites](https://virtualglobetrotting.com/category/buildings/radar-sites/rss.xml) | Geographic records linked from the rolling RSS feed | 100 sites from 100 detail pages |
 | [Russian Strategic Nuclear Forces](https://feeds.feedburner.com/russianforces/) | Named equipment and satellites mentioned in the rolling Atom feed | 57 entities with 15 full articles as evidence |
+| [Wikipedia: Military radars of China](https://en.wikipedia.org/wiki/Category:Military_radars_of_China) | English category members and their subcategories | 41 entities: 39 radars and two aircraft |
 
 Radartutorial discovery follows English sitemaps, indexes, manufacturer names, and links.
 The crawler obeys robots.txt, limits concurrency to two, and applies delay/throttling.
@@ -380,11 +382,80 @@ evaluator alongside the existing source regressions. All five new named-item che
 the ten existing named-item checks returned their expected entity first in the built CLI.
 
 The source archive was re-extracted in a container with networking disabled. Repackaging
-unchanged snapshots returned `changed: false` with the same dataset ID. The combined
-four-source dataset contains 3,177 entities, 2,647 evidence pages, and 11,311 vectors.
+unchanged snapshots returned `changed: false` with the same dataset ID. The initial
+four-source dataset contained 3,177 entities, 2,647 evidence pages, and 11,311 vectors.
 Fixture tests cover feed scope, variant boundaries, table extraction, uncertainty,
 multi-article merging, missing metadata, and offline refresh membership. Binary acceptance
 checks exercise exact full-evidence exports, source/kind filters, and offline embeddings.
+
+### Wikipedia category discovery and extraction
+
+The `wikipedia` source currently starts at the English **Military radars of China**
+category and recursively follows its subcategories. Discovery reads only category-member
+lists and category pagination; article references, parent categories, language links,
+and ordinary navigation do not expand the crawl. The root lists 41 articles and one
+subcategory. That subcategory lists eight articles, adding two distinct member URLs.
+The September 20, 2026 UTC crawl saved all 45 pages: two categories and 43 article responses.
+
+Evaluation compared category HTML with the MediaWiki category-members API, and a Type 346
+article response with REST HTML. Membership and normalized article text agreed exactly.
+Production uses ordinary `/wiki/` HTML, which supplies the full article and page/revision
+metadata without a browser. The site's search and API interfaces live under `/w/`, which
+the crawler's robots policy excludes. Neither is required for this category. Unsupported
+pagination causes a discovery error instead of silently publishing a partial category;
+the current two category pages need no pagination.
+
+Category membership is not an entity type. Two reviewed non-item pages, the research
+institute and the national missile-warning-system overview, are archived but excluded
+from the entity index. Shaanxi KJ-2000 is an aircraft. The Type 1475 Radar member currently
+redirects to Chengdu J-20, so that response produces the aircraft entity, with its actual
+title and page ID; the old radar title is not added as an aircraft alias. New unrecognized
+entity types fail extraction for review. The resulting corpus has 39 radars and two aircraft.
+
+IDs use Wikipedia's numeric page ID, for example `wikipedia:51215241` for Type 346 radar.
+Renaming a page does not change the ID. Each entity retains the captured revision ID,
+canonical article URL, permanent revision link, contributor-history link, visible
+categories, and infobox facts with original units and variant qualifications. A family
+article remains one entity; variants described within it remain in the full evidence.
+The adapter does not invent separate variant identities from every model number mentioned.
+
+Aliases come from the opening subject description and infobox title. Bold text elsewhere
+can name a predecessor or comparison item: JL-10A's mention of Type 232H is retained as
+evidence but is not an alias. Observed aliases such as Dragon Eye, Type 1478, Rice Screen,
+LLQ302, and Mainring are searchable. Original HTML is exportable byte for byte. Markdown
+retains the article body, technical lists/tables, captions, references, and source-quality
+notices, while removing navigation and editing controls. Images and other attachments
+remain links. Wikipedia contributor attribution, the captured CC BY-SA license link,
+revision provenance, and the HTML-to-Markdown transformation are recorded with every page;
+linked media retain their own licensing terms.
+
+Embeddings use article prose, specifications, infoboxes, and captions. Reference lists,
+bibliographies, maintenance messages, and unrelated navigation stay out of embeddings.
+Qualifications such as "reported", "believed", and variant-specific ranges remain in the
+source text. Eight distinct queries compared three representations using the pinned
+model and pure cosine ranking across the 41 entities:
+
+| Embedding input | Vectors | Expected item first | Expected item in first five |
+| --- | --- | --- | --- |
+| Lead paragraphs only | 93 | 4/8 | 6/8 |
+| Full extracted article | 398 | 3/8 | 7/8 |
+| Article body without references and maintenance text (selected) | 237 | 4/8 | 7/8 |
+
+The selected representation preserves technical sections that lead-only extraction would
+lose, with fewer vectors than full-article embedding. These are small diagnostics, not a
+general accuracy estimate. Type 1478 still ranks 11th in pure vector mode; the captured
+alias makes it first in hybrid mode. The three capability queries rank their expected
+items first, fourth, and fourth. All five new named-item regressions, and all 15 existing
+named-item regressions, return the expected entity first. Numeric-designation failures
+remain visible as diagnostic cases in the CLI evaluator.
+
+Offline container extraction passed, and unchanged repackaging preserved the dataset ID.
+The combined five-source bundle contains 3,218 entities, 2,688 evidence pages, and 11,548
+vectors. Tests cover category scope, pagination rejection, stable identity, redirects,
+alias exclusions, variant qualifications, legacy and current HTML layouts, missing
+provenance, and exact archived bytes. Additional Wikipedia categories can be added as
+reviewed seeds in the adapter; review their entity kinds and exclusions before expanding
+scope. The shared builder and consumer CLI need no source-specific changes.
 
 ### Add another website
 
@@ -472,6 +543,7 @@ pipelines search --source deagel "M142 HIMARS wheeled rocket artillery launcher"
 pipelines search --source virtualglobetrotting --kind site "Bullen Point Alaska radar"
 pipelines search --source russianforces --kind radar "Razvyazka space surveillance radar"
 pipelines search --source russianforces --kind spacecraft "Cosmos 2615"
+pipelines search --source wikipedia --kind radar "Dragon Eye"
 pipelines search --mode vector --kind radar "detect aircraft approaching an airport"
 pipelines similar --limit 5 radartutorial:8bdc6ce92fea3ca62de71395
 pipelines get radartutorial:8bdc6ce92fea3ca62de71395
@@ -480,6 +552,7 @@ pipelines get --format html radartutorial:8bdc6ce92fea3ca62de71395
 pipelines get deagel:a000516-003
 pipelines get virtualglobetrotting:311208
 pipelines get russianforces:sineva
+pipelines get wikipedia:51215241
 ```
 
 Search emits JSON with `dataset_id`, query/mode, and `results`. Each result includes its

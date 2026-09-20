@@ -9,3 +9,6 @@ adapter = "pipelines.sources.virtualglobetrotting:VirtualGlobetrotting"
 
 [russianforces]
 adapter = "pipelines.sources.russianforces:RussianForces"
+
+[wikipedia]
+adapter = "pipelines.sources.wikipedia:Wikipedia"
