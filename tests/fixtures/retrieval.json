@@ -14,5 +14,13 @@
   {"source":"virtualglobetrotting","query":"weather monitoring radar in Santa Teresa New Mexico","mode":"vector","expected":"virtualglobetrotting:304336","max_rank":5,"required":false},
   {"source":"virtualglobetrotting","query":"Cold War distant early warning radar on Cape Sarichef Alaska","mode":"vector","expected":"virtualglobetrotting:234674","max_rank":5,"required":false},
   {"source":"virtualglobetrotting","query":"radar inside a protective dome on Apple Orchard Mountain","mode":"vector","expected":"virtualglobetrotting:258274","max_rank":5,"required":false},
-  {"source":"virtualglobetrotting","query":"fire lookout tower with radar on a Cyprus mountain summit","mode":"vector","expected":"virtualglobetrotting:260383","max_rank":5,"required":false}
+  {"source":"virtualglobetrotting","query":"fire lookout tower with radar on a Cyprus mountain summit","mode":"vector","expected":"virtualglobetrotting:260383","max_rank":5,"required":false},
+  {"source":"russianforces","kind":"radar","query":"Razvyazka space surveillance radar","mode":"hybrid","expected":"russianforces:razvyazka","max_rank":1},
+  {"source":"russianforces","query":"Voronezh-DM1 radar Olenegorsk","mode":"hybrid","expected":"russianforces:voronezh-dm1","max_rank":1},
+  {"source":"russianforces","query":"Sineva R-29RM submarine missile","mode":"hybrid","expected":"russianforces:sineva","max_rank":1},
+  {"source":"russianforces","query":"Karelia submarine","mode":"hybrid","expected":"russianforces:karelia","max_rank":1},
+  {"source":"russianforces","kind":"spacecraft","query":"Cosmos 2615","mode":"hybrid","expected":"russianforces:cosmos-2615","max_rank":1},
+  {"source":"russianforces","query":"space surveillance radar that began operation in Chekhov in 2023","mode":"vector","expected":"russianforces:razvyazka","max_rank":5,"required":false},
+  {"source":"russianforces","query":"radar in Olenegorsk with uncertain operating status","mode":"vector","expected":"russianforces:voronezh-dm1","max_rank":5,"required":false},
+  {"source":"russianforces","query":"satellite with NORAD identifier 68826","mode":"vector","expected":"russianforces:cosmos-2615","max_rank":5,"required":false}
 ]

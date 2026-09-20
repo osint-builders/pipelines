@@ -128,9 +128,7 @@ def test_offline_publication_and_feed_rolloff_history(
     assert entities[0]["id"] == source.id + ":12345"
     second = directory / "archives/second"
     assert source.discovery_seeds(second) == [URL]
-    monkeypatch.setattr(
-        "pipelines.sources.virtualglobetrotting.load_snapshot", forbidden
-    )
+    monkeypatch.setattr("pipelines.sources.feeds.load_snapshot", forbidden)
     assert source.discovery_seeds(second) == [URL]
     cache = second / "discovery/previous-urls.json"
     record = json.loads(cache.read_text())

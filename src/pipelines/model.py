@@ -26,6 +26,7 @@ class EntityKind(StrEnum):
     EQUIPMENT = "equipment"
     ITEM = "item"
     SITE = "site"
+    SPACECRAFT = "spacecraft"
 
 
 @dataclass

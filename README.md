@@ -49,9 +49,10 @@ uv run --no-sync pipeline-build sources
 uv run --no-sync pipeline-build crawl radartutorial --root ../pipeline-data
 uv run --no-sync pipeline-build crawl deagel --root ../pipeline-data
 uv run --no-sync pipeline-build crawl virtualglobetrotting --root ../pipeline-data
+uv run --no-sync pipeline-build crawl russianforces --root ../pipeline-data
 uv run --no-sync pipeline-build status radartutorial --root ../pipeline-data
 uv run --no-sync pipeline-build model --output build/model
-uv run --no-sync pipeline-build package --root ../pipeline-data --source radartutorial --source deagel --source virtualglobetrotting --model build/model --cache build/vector-cache --output build/dataset.zip
+uv run --no-sync pipeline-build package --root ../pipeline-data --source radartutorial --source deagel --source virtualglobetrotting --source russianforces --model build/model --cache build/entity-vector-cache --output build/dataset.zip
 uv run --no-sync python tools/build_cli.py --bundle build/dataset.zip --output dist/pipelines
 uv run --no-sync python tools/accept_cli.py dist/pipelines build/dataset.zip
 uv run --no-sync python tools/evaluate_cli.py dist/pipelines --output build/retrieval-evaluation.json
@@ -88,7 +89,7 @@ atomically replacing the current pointer. Failed runs preserve the previous snap
 Archives and historical snapshots are retained. Older page-based snapshots can be migrated
 by extracting their saved archive again; another crawl is unnecessary.
 
-For containerized Radartutorial/VirtualGlobetrotting crawling or offline extraction of any source:
+For containerized Radartutorial, VirtualGlobetrotting, or RussianForces crawling, or offline extraction of any source:
 
 ```sh
 docker build --tag osint-pipelines:local .
@@ -178,6 +179,7 @@ of Git history. License notices remain embedded and available through the CLI.
 | [Radartutorial](https://www.radartutorial.eu/index.en.html) | English equipment catalog pages | 1,735 entities: 1,710 radar and 25 equipment |
 | [Deagel Armies](https://www.deagel.com/Armies/) | English land equipment and its variants, across all four status filters | 1,285 entities from 797 family pages |
 | [VirtualGlobetrotting Radar Sites](https://virtualglobetrotting.com/category/buildings/radar-sites/rss.xml) | Geographic records linked from the rolling RSS feed | 100 sites from 100 detail pages |
+| [Russian Strategic Nuclear Forces](https://feeds.feedburner.com/russianforces/) | Named equipment and satellites mentioned in the rolling Atom feed | 57 entities with 15 full articles as evidence |
 
 Radartutorial discovery follows English sitemaps, indexes, manufacturer names, and links.
 The crawler obeys robots.txt, limits concurrency to two, and applies delay/throttling.
@@ -305,9 +307,84 @@ Both are retained as diagnostic cases in the CLI evaluation suite. All four new 
 regressions returned their expected result first; all six earlier named-item cases still
 passed. Raw HTML and Markdown round trips passed for all three sources.
 
-The combined dataset contains 3,120 entities, 2,632 evidence pages, and 11,172 vectors.
+The initial three-source dataset contained 3,120 entities, 2,632 evidence pages, and 11,172 vectors.
 The new `site` filter works alongside existing entity kinds; source and kind filters are
 checked by the executable evaluation, and the release workflow runs these checks.
+
+### RussianForces discovery and extraction
+
+The supplied FeedBurner URL is an Atom feed. Its response matched the publisher's
+[direct Atom feed](https://russianforces.org/atom.xml) byte for byte, so the adapter uses
+the publisher URL as its seed. The feed exposes 15 recent English posts, with both short
+summaries and complete HTML content. The publisher also has category, year, and month
+archives and a search form with keyword, case-sensitive, and regular-expression controls.
+The search endpoint is under `/cgi-bin/`, which robots.txt disallows. The scraper follows
+only canonical article URLs from the feed and previously published evidence; it does not
+submit searches, enumerate the historical archives, or follow article references.
+
+Direct HTTP supplies the complete article body, tables, source article ID, author, and
+publication date. No browser is needed. The September 20, 2026 UTC crawl saved the feed
+and all 15 articles with HTTP 200. Every article title and normalized body text matched
+its Atom entry. Summaries were only 209-280 characters, compared with 670-7,431 characters
+in full articles. Fetching the article also preserves original HTML and citation metadata.
+
+These are analytical reports, so articles become evidence for named items. A reviewed
+[name catalog](src/pipelines/sources/russianforces_entities.json) defines 34 equipment
+identities and their source-observed aliases. Explicit `Cosmos` designations add 23
+satellite identities automatically. Models, classes, and named individual objects remain
+separate records. Keys such as `russianforces:razvyazka` are stable catalog keys, while
+`russianforces:cosmos-2615` follows the reported designation. Article IDs remain provenance.
+Repeated mentions merge under the same entity ID; nine entities currently have multiple
+evidence pages. Article headlines, unnamed objects, organizations, and events do not
+become item records.
+
+Name boundaries distinguish Voronezh-DM from Voronezh-DM1 and UR-100 from UR-100NUTTH.
+Context checks distinguish the submarine Bryansk from a city mention. Only literal Cosmos
+numbers are extracted: a range does not invent intervening identities, and temporary
+labels such as OBJECT A are not globally unique entity names. Source table rows retain
+their reported identifiers and values, including later updates and tentative identities.
+The 57 records comprise 26 spacecraft, 13 weapons, five radars, four aircraft, four vessels,
+three launch vehicles, and two upper stages.
+
+The catalog is deliberately reviewed rather than unrestricted named-entity recognition.
+New equipment names need catalog entries before they become independent search results.
+Unrecognized mentions remain in retained article text; a post with no recognized item
+stays only in the raw crawl archive. This first snapshot covers the current feed, not the
+publisher's entire history. Both feed adapters use the shared
+[previous-membership helper](src/pipelines/sources/feeds.py) to retain previously indexed
+article/detail URLs on explicit refreshes. Nothing refreshes during consumer CLI use.
+
+Embeddings contain the entity identity plus paragraphs and labeled table rows that mention
+it. Every entity still exposes each associated article in full Markdown and byte-exact
+HTML, with author, publication date, references, and original qualifications. A report's
+speculation or historical observation is not promoted to a verified current capability
+or status. Navigation, comment forms, sidebars, and scripts are excluded from extracted
+article Markdown. Linked PDFs, KMZ files, imagery, and external references remain links.
+Source material retains its attribution and original terms.
+
+Eight source-filtered queries compared full-article and entity-passage embeddings using
+the pinned model and pure cosine ranking. This is a small diagnostic, not a general
+accuracy estimate:
+
+| Embedding input | Vectors for 57 entities | Expected item first | Expected item in first five |
+| --- | --- | --- | --- |
+| Full article for every mentioned entity | 367 | 4/8 | 7/8 |
+| Entity-specific paragraphs and table rows (selected) | 139 | 5/8 | 7/8 |
+
+The Chekhov space-surveillance query improved from rank five to one. The Olenegorsk
+status query ranked Voronezh-DM1 second because the same passage discusses Dnepr. Numeric
+similarity remains weak: the NORAD 68826 query placed Cosmos-2615 at rank 13 with selected
+passages, versus seven with full articles. The named Cosmos query was second in pure
+vector mode; hybrid name matching retrieves it first. These cases remain in the CLI
+evaluator alongside the existing source regressions. All five new named-item checks and
+the ten existing named-item checks returned their expected entity first in the built CLI.
+
+The source archive was re-extracted in a container with networking disabled. Repackaging
+unchanged snapshots returned `changed: false` with the same dataset ID. The combined
+four-source dataset contains 3,177 entities, 2,647 evidence pages, and 11,311 vectors.
+Fixture tests cover feed scope, variant boundaries, table extraction, uncertainty,
+multi-article merging, missing metadata, and offline refresh membership. Binary acceptance
+checks exercise exact full-evidence exports, source/kind filters, and offline embeddings.
 
 ### Add another website
 
@@ -324,13 +401,15 @@ needed in the shared builder, bundle format, or consumer CLI.
 | `discover(url, body)` | Links discovered from saved response bytes |
 | `labels(url, body)` | Explicit catalog names keyed by canonical item URL, or `{}` |
 | `extract(url, body, names)` | Zero or more entities derived from the current archived page |
-| `discovery_seeds(archive_directory)` (optional) | Additional catalog discovery captured once per archive, for sites requiring interaction |
+| `discovery_seeds(archive_directory)` (optional) | Discovery captured once per archive, including rendered catalogs or previous feed membership |
 
 Use [Entity and Evidence](src/pipelines/model.py) for extraction. Each emitted entity needs
-a stable source-native key, canonical title, kind, and one evidence record for the current
+a stable key, canonical title, kind, and one evidence record for the current
 page. The builder attaches retrieval time and the HTML hash. Return `[]` for non-item pages;
 extraction must not fetch other pages. Keys are 1-128 ASCII letters/digits/dots/underscores/
-hyphens and start with a letter or digit. Prefer catalog IDs over names or crawl order.
+hyphens and start with a letter or digit. Prefer source-native catalog IDs over names or
+crawl order. For narrative sources without equipment IDs, maintain explicit reviewed
+identity keys rather than deriving them from article headlines.
 
 Emit the same key/title/kind from multiple pages only when the source establishes they
 refer to the same item. Their evidence, aliases, and facts merge; conflicting identities
@@ -340,10 +419,11 @@ text. Facts point to retained evidence URLs or anchors, and aliases name the ite
 Set `Evidence.search_text` to an item's own section when shared-page text would confuse
 sibling variants. Leave it empty to embed full Markdown. This never replaces the retained
 full evidence. An optional `Entity.url` may select an anchor within a retained page.
-Implement the separate `SupplementalDiscovery` protocol only when ordinary archived HTML
-cannot expose the complete catalog; offline extraction never invokes that capability.
+Implement the separate `SupplementalDiscovery` protocol for discovery state not available
+in ordinary archived HTML, such as browser-rendered catalogs or prior feed membership;
+offline extraction never invokes that capability.
 
-Supported kinds are `radar`, `emitter`, `sensor`, `vehicle`, `aircraft`, `vessel`, `weapon`, `site`,
+Supported kinds are `radar`, `emitter`, `sensor`, `vehicle`, `aircraft`, `spacecraft`, `vessel`, `weapon`, `site`,
 `equipment`, and `item`. Categories provide source-specific distinctions. Country and
 manufacturer facts need source evidence; cross-source entity resolution and attachment
 OCR are not implemented.
@@ -390,6 +470,8 @@ is currently no structured country or numeric-fact filter.
 pipelines search "russian cheeseboard"
 pipelines search --source deagel "M142 HIMARS wheeled rocket artillery launcher"
 pipelines search --source virtualglobetrotting --kind site "Bullen Point Alaska radar"
+pipelines search --source russianforces --kind radar "Razvyazka space surveillance radar"
+pipelines search --source russianforces --kind spacecraft "Cosmos 2615"
 pipelines search --mode vector --kind radar "detect aircraft approaching an airport"
 pipelines similar --limit 5 radartutorial:8bdc6ce92fea3ca62de71395
 pipelines get radartutorial:8bdc6ce92fea3ca62de71395
@@ -397,6 +479,7 @@ pipelines get --format markdown radartutorial:8bdc6ce92fea3ca62de71395
 pipelines get --format html radartutorial:8bdc6ce92fea3ca62de71395
 pipelines get deagel:a000516-003
 pipelines get virtualglobetrotting:311208
+pipelines get russianforces:sineva
 ```
 
 Search emits JSON with `dataset_id`, query/mode, and `results`. Each result includes its
