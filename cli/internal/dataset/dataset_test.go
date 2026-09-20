@@ -205,3 +205,102 @@ func TestMultipleEvidenceExportRequiresExplicitHTMLSelection(t *testing.T) {
 		t.Fatal(string(raw), err)
 	}
 }
+
+func recordFixture(t *testing.T, mutate func(map[string]any)) *Dataset {
+	t.Helper()
+	d := fixture(t, false)
+	members := map[string][]byte{}
+	for name := range d.Manifest.Files {
+		body, err := d.Read(name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		members[name] = body
+	}
+	name := "entities/" + strings.Replace(firstID, ":", "/", 1) + ".json"
+	var entity map[string]any
+	if err := json.Unmarshal(members[name], &entity); err != nil {
+		t.Fatal(err)
+	}
+	page := entity["evidence"].([]any)[0].(map[string]any)
+	previous := page["id"].(string)
+	page["record_id"] = "point-1"
+	page["records"] = []any{map[string]any{"name": "Example", "coordinates": []any{25, 50}}}
+	digest := sha256.Sum256([]byte(page["url"].(string) + "\npoint-1"))
+	page["id"] = hex.EncodeToString(digest[:])[:24]
+	page["html_origin"] = "record-rendered"
+	body := []byte(`{"features":[{"name":"Example","coordinates":[25,50]}]}`)
+	bodyHash := sha256.Sum256(body)
+	member := "responses/sample/" + previous + ".json"
+	page["source_response"] = map[string]any{"url": page["url"], "content_type": "application/geo+json", "sha256": hex.EncodeToString(bodyHash[:]), "body_member": member}
+	members[member] = body
+	html := []byte("<!doctype html><p>Example</p>")
+	htmlHash := sha256.Sum256(html)
+	page["html_sha256"] = hex.EncodeToString(htmlHash[:])
+	delete(members, "html/sample/"+previous+".html")
+	members["html/sample/"+page["id"].(string)+".html"] = html
+	if mutate != nil {
+		mutate(page)
+	}
+	members[name], _ = json.Marshal(entity)
+	d.Manifest.Files = map[string]string{}
+	for name, body := range members {
+		digest := sha256.Sum256(body)
+		d.Manifest.Files[name] = hex.EncodeToString(digest[:])
+	}
+	members["manifest.json"], _ = json.Marshal(d.Manifest)
+	var output bytes.Buffer
+	writer := zip.NewWriter(&output)
+	for name, body := range members {
+		entry, err := writer.Create(name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := entry.Write(body); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := writer.Close(); err != nil {
+		t.Fatal(err)
+	}
+	result, err := Open(output.Bytes())
+	if err != nil {
+		t.Fatal(err)
+	}
+	return result
+}
+
+func TestStructuredRecordExportsSharedOriginalWithoutInflatingJSON(t *testing.T) {
+	d := recordFixture(t, nil)
+	if err := d.Verify(); err != nil {
+		t.Fatal(err)
+	}
+	raw, err := d.Export(firstID, "source", "")
+	if err != nil || string(raw) != `{"features":[{"name":"Example","coordinates":[25,50]}]}` {
+		t.Fatal(string(raw), err)
+	}
+	raw, err = d.Export(firstID, "json", "")
+	if err != nil || !bytes.Contains(raw, []byte(`"records"`)) || !bytes.Contains(raw, []byte(`"body_member"`)) || bytes.Contains(raw, []byte(`"body_base64"`)) {
+		t.Fatal(string(raw), err)
+	}
+	if len(d.sourceResponses) != 1 {
+		t.Fatal("response was not shared")
+	}
+	for _, field := range []string{"body_member", "sha256", "url", "content_type"} {
+		t.Run(field, func(t *testing.T) {
+			d := recordFixture(t, func(page map[string]any) { delete(page["source_response"].(map[string]any), field) })
+			if _, err := d.Export(firstID, "source", ""); err == nil {
+				t.Fatal("invalid capture accepted")
+			}
+		})
+	}
+	for _, field := range []string{"record_id", "records"} {
+		d := recordFixture(t, func(page map[string]any) { delete(page, field) })
+		if _, err := d.Export(firstID, "json", ""); err == nil {
+			t.Fatal("invalid record identity accepted")
+		}
+	}
+	if _, err := fixture(t, false).Export(secondID, "source", ""); err == nil {
+		t.Fatal("ambiguous original response accepted")
+	}
+}

@@ -5,6 +5,7 @@ import base64
 import hashlib
 import json
 import os
+import re
 import shutil
 import subprocess
 import zipfile
@@ -80,7 +81,24 @@ def verify_bundle(bundle: Path) -> dict:
                 if hashlib.sha256(raw).hexdigest() != page["html_sha256"]:
                     raise ValueError("Original HTML does not match entity provenance")
                 response = page.get("source_response")
-                if page.get("html_origin") == "api-rendered":
+                if page.get("html_origin") == "record-rendered":
+                    record_id = page.get("record_id", "")
+                    member = f"responses/{entity['source']}/{hashlib.sha256(page['url'].encode()).hexdigest()[:24]}.json"
+                    identity = page["url"] + "\n" + record_id
+                    if (
+                        not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,127}", record_id)
+                        or not page.get("records")
+                        or page["id"]
+                        != hashlib.sha256(identity.encode()).hexdigest()[:24]
+                        or not response
+                        or response.get("url") != page["url"]
+                        or not response.get("content_type")
+                        or response.get("body_member") != member
+                        or "body_base64" in response
+                        or response.get("sha256") != manifest["files"].get(member)
+                    ):
+                        raise ValueError("Invalid record response provenance")
+                elif page.get("html_origin") == "api-rendered":
                     if (
                         not response
                         or response.get("url") != page["url"]

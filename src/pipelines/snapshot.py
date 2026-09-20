@@ -34,7 +34,14 @@ def load_snapshot(source_dir: Path) -> tuple[dict, list[dict]]:
             raise ValueError("Entity requires title and evidence")
         seen: set[str] = set()
         for page in entity["evidence"]:
-            if page["id"] != evidence_id(page["url"]) or page["id"] in seen:
+            record_id = page.get("record_id", "")
+            if record_id and (
+                not isinstance(record_id, str)
+                or not valid_key(record_id)
+                or not page.get("records")
+            ):
+                raise ValueError("Invalid record evidence")
+            if page["id"] != evidence_id(page["url"], record_id) or page["id"] in seen:
                 raise ValueError("Invalid or duplicate evidence ID")
             seen.add(page["id"])
             page["markdown"] = (snapshot / "markdown" / f"{page['id']}.md").read_text(

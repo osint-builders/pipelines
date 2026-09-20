@@ -23,7 +23,7 @@ const help = `pipelines - offline equipment and entity search
 Usage:
   pipelines search [--mode hybrid|vector] [--limit 10] [filters] "query"
   pipelines similar [--limit 10] [filters] SOURCE:ID
-  pipelines get [--format json|markdown|html] [--evidence PAGE_ID] SOURCE:ID
+  pipelines get [--format json|markdown|html|source] [--evidence PAGE_ID] SOURCE:ID
   pipelines info
   pipelines verify
   pipelines version
@@ -31,7 +31,7 @@ Usage:
 
 Filters: --source SOURCE --kind KIND --category CATEGORY
 Place flags before the query or ID. Every search returns stable, source-qualified IDs.
-JSON is the default output. HTML export preserves the archived response bytes.
+JSON is the default output. Source export preserves the archived response bytes.
 All commands work offline. This executable never scrapes or downloads models.
 `
 
@@ -98,8 +98,8 @@ func run(ctx context.Context, args []string, out io.Writer) error {
 	if mode != "hybrid" && mode != "vector" {
 		return errors.New("mode must be hybrid or vector")
 	}
-	if format != "json" && format != "markdown" && format != "html" {
-		return errors.New("format must be json, markdown, or html")
+	if format != "json" && format != "markdown" && format != "html" && format != "source" {
+		return errors.New("format must be json, markdown, html, or source")
 	}
 	if limit < 1 || limit > 100 {
 		return errors.New("limit must be between 1 and 100")

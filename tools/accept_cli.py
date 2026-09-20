@@ -1,5 +1,6 @@
 """Exercise the built executable against its bundled data on a native runner."""
 
+import base64
 import hashlib
 import json
 import subprocess
@@ -83,6 +84,20 @@ def accept(binary: Path, bundle: Path) -> None:
                     "html/" + original["source"] + "/" + page["id"] + ".html"
                 )
                 assert hashlib.sha256(html).hexdigest() == page["html_sha256"]
+                captured = run(
+                    "get", "--format", "source", "--evidence", page["id"], identifier
+                )
+                response = page.get("source_response")
+                if response:
+                    expected = (
+                        archive.read(response["body_member"])
+                        if "body_member" in response
+                        else base64.b64decode(response["body_base64"])
+                    )
+                    assert captured == expected
+                    assert hashlib.sha256(captured).hexdigest() == response["sha256"]
+                else:
+                    assert captured == html
         neighbors = json.loads(run("similar", "--limit", "3", identifier))
         assert all(item["id"] != identifier for item in neighbors["results"])
         assert len({item["id"] for item in neighbors["results"]}) == len(

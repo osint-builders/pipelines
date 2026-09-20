@@ -68,5 +68,17 @@
   {"source":"fandom","query":"Soviet over the horizon radar that made a repetitive tapping noise on shortwave radio","mode":"vector","expected":"fandom:344747","max_rank":5,"required":false},
   {"source":"fandom","query":"early warning radar station in Azerbaijan that Russia leased until 2012","mode":"vector","expected":"fandom:126803","max_rank":5,"required":false},
   {"source":"fandom","query":"shipboard fire control radar guiding AK-725 naval guns","mode":"vector","expected":"fandom:320530","max_rank":5,"required":false},
-  {"source":"fandom","query":"fighter radar with passive electronically scanned array developed for the Su-35","mode":"vector","expected":"fandom:144911","max_rank":5,"required":false}
+  {"source":"fandom","query":"fighter radar with passive electronically scanned array developed for the Su-35","mode":"vector","expected":"fandom:144911","max_rank":5,"required":false},
+  {"source":"climateviewer","kind":"site","query":"S-300_1 site","mode":"hybrid","expected":"climateviewer:fortress-russia-6528dd8833bb664142c4faaf","max_rank":1},
+  {"source":"climateviewer","kind":"site","query":"S-400_1 site","mode":"hybrid","expected":"climateviewer:fortress-russia-fd910911d66b41498875b72f","max_rank":1},
+  {"source":"climateviewer","kind":"site","query":"TinShield_1 radar site","mode":"hybrid","expected":"climateviewer:fortress-russia-5a234e1ccb5ea8f413410359","max_rank":1},
+  {"source":"climateviewer","kind":"site","query":"BigBird_1 radar site","mode":"hybrid","expected":"climateviewer:fortress-russia-88f7aa267e21a4f8643ec75d","max_rank":1},
+  {"source":"climateviewer","kind":"site","query":"BOLSHOYE SAVINO air base","mode":"hybrid","expected":"climateviewer:fortress-russia-308b83193fb2a0e18ede7fbd","max_rank":1},
+  {"source":"climateviewer","kind":"site","query":"KHOTILOVO former air base","mode":"hybrid","expected":"climateviewer:fortress-russia-66c9e2801eca8933c7009691","max_rank":1},
+  {"source":"climateviewer","kind":"site","query":"EREBUNI air base","mode":"hybrid","expected":"climateviewer:fortress-russia-594680b893114192e1b52c78","max_rank":1},
+  {"source":"climateviewer","kind":"site","query":"EW_58 site","mode":"hybrid","expected":"climateviewer:fortress-russia-6dfc750c0b1d401d1f532b00","max_rank":1},
+  {"source":"climateviewer","kind":"site","query":"first operational location of the S-400 system in the historical map","mode":"vector","expected":"climateviewer:fortress-russia-fd910911d66b41498875b72f","max_rank":5,"required":false},
+  {"source":"climateviewer","kind":"site","query":"former MiG-31 Foxhound air base","mode":"vector","expected":"climateviewer:fortress-russia-66c9e2801eca8933c7009691","max_rank":5,"required":false},
+  {"source":"climateviewer","kind":"site","query":"Lavrentiya early warning site with approximate location and no high resolution imagery","mode":"vector","expected":"climateviewer:fortress-russia-6dfc750c0b1d401d1f532b00","max_rank":5,"required":false},
+  {"source":"climateviewer","kind":"site","query":"SAM site unoccupied in September 2004 with a battery in residence by May 2007","mode":"vector","expected":"climateviewer:fortress-russia-4828ac22dc9669f0ffa25bb8","max_rank":5,"required":false}
 ]

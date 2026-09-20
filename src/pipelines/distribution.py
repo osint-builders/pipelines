@@ -11,6 +11,7 @@ import zipfile
 from contextlib import closing
 from pathlib import Path
 
+from pipelines.model import evidence_id
 from pipelines.snapshot import load_snapshot
 
 FORMAT_VERSION = 2
@@ -52,13 +53,22 @@ def plain_text(markdown: str) -> str:
 
 
 def collect(root: Path, sources: list[str]) -> tuple[list[dict], dict[str, bytes]]:
+    entities, html, _ = collect_artifacts(root, sources)
+    return entities, html
+
+
+def collect_artifacts(
+    root: Path, sources: list[str]
+) -> tuple[list[dict], dict[str, bytes], dict[str, bytes]]:
     entities: list[dict] = []
     html: dict[str, bytes] = {}
+    responses: dict[str, bytes] = {}
     provenance: dict[str, tuple] = {}
     for source in sorted(set(sources)):
         if not re.fullmatch(r"[a-z0-9_-]+", source):
             raise ValueError("Invalid source ID")
         source_dir = root / source
+        captures: dict[str, tuple[bytes, str]] = {}
         manifest, records = load_snapshot(source_dir)
         archive = source_dir / "archives" / manifest["archive"]
         with closing(
@@ -88,18 +98,42 @@ def collect(root: Path, sources: list[str]) -> tuple[list[dict], dict[str, bytes
                         path = (archive / page[0]).resolve()
                         if not path.is_relative_to(archive.resolve()):
                             raise ValueError("Archive path escapes its directory")
-                        response_body = path.read_bytes()
-                        if evidence.get("html_origin") == "api-rendered":
+                        if evidence["url"] not in captures:
+                            raw = path.read_bytes()
+                            captures[evidence["url"]] = (raw, sha256(raw))
+                        response_body, response_hash = captures[evidence["url"]]
+                        if evidence.get("html_origin") in {
+                            "api-rendered",
+                            "record-rendered",
+                        }:
                             response = evidence.get("source_response", {})
                             if (
                                 response.get("url") != evidence["url"]
                                 or response.get("content_type") != page[3]
                                 or response.get("sha256") != page[1]
-                                or sha256(response_body) != page[1]
-                                or base64.b64decode(
+                                or response_hash != page[1]
+                            ):
+                                raise ValueError(
+                                    "API response checksum or provenance mismatch"
+                                )
+                            if evidence["html_origin"] == "record-rendered":
+                                member = f"responses/{source}/{evidence_id(evidence['url'])}.json"
+                                if (
+                                    not evidence.get("record_id")
+                                    or not evidence.get("records")
+                                    or response.get("body_member") != member
+                                    or "body_base64" in response
+                                ):
+                                    raise ValueError(
+                                        "Invalid record response provenance"
+                                    )
+                                responses[member] = response_body
+                            elif (
+                                base64.b64decode(
                                     response.get("body_base64", ""), validate=True
                                 )
                                 != response_body
+                                or "body_member" in response
                             ):
                                 raise ValueError(
                                     "API response checksum or provenance mismatch"
@@ -117,7 +151,7 @@ def collect(root: Path, sources: list[str]) -> tuple[list[dict], dict[str, bytes
                             if (
                                 "source_response" in evidence
                                 or "html_origin" in evidence
-                                or sha256(response_body) != page[1]
+                                or response_hash != page[1]
                             ):
                                 raise ValueError(
                                     "Archive checksum or provenance mismatch"
@@ -129,7 +163,7 @@ def collect(root: Path, sources: list[str]) -> tuple[list[dict], dict[str, bytes
     entities.sort(key=lambda entity: entity["id"])
     if not entities or len({entity["id"] for entity in entities}) != len(entities):
         raise ValueError("Dataset is empty or contains duplicate entity IDs")
-    return entities, html
+    return entities, html, responses
 
 
 def stable_content(value: object) -> object:
@@ -248,7 +282,7 @@ def package(
 def _package(
     root: Path, sources: list[str], model: Path, cache: Path, output: Path
 ) -> dict:
-    entities, html = collect(root, sources)
+    entities, html, responses = collect_artifacts(root, sources)
     digest = content_digest(entities)
     recipe = sha256(
         canonical({"format": FORMAT_VERSION, "search": SEARCH_VERSION, "model": LOCK})
@@ -312,6 +346,7 @@ def _package(
         "chunks.json": canonical(chunks),
         "vectors.f32": vector_bytes,
     }
+    members.update(responses)
     for entity in entities:
         identifier = entity["id"].replace(":", "/")
         members[f"entities/{identifier}.json"] = canonical(entity)

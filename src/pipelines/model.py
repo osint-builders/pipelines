@@ -7,8 +7,9 @@ from urllib.parse import urlsplit
 SCHEMA_VERSION = 2
 
 
-def evidence_id(url: str) -> str:
-    return hashlib.sha256(url.encode()).hexdigest()[:24]
+def evidence_id(url: str, record_id: str = "") -> str:
+    identity = url + ("\n" + record_id if record_id else "")
+    return hashlib.sha256(identity.encode()).hexdigest()[:24]
 
 
 def valid_key(value: str) -> bool:
@@ -52,10 +53,12 @@ class Evidence:
     search_text: str = ""
     canonical_url: str = ""
     rendered_html: str = ""
+    record_id: str = ""
+    records: list[dict] = field(default_factory=list)
 
     @property
     def id(self) -> str:
-        return evidence_id(self.url)
+        return evidence_id(self.url, self.record_id)
 
 
 @dataclass
@@ -76,6 +79,16 @@ class Entity:
         if not self.evidence:
             raise ValueError("Entity requires source evidence")
         for page in self.evidence:
+            if page.record_id and (
+                not valid_key(page.record_id)
+                or not page.records
+                or not page.rendered_html
+            ):
+                raise ValueError(
+                    "Record evidence requires a safe record ID, records, and rendered HTML"
+                )
+            if page.records and not page.record_id:
+                raise ValueError("Structured records require a record ID")
             if (
                 urlsplit(page.url).scheme not in {"https", "http"}
                 or not page.markdown.strip()
@@ -108,6 +121,9 @@ class Entity:
                 data.pop("canonical_url")
             if not page.rendered_html:
                 data.pop("rendered_html")
+            if not page.record_id:
+                data.pop("record_id")
+                data.pop("records")
         return value
 
     def merge(self, other: "Entity") -> None:

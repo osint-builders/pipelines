@@ -56,6 +56,7 @@ func (d *Dataset) Export(id, format, evidenceID string) ([]byte, error) {
 	var selected []any
 	var markdown []string
 	var html []byte
+	var sourceBody []byte
 	seen := map[string]bool{}
 	for _, value := range pages {
 		page, ok := value.(map[string]any)
@@ -64,7 +65,16 @@ func (d *Dataset) Export(id, format, evidenceID string) ([]byte, error) {
 		}
 		pageID, ok := page["id"].(string)
 		url, urlOK := page["url"].(string)
-		digest := sha256.Sum256([]byte(url))
+		identity := url
+		if id, exists := page["record_id"]; exists {
+			recordID, valid := id.(string)
+			records, listOK := page["records"].([]any)
+			if !valid || !safeKey(recordID) || !listOK || len(records) == 0 || page["html_origin"] != "record-rendered" {
+				return nil, errors.New("invalid structured record evidence")
+			}
+			identity += "\n" + recordID
+		}
+		digest := sha256.Sum256([]byte(identity))
 		if !ok || !urlOK || pageID != hex.EncodeToString(digest[:])[:24] || seen[pageID] {
 			return nil, errors.New("invalid evidence identity")
 		}
@@ -84,7 +94,27 @@ func (d *Dataset) Export(id, format, evidenceID string) ([]byte, error) {
 		if hex.EncodeToString(hash[:]) != page["html_sha256"] {
 			return nil, errors.New("evidence HTML checksum mismatch")
 		}
-		if page["html_origin"] == "api-rendered" {
+		sourceBody = html
+		if page["html_origin"] == "record-rendered" {
+			response, valid := page["source_response"].(map[string]any)
+			contentType, typeOK := response["content_type"].(string)
+			urlHash := sha256.Sum256([]byte(url))
+			member := "responses/" + entity.Source + "/" + hex.EncodeToString(urlHash[:])[:24] + ".json"
+			expected, exists := d.Manifest.Files[member]
+			if page["record_id"] == nil || !valid || !typeOK || contentType == "" || response["url"] != url || response["body_member"] != member || response["body_base64"] != nil || !exists || response["sha256"] != expected {
+				return nil, errors.New("invalid record response provenance")
+			}
+			if d.sourceResponses == nil {
+				d.sourceResponses = map[string][]byte{}
+			}
+			if d.sourceResponses[member] == nil {
+				d.sourceResponses[member], err = d.Read(member)
+				if err != nil {
+					return nil, err
+				}
+			}
+			sourceBody = d.sourceResponses[member]
+		} else if page["html_origin"] == "api-rendered" {
 			response, ok := page["source_response"].(map[string]any)
 			contentType, typeOK := response["content_type"].(string)
 			if !ok || response["url"] != url || !typeOK || contentType == "" {
@@ -102,6 +132,7 @@ func (d *Dataset) Export(id, format, evidenceID string) ([]byte, error) {
 			if hex.EncodeToString(digest[:]) != response["sha256"] {
 				return nil, errors.New("API response checksum mismatch")
 			}
+			sourceBody = body
 		} else if page["source_response"] != nil || page["html_origin"] != nil {
 			return nil, errors.New("unexpected API response provenance")
 		}
@@ -117,6 +148,11 @@ func (d *Dataset) Export(id, format, evidenceID string) ([]byte, error) {
 		return nil, errors.New("evidence page does not belong to entity")
 	}
 	switch format {
+	case "source":
+		if len(selected) != 1 {
+			return nil, errors.New("entity has multiple evidence pages; select one with --evidence PAGE_ID")
+		}
+		return sourceBody, nil
 	case "html":
 		if len(selected) != 1 {
 			return nil, errors.New("entity has multiple evidence pages; select one with --evidence PAGE_ID")

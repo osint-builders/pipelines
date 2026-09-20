@@ -8,7 +8,7 @@ from filelock import FileLock
 
 from pipelines.archive import Archive, atomic_json, run_id
 from pipelines.crawl import crawl
-from pipelines.model import SCHEMA_VERSION, Entity
+from pipelines.model import SCHEMA_VERSION, Entity, evidence_id
 from pipelines.sources.base import PreparedSource, Source
 
 
@@ -108,15 +108,22 @@ def publish(source: Source, archive: Archive, source_dir: Path) -> Path:
                         rendered, encoding="utf-8", newline="\n"
                     )
                     response = archived_pages[page["url"]]
-                    page["html_origin"] = "api-rendered"
+                    page["html_origin"] = (
+                        "record-rendered" if page.get("record_id") else "api-rendered"
+                    )
                     page["source_response"] = {
                         "url": response["url"],
                         "content_type": response["content_type"],
                         "sha256": response["sha256"],
-                        "body_base64": base64.b64encode(
-                            archive.body(response)
-                        ).decode(),
                     }
+                    if page.get("record_id"):
+                        page["source_response"]["body_member"] = (
+                            f"responses/{source.id}/{evidence_id(response['url'])}.json"
+                        )
+                    else:
+                        page["source_response"]["body_base64"] = base64.b64encode(
+                            archive.body(response)
+                        ).decode()
                 display_url = page.get("canonical_url", page["url"])
                 markdown = f"# {page['title']}\n\nSource: {display_url}\n\n{page['attribution']}\n\n{page.pop('markdown')}\n"
                 if (

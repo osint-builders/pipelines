@@ -54,9 +54,10 @@ uv run --no-sync pipeline-build crawl wikipedia --root ../pipeline-data
 uv run --no-sync pipeline-build crawl commons --root ../pipeline-data
 uv run --no-sync pipeline-build crawl armyrecognition --root ../pipeline-data
 uv run --no-sync pipeline-build crawl fandom --root ../pipeline-data
+uv run --no-sync pipeline-build crawl climateviewer --root ../pipeline-data
 uv run --no-sync pipeline-build status radartutorial --root ../pipeline-data
 uv run --no-sync pipeline-build model --output build/model
-uv run --no-sync pipeline-build package --root ../pipeline-data --source radartutorial --source deagel --source virtualglobetrotting --source russianforces --source wikipedia --source commons --source armyrecognition --source fandom --model build/model --cache build/entity-vector-cache --output build/dataset.zip
+uv run --no-sync pipeline-build package --root ../pipeline-data --source radartutorial --source deagel --source virtualglobetrotting --source russianforces --source wikipedia --source commons --source armyrecognition --source fandom --source climateviewer --model build/model --cache build/entity-vector-cache --output build/dataset.zip
 uv run --no-sync python tools/build_cli.py --bundle build/dataset.zip --output dist/pipelines
 uv run --no-sync python tools/accept_cli.py dist/pipelines build/dataset.zip
 uv run --no-sync python tools/evaluate_cli.py dist/pipelines --output build/retrieval-evaluation.json
@@ -91,6 +92,9 @@ API sources save original JSON as `.json` files in the archive's `html/` respons
 Their published snapshots additionally contain derived `html/EVIDENCE_ID.html` files.
 Each derived HTML page retains the API's exact article fragment inside a minimal document;
 the original response is separately preserved in entity metadata and CLI JSON exports.
+Structured collections such as GeoJSON instead retain complete item records and a shared
+response descriptor. Their original collection is stored once in the bundle and available
+through `get --format source`; each item has its own generated HTML and full Markdown.
 
 A per-source lock prevents concurrent writers. Publication checks archive completeness,
 HTML hashes, entity validity, minimum corpus size, and unexpected shrinkage before
@@ -193,6 +197,7 @@ of Git history. License notices remain embedded and available through the CLI.
 | [Wikimedia Commons: Military radars of Russia](https://commons.wikimedia.org/wiki/Category:Military_radars_of_Russia) | Named equipment categories with category and media-description evidence | 151 equipment and site identities |
 | [Army Recognition: Air Defense Radars](https://www.armyrecognition.com/military-products/army/radars/air-defense-radars) | Equipment articles in category 139 | 11 entities: ten radars and one optical sensor |
 | [Fandom Military Wiki: Russian and Soviet military radars](https://military-history.fandom.com/wiki/Category:Russian_and_Soviet_military_radars) | Reviewed category articles from the public MediaWiki API | 46 entities: 32 radars and 14 sites, with 53 article pages |
+| [ClimateViewer Fortress Russia](https://climateviewer.org/layers/geojson/2018/Fortress-Russia-SAM-Sites-ClimateViewer-3D.geojson) | Historical GeoJSON site markers | 383 sites: 291 radar, 65 SAM, 22 air bases, and 5 ABM |
 
 Radartutorial discovery follows English sitemaps, indexes, manufacturer names, and links.
 The crawler obeys robots.txt, limits concurrency to two, and applies delay/throttling.
@@ -724,7 +729,7 @@ descriptions of Duga's shortwave interference, Gabala's location, naval gun cont
 the Su-35 radar. Twelve Fandom cases are retained in the CLI evaluator, including separate
 Bars/Muff Cob identities and source/kind filters.
 
-The combined eight-source bundle contains 3,426 entities, 4,158 evidence pages, and 13,736
+The initial eight-source bundle contained 3,426 entities, 4,158 evidence pages, and 13,736
 vectors. The 53 original API article captures round-trip independently of their derived
 HTML, and full Markdown remains available for every article, including duplicate pages.
 All twelve Fandom CLI queries pass, along with all 45 required checks across the eight
@@ -738,6 +743,88 @@ Linux ran with networking disabled and a read-only filesystem. Linux arm64 verif
 passed under emulation. macOS binaries were cross-compiled locally; release publication
 still requires their native acceptance jobs. API errors returned with HTTP 200 are marked
 as failed captures so an explicit crawl retry can fetch them again.
+
+### ClimateViewer Fortress Russia discovery and extraction
+
+The `climateviewer` source imports the supplied [Fortress Russia GeoJSON](https://climateviewer.org/layers/geojson/2018/Fortress-Russia-SAM-Sites-ClimateViewer-3D.geojson)
+and its [map description and attribution](https://climateviewer.org/history-and-science/government/maps/fortress-russia-air-defence-radar-sam-sites/).
+On September 20, 2026 UTC, both resources and `robots.txt` returned HTTP 200 with the
+normal project user agent. Robots contained no exclusions. The Cesium map provides layer
+and base-map controls, but the complete collection is already available in one static
+response: no browser, search requests, pagination, or map interaction is needed. The
+production crawl saves those two resources with the shared robots checks and throttling;
+external references, photographs, and other map layers never expand its scope.
+
+The 2,989,317-byte collection contains 766 features: 383 Point markers and 383 LineString
+overlays. Every Point becomes a `site`: 291 radar sites, 65 SAM sites, 22 air bases, and
+five ABM sites. The illustrative range/radius overlays have no explicit parent IDs and
+are not consistently adjacent to their markers. They remain in the original collection
+without being assigned to sites or interpreted as verified performance data. Equipment
+mentioned in a site's description remains site evidence rather than a new equipment
+entity. The adapter validates geometry types, finite coordinate values, geographic
+bounds, required descriptions, duplicate identities, and the map's provenance.
+
+The map cites **Integrated Air Defence of Russia 2010**, and the layer is hosted under a
+2018 path. Neither date establishes when every marker was observed. All records carry
+this historical context; descriptions do not establish current deployment or operating
+status. Country is not inferred from the layer title. Original uncertainty, approximate
+locations, `N/A` values, component lists, site histories, and contributor credits survive
+extraction. Longitude and latitude use GeoJSON coordinate order; the complete geometry,
+including any third coordinate, remains in the original point record.
+
+No native feature IDs exist. Entity keys hash the source marker name and coordinates,
+independently of feature order, descriptions, and styling. Repeated names and distinct
+colocated markers remain separate. Renaming or moving a marker changes its ID and needs
+identity review if continuity is required. Only the marker's own name becomes an alias;
+short numeric names are excluded. The JSON dump contains the entire original Point
+feature in `evidence[].records`, including all properties and description HTML. Full
+Markdown and generated HTML retain that record alongside readable site text. The exact
+original GeoJSON, including all overlays, is stored once and can be exported using any
+site's ID with `get --format source`.
+
+The captured map notice credits Jim Lee and specifies
+[CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/), including its
+noncommercial restriction. That notice and the descriptions' original Planeman, Sean
+O'Connor/SOC, and other credits accompany the records. Linked media retain their own
+rights; media files are not downloaded. These data terms are separate from the CLI's
+software license.
+
+Eight queries compared embedding representations across all 383 sites using the pinned
+model and pure cosine ranking:
+
+| Embedding input | Vectors | Expected site first | Expected site in first five |
+| --- | --- | --- | --- |
+| Marker names only | 766 | 5/8 | 5/8 |
+| Full extracted Markdown | 1,758 | 8/8 | 8/8 |
+| Site descriptions without credits or image URLs (selected) | 766 | 7/8 | 8/8 |
+
+The selected input retains historical and technical descriptions with 56% fewer vectors
+than full Markdown, avoiding duplicated raw JSON and map styling. The former MiG-31 air
+base query places Khotilovo second; including its name places it first. Full Markdown
+performed better on that query. This eight-query diagnostic is not a general accuracy
+estimate, and many markers share identical descriptions. The committed CLI evaluation
+adds eight required named-site cases and four semantic cases, including approximate
+location wording and historical occupancy changes.
+
+Repeat HTTP captures were byte-identical. Offline extraction with networking disabled
+preserved all 383 original Point features exactly and retained one complete source
+response. Canonical rendering and a fingerprint of every feature make JSON property order,
+feature order, and whitespace irrelevant to content identity; changes to a Point or an
+unassigned overlay still change the dataset fingerprint. Fixture tests cover malformed
+geometry, source scope, identity, uncertainty, license/provenance changes, response and
+HTML corruption, offline publication, and content-change gating.
+
+The combined nine-source bundle contains 3,809 entities, 4,541 evidence pages, and 14,502
+vectors. Windows and Linux amd64 acceptance round-trip all 383 site records, their generated HTML and
+complete Markdown, and the byte-exact original collection. All twelve ClimateViewer
+retrieval cases pass, including all eight named sites at rank one. All 53 required cases
+across the nine sources pass; six previously documented optional diagnostics remain
+misses. The unfiltered `russian cheeseboard` query remains first in both modes.
+Networking-disabled repackaging reports `changed: false` with the same dataset ID.
+Verification also passed 136 Python tests, lint/type checks, Go tests/vet, and all five
+binary builds. Linux amd64 verification and exports also pass with networking disabled
+and a read-only filesystem. Linux arm64 verification passed under emulation. macOS binaries were
+cross-compiled locally; release publication still requires native macOS acceptance.
 
 ### Add another website
 
@@ -779,6 +866,15 @@ shared builder writes the derived HTML and attaches `html_origin: "api-rendered"
 `source_response` with its URL, content type, SHA-256, and exact `body_base64`. Producer
 and consumer integrity checks validate both representations. Ordinary HTML adapters
 leave these optional fields empty and retain their existing exports.
+For structured collections, set a stable `Evidence.record_id`, complete original objects
+in `Evidence.records`, and item-specific `rendered_html` and Markdown. Keep `Evidence.url`
+equal to the captured collection request. Evidence identity then hashes the URL plus the
+record ID, allowing independent records in one response. The builder uses
+`html_origin: "record-rendered"` and `source_response.body_member` to refer to one
+checksum-verified `responses/SOURCE/URL_HASH.json` bundle member. This supports additional
+JSON/GeoJSON sources without duplicating an entire collection inside each entity dump.
+Preserve collection-level data changes in the source's semantic fingerprint when excluded
+features still belong to its original export, as ClimateViewer does for line overlays.
 Implement the separate `SupplementalDiscovery` protocol for discovery state not available
 in ordinary archived HTML, such as browser-rendered catalogs or prior feed membership;
 offline extraction never invokes that capability.
@@ -818,7 +914,7 @@ dataset, service, API key, or first-run model download is required.
 | --- | --- |
 | `pipelines search [--mode hybrid\|vector] [--limit N] [filters] "query"` | Ranked, deduplicated entities |
 | `pipelines similar [--limit N] [filters] SOURCE:ID` | Nearest entities, excluding the input entity |
-| `pipelines get [--format json\|markdown\|html] [--evidence PAGE_ID] SOURCE:ID` | Complete entity/evidence export |
+| `pipelines get [--format json\|markdown\|html\|source] [--evidence PAGE_ID] SOURCE:ID` | Complete entity/evidence export |
 | `pipelines info` | Dataset identity, counts, model, and included sources |
 | `pipelines verify` | Bundle integrity and cross-runtime embedding checks |
 | `pipelines version` | Executable version |
@@ -840,6 +936,7 @@ pipelines search --source wikipedia --kind radar "Dragon Eye"
 pipelines search --source commons --kind radar "1L122-2E"
 pipelines search --source armyrecognition --kind sensor "MSP500 NASAMS"
 pipelines search --source fandom --kind radar "Russian Woodpecker"
+pipelines search --source climateviewer --kind site "BOLSHOYE SAVINO air base"
 pipelines search --mode vector --kind radar "detect aircraft approaching an airport"
 pipelines similar --limit 5 radartutorial:8bdc6ce92fea3ca62de71395
 pipelines get radartutorial:8bdc6ce92fea3ca62de71395
@@ -852,6 +949,8 @@ pipelines get wikipedia:51215241
 pipelines get commons:54320747
 pipelines get armyrecognition:e4a5aecde1b187a0deffbab3
 pipelines get fandom:344747
+pipelines get climateviewer:fortress-russia-308b83193fb2a0e18ede7fbd
+pipelines get --format source climateviewer:fortress-russia-308b83193fb2a0e18ede7fbd > fortress-russia.geojson
 ```
 
 Search emits JSON with `dataset_id`, query/mode, and `results`. Each result includes its
@@ -869,5 +968,11 @@ captured HTML bytes for ordinary pages, or the derived article document for API 
 and requires an evidence ID when the entity has multiple pages. API evidence is marked
 `html_origin: "api-rendered"`; JSON output also includes the exact original response in
 `source_response.body_base64`, its content type and checksum, and `canonical_url`.
+Structured records instead use `html_origin: "record-rendered"`, complete original objects
+in `records`, and a `source_response.body_member` descriptor. `--format source` exports
+the byte-exact captured response: ordinary HTML, API JSON, or the whole shared GeoJSON
+collection. Like HTML output, source output requires `--evidence PAGE_ID` for entities
+with multiple evidence pages. This keeps ordinary record dumps compact while retaining
+the entire source response for inspection.
 Commands return nonzero on failure with a JSON `error` on stderr. All consumer operations
 work offline and never start a crawl or update the dataset.

@@ -58,12 +58,13 @@ type Result struct {
 }
 type Filter struct{ Source, Kind, Category string }
 type Dataset struct {
-	Files    *zip.Reader
-	Manifest Manifest
-	Entities []Entity
-	chunks   []Chunk
-	vectors  []float32
-	byID     map[string]int
+	sourceResponses map[string][]byte
+	Files           *zip.Reader
+	Manifest        Manifest
+	Entities        []Entity
+	chunks          []Chunk
+	vectors         []float32
+	byID            map[string]int
 }
 
 func Open(data []byte) (*Dataset, error) {

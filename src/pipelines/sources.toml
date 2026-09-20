@@ -21,3 +21,6 @@ adapter = "pipelines.sources.armyrecognition:ArmyRecognition"
 
 [fandom]
 adapter = "pipelines.sources.fandom:Fandom"
+
+[climateviewer]
+adapter = "pipelines.sources.climateviewer:ClimateViewer"
