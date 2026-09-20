@@ -4,8 +4,8 @@ Scrape equipment sources into one offline CLI. Search radars, emitters, vehicles
 and other items by name or meaning; follow a stable ID to the complete captured evidence.
 
 **Local dataset:** 10 sources, **4,194 entities**, **4,926 evidence pages**, **15,272 vectors**.
-Captured/evaluated September 20, 2026 UTC. [TODO.md](TODO.md): outstanding work, failures,
-release readiness, dataset ID, and local data locations.
+Captured/evaluated September 20, 2026 UTC. Dataset ID:
+`00b3d0cad1a8c2b508af65b2e2fdb879dc08eefefb0339a7fecb8fff8cb00998`.
 
 ## Architecture
 
@@ -61,6 +61,10 @@ The image lacks Chromium/agent-browser; run initial Deagel discovery on a prepar
 
 SQLite is producer bookkeeping; consumer lookup uses embedded catalog/vectors.
 Generated archives, models, bundles, and binaries stay outside Git history.
+Current workstation data root: `C:/Users/erikz/.hai/reference-data/`; model/cache/bundle:
+`build/model/`, `build/entity-vector-cache/`, `build/dataset.zip`; binaries/checksums: `dist/`.
+Latest retrieval report: `build/cambridgepixel-evaluation/cli-retrieval.json`;
+CMANO access captures: `build/cmano-evaluation/`.
 
 ## Release mechanics
 
@@ -81,6 +85,15 @@ Generated archives, models, bundles, and binaries stay outside Git history.
 | Platforms | Native Linux/macOS amd64+arm64 and Windows amd64, `CGO_ENABLED=0`; identical verified bundle. Linux amd64 additionally verifies offline/read-only. |
 | Publication | All five jobs and asset-completeness checks pass before publishing draft; existing binaries never overwritten. |
 | Artifacts | Input `data-CONTENT_SHA256`; release `cli-DATASET_ID`; five executables, `dataset-manifest.json`, `SHA256SUMS`; embedded notices. |
+
+### Remaining work
+
+- Review redistribution rights/select a permitted source subset; stage and publish the
+  first CLI release. Complete native acceptance for both macOS targets and all release jobs.
+- Back up producer archives, snapshots, model, and bundle independently of Git.
+- Resume CMANO when original pages/export are accessible; current implementation is blocked.
+- Improve the six semantic misses below; broaden independent/ambiguous-name evaluations.
+  Historical feeds, further categories, and Cold War data require explicit scope review.
 
 ## Sources
 
@@ -196,8 +209,7 @@ accuracy estimates. Selected text keeps technical content; full evidence remains
 | Cambridge Pixel | Names: 770 / 2 / 2 | 1,534 / 7 / 8 | Description/band/status/applications: 770 / 8 / 8 |
 
 - [CLI cases](tests/fixtures/retrieval.json): **63/63 required**, **29/35 optional** pass;
-  missing sources reported skipped.
-  Six misses/query ranks: [TODO.md](TODO.md). Global `russian cheeseboard`: 96L6E first,
+  missing sources reported skipped. Global `russian cheeseboard`: 96L6E first,
   hybrid/vector. Type 1478/Repeynik: vector ranks 11/7, hybrid first.
 - Tradeoffs: Apple Orchard full/focused rank 3/20; NORAD 68826 rank 7/13; Commons broad
   stealth query rank 45; Deagel sound/infrared outside top 20. Khotilovo second without name.
@@ -211,6 +223,17 @@ accuracy estimates. Selected text keeps technical content; full evidence remains
 - Export checks: all 11 Army Recognition, 53 Fandom articles, 383 ClimateViewer,
   385 Cambridge Pixel records, 198 Duga-1 pages. Latest Linux samples all sources plus
   12 Cambridge records; all 16 Cambridge queries pass Windows/Linux.
+
+Optional misses, source-filtered vector mode; target top five, twenty results retrieved:
+
+| Source | Query | Rank |
+| --- | --- | ---: |
+| Deagel | passive artillery locator using sound and infrared sensors | >20 |
+| VirtualGlobetrotting | radar inside a protective dome on Apple Orchard Mountain | 20 |
+| RussianForces | satellite with NORAD identifier 68826 | 13 |
+| Wikipedia | Type 1478 airborne fire control radar | 11 |
+| Commons | radar to detect stealth aircraft cruise missiles and unmanned aerial vehicles | >20 |
+| Commons | Repeynik radar | 7 |
 
 ```sh
 uv sync --frozen --extra build

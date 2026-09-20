@@ -8,7 +8,7 @@ from test_pipeline import archived
 
 from pipelines.archive import Archive
 from pipelines.build import publish
-from pipelines.distribution import collect, content_digest
+from pipelines.distribution import collect_artifacts, content_digest
 from pipelines.model import Entity, EntityKind, Evidence, Fact
 from pipelines.sources.base import Source
 
@@ -29,7 +29,6 @@ class CatalogSource:
         return {}
 
     def extract(self, url: str, body: bytes, names: list[str]) -> list[Entity]:
-        # The fixture uses a JSON catalog to avoid coupling to the radar HTML parser.
         items = json.loads(body)
         return [
             Entity(
@@ -74,7 +73,7 @@ def test_second_adapter_catalog_and_multiple_evidence_pages(tmp_path: Path) -> N
         publish(radar, radar_archive, radar_dir)
     finally:
         radar_archive.close()
-    entities, html = collect(tmp_path, [radar.id, source.id])
+    entities, html, _ = collect_artifacts(tmp_path, [radar.id, source.id])
     assert len(entities) == 3
     assert len(html) == 3
     by_id = {entity["id"]: entity for entity in entities}

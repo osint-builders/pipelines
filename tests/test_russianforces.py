@@ -5,7 +5,7 @@ import pytest
 
 from pipelines.archive import Archive
 from pipelines.build import build
-from pipelines.distribution import collect
+from pipelines.distribution import collect_artifacts
 from pipelines.model import EntityKind, valid_key
 from pipelines.sources.russianforces import CATALOG, FEED, RussianForces
 
@@ -123,7 +123,7 @@ def test_offline_merge_retains_all_articles_and_refresh_membership(
 
     monkeypatch.setattr(socket, "socket", forbidden)
     build(source, tmp_path, archive_id="fixture")
-    records, bodies = collect(tmp_path, [source.id])
+    records, bodies, _ = collect_artifacts(tmp_path, [source.id])
     assert len(records) == 9 and len(bodies) == 2
     assert all(len(e["evidence"]) == 2 for e in records)
     assert source.discovery_seeds(directory / "archives/next") == sorted(

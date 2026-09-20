@@ -1,5 +1,3 @@
-"""RSS-discovered radar-site records with complete archived detail evidence."""
-
 import math
 import re
 from pathlib import Path
@@ -11,15 +9,12 @@ from markdownify import markdownify
 
 from pipelines.model import Entity, EntityKind, Evidence, Fact
 from pipelines.sources.feeds import previous_urls
+from pipelines.sources.html import text
 
 ORIGIN = "https://virtualglobetrotting.com"
 CATEGORY = ORIGIN + "/category/buildings/radar-sites/"
 FEED = CATEGORY + "rss.xml"
 DETAIL = re.compile(r"/map/[a-z0-9][a-z0-9-]*/$")
-
-
-def text(node: Tag) -> str:
-    return " ".join(node.stripped_strings)
 
 
 def markdown(node: Tag) -> str:

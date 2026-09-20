@@ -1,5 +1,3 @@
-"""Radar model records cross-checked against Cambridge Pixel's visible catalog."""
-
 import hashlib
 import json
 import re
@@ -7,16 +5,13 @@ import unicodedata
 from html import escape
 from urllib.parse import urlsplit
 
-from bs4 import BeautifulSoup, Tag
+from bs4 import BeautifulSoup
 
 from pipelines.model import Entity, EntityKind, Evidence, Fact
+from pipelines.sources.html import text
 
 SEED = "https://cambridgepixel.com/resources/radar-database/"
 HEADERS = ["Manufacturer", "Model", "Band", "Status", "Description", "URL"]
-
-
-def text(node: Tag) -> str:
-    return " ".join(node.stripped_strings)
 
 
 def identity(manufacturer: str, model: str) -> str:

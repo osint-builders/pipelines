@@ -8,7 +8,7 @@ from bs4 import BeautifulSoup
 
 from pipelines.archive import Archive, atomic_json
 from pipelines.build import build
-from pipelines.distribution import collect, content_digest
+from pipelines.distribution import collect_artifacts, content_digest
 from pipelines.sources.deagel import Deagel, kind
 
 BODY = (Path(__file__).parent / "fixtures/deagel.html").read_bytes()
@@ -109,7 +109,7 @@ def test_offline_extraction_keeps_full_evidence_and_scoped_search(
     monkeypatch.setattr(socket, "socket", forbidden)
     monkeypatch.setattr(source, "discovery_seeds", forbidden)
     build(source, tmp_path, archive_id="fixture")
-    entities, bodies = collect(tmp_path, [source.id])
+    entities, bodies, _ = collect_artifacts(tmp_path, [source.id])
     assert len(entities) == 2 and len(bodies) == 1
     assert next(iter(bodies.values())) == BODY
     assert "copper turret" in entities[0]["evidence"][0]["search_text"]

@@ -7,7 +7,7 @@ import pytest
 
 from pipelines.archive import Archive
 from pipelines.build import publish
-from pipelines.distribution import collect, collect_artifacts, content_digest
+from pipelines.distribution import collect_artifacts, content_digest
 from pipelines.sources.climateviewer import (
     DATA,
     LICENSE,
@@ -224,12 +224,12 @@ def test_offline_archive_stores_original_collection_once_and_indexes_each_record
         page = entities[0]["evidence"][0]
         (snapshot / "html" / f"{page['id']}.html").write_text("Corrupted")
         with pytest.raises(ValueError, match="HTML checksum"):
-            collect(tmp_path, [adapter.id])
+            collect_artifacts(tmp_path, [adapter.id])
         publish(adapter, archive, directory)
         captured = next(p for p in archive.pages("saved") if p["url"] == DATA)
         (archive.path / captured["file"]).write_bytes(b"corrupt JSON")
         with pytest.raises(ValueError, match="checksum"):
-            collect(tmp_path, [adapter.id])
+            collect_artifacts(tmp_path, [adapter.id])
     finally:
         archive.close()
 

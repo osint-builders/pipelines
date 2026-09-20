@@ -1,5 +1,3 @@
-"""Keep published feed members in subsequent explicitly requested crawls."""
-
 import hashlib
 import json
 from pathlib import Path

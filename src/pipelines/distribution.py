@@ -1,5 +1,3 @@
-"""Produce a portable, immutable dataset from already published source snapshots."""
-
 import base64
 import hashlib
 import json
@@ -50,11 +48,6 @@ def plain_text(markdown: str) -> str:
     text = re.sub(r"https?://\S+", " ", text)
     text = re.sub(r"<[^>]+>", " ", text)
     return " ".join(re.sub(r"[#*_`|]", " ", text).split())
-
-
-def collect(root: Path, sources: list[str]) -> tuple[list[dict], dict[str, bytes]]:
-    entities, html, _ = collect_artifacts(root, sources)
-    return entities, html
 
 
 def collect_artifacts(
@@ -300,7 +293,6 @@ def _package(
                     raise ValueError("Existing bundle failed integrity check")
                 return {**manifest, "changed": False, "output": str(output)}
     encoder = Encoder(model)
-    cache.mkdir(parents=True, exist_ok=True)
     index = []
     chunks: list[dict] = []
     for entity in entities:

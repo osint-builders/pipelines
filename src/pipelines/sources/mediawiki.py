@@ -1,13 +1,7 @@
-"""Read metadata shared by archived MediaWiki HTML sources."""
-
 import json
 import re
 
-from bs4 import BeautifulSoup, Tag
-
-
-def text(node: Tag) -> str:
-    return " ".join(node.stripped_strings)
+from bs4 import BeautifulSoup
 
 
 def config(soup: BeautifulSoup, name: str) -> object:

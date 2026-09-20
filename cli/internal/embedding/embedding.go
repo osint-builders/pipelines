@@ -42,7 +42,6 @@ func New(ctx context.Context, files fs.FS) (*Encoder, error) {
 func (e *Encoder) Close() error { return e.session.Destroy() }
 
 func (e *Encoder) Encode(ctx context.Context, text string) ([]float32, error) {
-	// Reject overlong queries explicitly instead of silently truncating them.
 	if len([]rune(text)) > 1000 {
 		return nil, errors.New("query exceeds 1000 characters")
 	}

@@ -6,7 +6,7 @@ import pytest
 
 from pipelines.archive import Archive
 from pipelines.build import build
-from pipelines.distribution import collect
+from pipelines.distribution import collect_artifacts
 from pipelines.sources.wikipedia import ORIGIN, Wikipedia
 
 BODY = (Path(__file__).parent / "fixtures/wikipedia.html").read_bytes()
@@ -148,7 +148,7 @@ def test_offline_category_publication_and_exact_html(
 
     monkeypatch.setattr(socket, "socket", forbidden)
     path = build(source, tmp_path, archive_id="fixture")
-    entities, bodies = collect(tmp_path, [source.id])
+    entities, bodies, _ = collect_artifacts(tmp_path, [source.id])
     assert entities[0]["id"] == "wikipedia:1234"
     assert list(bodies.values()) == [BODY]
     manifest = json.loads((path / "manifest.json").read_text())

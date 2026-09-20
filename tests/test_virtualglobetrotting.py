@@ -7,7 +7,7 @@ from bs4 import BeautifulSoup
 
 from pipelines.archive import Archive
 from pipelines.build import build
-from pipelines.distribution import collect, content_digest
+from pipelines.distribution import collect_artifacts, content_digest
 from pipelines.sources.virtualglobetrotting import FEED, VirtualGlobetrotting
 
 BODY = (Path(__file__).parent / "fixtures/virtualglobetrotting.html").read_bytes()
@@ -123,7 +123,7 @@ def test_offline_publication_and_feed_rolloff_history(
 
     monkeypatch.setattr(socket, "socket", forbidden)
     build(source, tmp_path, archive_id="first")
-    entities, bodies = collect(tmp_path, [source.id])
+    entities, bodies, _ = collect_artifacts(tmp_path, [source.id])
     assert len(entities) == 1 and next(iter(bodies.values())) == BODY
     assert entities[0]["id"] == source.id + ":12345"
     second = directory / "archives/second"

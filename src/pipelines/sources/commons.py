@@ -1,5 +1,3 @@
-"""Equipment identities from reviewed Commons categories, with media-page evidence."""
-
 import json
 import re
 from collections import defaultdict
@@ -12,7 +10,8 @@ from bs4 import BeautifulSoup, Tag
 from markdownify import markdownify
 
 from pipelines.model import Entity, EntityKind, Evidence, Fact
-from pipelines.sources.mediawiki import config, text
+from pipelines.sources.html import text
+from pipelines.sources.mediawiki import config
 
 ORIGIN = "https://commons.wikimedia.org"
 ROOT_CATEGORY = "Category:Military_radars_of_Russia"

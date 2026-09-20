@@ -1,5 +1,3 @@
-"""Named equipment with dated evidence from the publisher's Atom feed."""
-
 import json
 import re
 from dataclasses import replace
@@ -12,6 +10,7 @@ from markdownify import markdownify
 
 from pipelines.model import Entity, EntityKind, Evidence, Fact
 from pipelines.sources.feeds import previous_urls
+from pipelines.sources.html import text
 
 ORIGIN = "https://russianforces.org"
 FEED = ORIGIN + "/atom.xml"
@@ -21,10 +20,6 @@ COSMOS = re.compile(r"(?<![\w-])Cosmos[- ](\d{1,5})(?![\w-])", re.I)
 CATALOG = json.loads(
     Path(__file__).with_name("russianforces_entities.json").read_text()
 )
-
-
-def text(node: Tag) -> str:
-    return " ".join(node.stripped_strings)
 
 
 def pattern(aliases: list[str]) -> re.Pattern:

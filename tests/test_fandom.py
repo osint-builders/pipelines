@@ -11,7 +11,7 @@ from scrapy.http import Response
 from pipelines.archive import Archive
 from pipelines.build import publish
 from pipelines.crawl import ArchiveSpider
-from pipelines.distribution import collect, content_digest
+from pipelines.distribution import collect_artifacts, content_digest
 from pipelines.sources.fandom import (
     API,
     CATEGORY,
@@ -224,7 +224,7 @@ def test_api_archive_offline_publish_exact_exports_and_content_gate(
         assert all(row["file"].endswith(".json") for row in archive.pages("saved"))
         archive.mark_complete(adapter.id)
         snapshot = publish(adapter, archive, directory)
-        entities, html = collect(tmp_path, [adapter.id])
+        entities, html, _ = collect_artifacts(tmp_path, [adapter.id])
         page = entities[0]["evidence"][0]
         assert base64.b64decode(page["source_response"]["body_base64"]) == article()
         assert html["fandom/" + page["id"]].startswith(b"<!doctype html>")
@@ -241,14 +241,14 @@ def test_api_archive_offline_publish_exact_exports_and_content_gate(
         assert content_digest(changed) != content_digest(entities)
         (snapshot / "html" / f"{page['id']}.html").write_text("Corrupted HTML")
         with pytest.raises(ValueError, match="HTML checksum"):
-            collect(tmp_path, [adapter.id])
+            collect_artifacts(tmp_path, [adapter.id])
         publish(adapter, archive, directory)
         raw_page = next(
             p for p in archive.pages("saved") if p["url"] == article_url("1")
         )
         (archive.path / raw_page["file"]).write_bytes(b"Changed API JSON")
         with pytest.raises(ValueError, match="API response checksum"):
-            collect(tmp_path, [adapter.id])
+            collect_artifacts(tmp_path, [adapter.id])
     finally:
         archive.close()
 

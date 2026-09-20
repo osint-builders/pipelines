@@ -1,5 +1,3 @@
-"""Equipment articles in Army Recognition's Air Defense Radars catalog."""
-
 import json
 import re
 from pathlib import Path
@@ -9,6 +7,7 @@ from bs4 import BeautifulSoup, Comment, Tag
 from markdownify import markdownify
 
 from pipelines.model import Entity, EntityKind, Evidence, Fact, evidence_id
+from pipelines.sources.html import text
 
 ORIGIN = "https://www.armyrecognition.com"
 CATALOG = "/military-products/army/radars/air-defense-radars"
@@ -17,10 +16,6 @@ SUBJECTS = json.loads(
     Path(__file__).with_name("armyrecognition_subjects.json").read_text()
 )
 TERMS = ORIGIN + "/legal-information"
-
-
-def text(node: Tag) -> str:
-    return " ".join(node.stripped_strings)
 
 
 def clean(content: Tag) -> None:

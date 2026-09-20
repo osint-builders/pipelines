@@ -1,5 +1,3 @@
-"""Category-scoped English Wikipedia entities with revision-attributed evidence."""
-
 import re
 from copy import copy
 from urllib.parse import parse_qsl, quote, unquote, urlencode, urljoin, urlsplit
@@ -8,7 +6,8 @@ from bs4 import BeautifulSoup, Tag
 from markdownify import markdownify
 
 from pipelines.model import Entity, EntityKind, Evidence, Fact
-from pipelines.sources.mediawiki import config, text
+from pipelines.sources.html import text
+from pipelines.sources.mediawiki import config
 
 ORIGIN = "https://en.wikipedia.org"
 ROOT_CATEGORY = "Category:Military_radars_of_China"

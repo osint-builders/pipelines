@@ -6,7 +6,7 @@ import pytest
 from test_pipeline import HTML, archived
 
 from pipelines.build import publish
-from pipelines.distribution import collect, content_digest, write_bundle
+from pipelines.distribution import collect_artifacts, content_digest, write_bundle
 
 
 def test_export_preserves_full_content_and_stable_source_id(tmp_path: Path) -> None:
@@ -15,7 +15,7 @@ def test_export_preserves_full_content_and_stable_source_id(tmp_path: Path) -> N
         snapshot = publish(source, archive, source_dir)
     finally:
         archive.close()
-    entities, bodies = collect(tmp_path, [source.id])
+    entities, bodies, _ = collect_artifacts(tmp_path, [source.id])
     document = entities[0]
     assert document["id"] == f"{source.id}:{document['source_id']}"
     assert bodies[document["source"] + "/" + document["evidence"][0]["id"]] == HTML
@@ -32,7 +32,7 @@ def test_corrupt_archive_cannot_be_distributed(tmp_path: Path) -> None:
     (archive.path / page["file"]).write_bytes(b"changed after publication")
     archive.close()
     with pytest.raises(ValueError, match="checksum"):
-        collect(tmp_path, [source.id])
+        collect_artifacts(tmp_path, [source.id])
 
 
 def test_digest_ignores_capture_metadata_but_detects_content_edits_and_deletions() -> (

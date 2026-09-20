@@ -1,5 +1,3 @@
-"""Validated entity snapshots shared by all source adapters."""
-
 import json
 import re
 from pathlib import Path

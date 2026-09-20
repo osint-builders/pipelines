@@ -6,6 +6,7 @@ from bs4 import BeautifulSoup, Tag
 from markdownify import markdownify
 
 from pipelines.model import Entity, EntityKind, Evidence, Fact, evidence_id
+from pipelines.sources.html import text
 
 ORIGIN = "https://www.radartutorial.eu"
 
@@ -19,10 +20,6 @@ def parse_html(body: bytes) -> BeautifulSoup:
         flags=re.S | re.I,
     )
     return BeautifulSoup(repaired, "html.parser")
-
-
-def text(node: Tag) -> str:
-    return " ".join(node.stripped_strings)
 
 
 def fact_text(node: Tag) -> str:

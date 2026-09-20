@@ -6,7 +6,7 @@ import pytest
 
 from pipelines.archive import Archive
 from pipelines.build import build
-from pipelines.distribution import collect, content_digest
+from pipelines.distribution import collect_artifacts, content_digest
 from pipelines.model import evidence_id
 from pipelines.sources.armyrecognition import CATALOG, ORIGIN, SEED, ArmyRecognition
 
@@ -180,7 +180,7 @@ def test_offline_publication_keeps_exact_original_html(
 
     monkeypatch.setattr(socket, "socket", forbidden)
     path = build(adapter, tmp_path, archive_id="fixture")
-    entities, bodies = collect(tmp_path, [adapter.id])
+    entities, bodies, _ = collect_artifacts(tmp_path, [adapter.id])
     assert entities[0]["id"] == "armyrecognition:" + evidence_id(URL)
     assert list(bodies.values()) == [BODY]
     manifest = json.loads((path / "manifest.json").read_text())

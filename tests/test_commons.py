@@ -7,7 +7,7 @@ from bs4 import BeautifulSoup
 
 from pipelines.archive import Archive
 from pipelines.build import build
-from pipelines.distribution import collect
+from pipelines.distribution import collect_artifacts
 from pipelines.sources.commons import ORIGIN, Commons, english
 
 FILE_URL = ORIGIN + "/wiki/File:Example.jpg"
@@ -288,7 +288,7 @@ def test_offline_preparation_publication_and_byte_exact_exports(
 
     monkeypatch.setattr(socket, "socket", forbidden)
     snapshot = build(source, tmp_path, archive_id="fixture")
-    entities, bodies = collect(tmp_path, [source.id])
+    entities, bodies, _ = collect_artifacts(tmp_path, [source.id])
     assert [e["id"] for e in entities] == ["commons:2", "commons:3", "commons:5"]
     assert len(entities[1]["evidence"]) == 3
     assert BODY in bodies.values()

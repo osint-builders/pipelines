@@ -1,5 +1,3 @@
-"""Deagel Armies: browser discovery, streamed HTML, and distinct equipment variants."""
-
 import hashlib
 import json
 import re
@@ -18,14 +16,11 @@ from markdownify import markdownify
 
 from pipelines.archive import atomic_json
 from pipelines.model import Entity, EntityKind, Evidence, Fact
+from pipelines.sources.html import text
 
 ORIGIN = "https://www.deagel.com"
 DETAIL = re.compile(r"/Armies/.+/(a\d{6})$")
 VARIANT = re.compile(r"\d{3}$")
-
-
-def text(node: Tag) -> str:
-    return " ".join(node.stripped_strings)
 
 
 def content(body: bytes) -> Tag:

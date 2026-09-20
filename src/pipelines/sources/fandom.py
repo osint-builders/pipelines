@@ -1,5 +1,3 @@
-"""Reviewed Military Wiki radar identities from its public MediaWiki API."""
-
 import json
 import re
 from collections.abc import Iterable
@@ -12,7 +10,7 @@ from bs4 import BeautifulSoup, Tag
 from markdownify import markdownify
 
 from pipelines.model import Entity, EntityKind, Evidence, Fact
-from pipelines.sources.mediawiki import text
+from pipelines.sources.html import text
 
 ORIGIN = "https://military-history.fandom.com"
 CATEGORY = "Category:Russian_and_Soviet_military_radars"

@@ -1,5 +1,3 @@
-"""Historical Fortress Russia site markers from a bounded GeoJSON layer."""
-
 import hashlib
 import json
 import math

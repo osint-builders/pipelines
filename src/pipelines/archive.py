@@ -35,10 +35,9 @@ class Archive:
         """)
         self.db.commit()
 
-    def add(self, url: str) -> bool:
-        cursor = self.db.execute("INSERT OR IGNORE INTO pages(url) VALUES (?)", (url,))
+    def add(self, url: str) -> None:
+        self.db.execute("INSERT OR IGNORE INTO pages(url) VALUES (?)", (url,))
         self.db.commit()
-        return cursor.rowcount > 0
 
     def save(
         self, url: str, status: int, body: bytes, content_type: str, headers: dict
