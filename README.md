@@ -8,6 +8,8 @@ The executable embeds the dataset, HTML, original responses, Markdown, vectors, 
 model. It requires no API key, Python installation, model download, or writable cache.
 The Python scraper and release tools run separately from consuming applications.
 
+See [TODO.md](TODO.md) for completed work, known failures, remaining work, and local data locations.
+
 ## Scraper project
 
 ```mermaid
