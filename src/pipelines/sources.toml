@@ -24,3 +24,6 @@ adapter = "pipelines.sources.fandom:Fandom"
 
 [climateviewer]
 adapter = "pipelines.sources.climateviewer:ClimateViewer"
+
+[cambridgepixel]
+adapter = "pipelines.sources.cambridgepixel:CambridgePixel"

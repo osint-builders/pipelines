@@ -83,7 +83,19 @@ def verify_bundle(bundle: Path) -> dict:
                 response = page.get("source_response")
                 if page.get("html_origin") == "record-rendered":
                     record_id = page.get("record_id", "")
-                    member = f"responses/{entity['source']}/{hashlib.sha256(page['url'].encode()).hexdigest()[:24]}.json"
+                    mime = (
+                        (response or {})
+                        .get("content_type", "")
+                        .split(";", 1)[0]
+                        .strip()
+                        .lower()
+                    )
+                    suffix = (
+                        "html"
+                        if mime in {"text/html", "application/xhtml+xml"}
+                        else "json"
+                    )
+                    member = f"responses/{entity['source']}/{hashlib.sha256(page['url'].encode()).hexdigest()[:24]}.{suffix}"
                     identity = page["url"] + "\n" + record_id
                     if (
                         not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,127}", record_id)

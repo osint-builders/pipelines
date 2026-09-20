@@ -99,7 +99,12 @@ func (d *Dataset) Export(id, format, evidenceID string) ([]byte, error) {
 			response, valid := page["source_response"].(map[string]any)
 			contentType, typeOK := response["content_type"].(string)
 			urlHash := sha256.Sum256([]byte(url))
-			member := "responses/" + entity.Source + "/" + hex.EncodeToString(urlHash[:])[:24] + ".json"
+			suffix := ".json"
+			mime := strings.ToLower(strings.TrimSpace(strings.SplitN(contentType, ";", 2)[0]))
+			if mime == "text/html" || mime == "application/xhtml+xml" {
+				suffix = ".html"
+			}
+			member := "responses/" + entity.Source + "/" + hex.EncodeToString(urlHash[:])[:24] + suffix
 			expected, exists := d.Manifest.Files[member]
 			if page["record_id"] == nil || !valid || !typeOK || contentType == "" || response["url"] != url || response["body_member"] != member || response["body_base64"] != nil || !exists || response["sha256"] != expected {
 				return nil, errors.New("invalid record response provenance")

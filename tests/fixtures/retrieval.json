@@ -80,5 +80,21 @@
   {"source":"climateviewer","kind":"site","query":"first operational location of the S-400 system in the historical map","mode":"vector","expected":"climateviewer:fortress-russia-fd910911d66b41498875b72f","max_rank":5,"required":false},
   {"source":"climateviewer","kind":"site","query":"former MiG-31 Foxhound air base","mode":"vector","expected":"climateviewer:fortress-russia-66c9e2801eca8933c7009691","max_rank":5,"required":false},
   {"source":"climateviewer","kind":"site","query":"Lavrentiya early warning site with approximate location and no high resolution imagery","mode":"vector","expected":"climateviewer:fortress-russia-6dfc750c0b1d401d1f532b00","max_rank":5,"required":false},
-  {"source":"climateviewer","kind":"site","query":"SAM site unoccupied in September 2004 with a battery in residence by May 2007","mode":"vector","expected":"climateviewer:fortress-russia-4828ac22dc9669f0ffa25bb8","max_rank":5,"required":false}
+  {"source":"climateviewer","kind":"site","query":"SAM site unoccupied in September 2004 with a battery in residence by May 2007","mode":"vector","expected":"climateviewer:fortress-russia-4828ac22dc9669f0ffa25bb8","max_rank":5,"required":false},
+  {"source":"cambridgepixel","kind":"radar","query":"BAE Systems Sampson","mode":"hybrid","expected":"cambridgepixel:bde71cdc6cc662ed8c60354b","max_rank":1},
+  {"source":"cambridgepixel","kind":"radar","query":"BAE Systems Watchman","mode":"hybrid","expected":"cambridgepixel:18a4cad33d6f80d293b3e680","max_rank":1},
+  {"source":"cambridgepixel","kind":"radar","query":"Plessey Watchman","mode":"hybrid","expected":"cambridgepixel:cc6775f32860c7ad6ae037eb","max_rank":1},
+  {"source":"cambridgepixel","kind":"radar","query":"Saab Giraffe 4A","mode":"hybrid","expected":"cambridgepixel:a3fb5a40ecd761dd87b2a77e","max_rank":1},
+  {"source":"cambridgepixel","kind":"radar","query":"Saab Sea Giraffe 4A Fixed Face","mode":"hybrid","expected":"cambridgepixel:1e4c94af3d96bf8314d2a673","max_rank":1},
+  {"source":"cambridgepixel","kind":"sensor","query":"ERA a.s. VERA-NG","mode":"hybrid","expected":"cambridgepixel:81b7e91d21c03088ca27f9b5","max_rank":1},
+  {"source":"cambridgepixel","kind":"radar","query":"Hensoldt Twinvis","mode":"hybrid","expected":"cambridgepixel:6e79006eb69a276f543ebc68","max_rank":1},
+  {"source":"cambridgepixel","kind":"radar","query":"Axis Communications D2210-VE","mode":"hybrid","expected":"cambridgepixel:faf3e4cd91013d7f0bc43491","max_rank":1},
+  {"source":"cambridgepixel","kind":"radar","query":"Aerostar HiPointer 100 / 150","mode":"hybrid","expected":"cambridgepixel:d0b30e63957c258083821edd","max_rank":1},
+  {"source":"cambridgepixel","kind":"radar","query":"Echodyne EchoShield","mode":"hybrid","expected":"cambridgepixel:4ecfb7b1456ae4bc5ae280b8","max_rank":1},
+  {"source":"cambridgepixel","kind":"radar","query":"aerostat mounted maritime surveillance system","mode":"vector","expected":"cambridgepixel:447ed96a327b6e402e458194","max_rank":5,"required":false},
+  {"source":"cambridgepixel","kind":"radar","query":"multifunction naval radar used on Royal Navy Type 45 destroyers","mode":"vector","expected":"cambridgepixel:bde71cdc6cc662ed8c60354b","max_rank":5,"required":false},
+  {"source":"cambridgepixel","kind":"sensor","query":"passive ESM tracker using TDOA multilateration for covert air surveillance","mode":"vector","expected":"cambridgepixel:81b7e91d21c03088ca27f9b5","max_rank":5,"required":false},
+  {"source":"cambridgepixel","kind":"radar","query":"60 GHz area and traffic monitoring radar detecting vehicles at 90 metres","mode":"vector","expected":"cambridgepixel:faf3e4cd91013d7f0bc43491","max_rank":5,"required":false},
+  {"source":"cambridgepixel","kind":"radar","query":"passive radar exploiting broadcast signals for covert 360 degree air tracking","mode":"vector","expected":"cambridgepixel:6e79006eb69a276f543ebc68","max_rank":5,"required":false},
+  {"source":"cambridgepixel","kind":"radar","query":"Hawkei mounted air defence radar for Australian NASAMS","mode":"vector","expected":"cambridgepixel:e7e4219f346b5dc9570f960b","max_rank":5,"required":false}
 ]

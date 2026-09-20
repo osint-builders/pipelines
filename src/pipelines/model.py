@@ -16,6 +16,12 @@ def valid_key(value: str) -> bool:
     return re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,127}", value) is not None
 
 
+def response_member(source: str, url: str, content_type: str) -> str:
+    mime = content_type.split(";", 1)[0].strip().lower()
+    suffix = "html" if mime in {"text/html", "application/xhtml+xml"} else "json"
+    return f"responses/{source}/{evidence_id(url)}.{suffix}"
+
+
 class EntityKind(StrEnum):
     RADAR = "radar"
     EMITTER = "emitter"

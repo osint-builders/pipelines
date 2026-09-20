@@ -8,7 +8,7 @@ from filelock import FileLock
 
 from pipelines.archive import Archive, atomic_json, run_id
 from pipelines.crawl import crawl
-from pipelines.model import SCHEMA_VERSION, Entity, evidence_id
+from pipelines.model import SCHEMA_VERSION, Entity, response_member
 from pipelines.sources.base import PreparedSource, Source
 
 
@@ -117,8 +117,8 @@ def publish(source: Source, archive: Archive, source_dir: Path) -> Path:
                         "sha256": response["sha256"],
                     }
                     if page.get("record_id"):
-                        page["source_response"]["body_member"] = (
-                            f"responses/{source.id}/{evidence_id(response['url'])}.json"
+                        page["source_response"]["body_member"] = response_member(
+                            source.id, response["url"], response["content_type"]
                         )
                     else:
                         page["source_response"]["body_base64"] = base64.b64encode(

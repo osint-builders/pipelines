@@ -11,7 +11,7 @@ import zipfile
 from contextlib import closing
 from pathlib import Path
 
-from pipelines.model import evidence_id
+from pipelines.model import response_member
 from pipelines.snapshot import load_snapshot
 
 FORMAT_VERSION = 2
@@ -117,7 +117,9 @@ def collect_artifacts(
                                     "API response checksum or provenance mismatch"
                                 )
                             if evidence["html_origin"] == "record-rendered":
-                                member = f"responses/{source}/{evidence_id(evidence['url'])}.json"
+                                member = response_member(
+                                    source, evidence["url"], page[3]
+                                )
                                 if (
                                     not evidence.get("record_id")
                                     or not evidence.get("records")

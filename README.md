@@ -55,9 +55,10 @@ uv run --no-sync pipeline-build crawl commons --root ../pipeline-data
 uv run --no-sync pipeline-build crawl armyrecognition --root ../pipeline-data
 uv run --no-sync pipeline-build crawl fandom --root ../pipeline-data
 uv run --no-sync pipeline-build crawl climateviewer --root ../pipeline-data
+uv run --no-sync pipeline-build crawl cambridgepixel --root ../pipeline-data
 uv run --no-sync pipeline-build status radartutorial --root ../pipeline-data
 uv run --no-sync pipeline-build model --output build/model
-uv run --no-sync pipeline-build package --root ../pipeline-data --source radartutorial --source deagel --source virtualglobetrotting --source russianforces --source wikipedia --source commons --source armyrecognition --source fandom --source climateviewer --model build/model --cache build/entity-vector-cache --output build/dataset.zip
+uv run --no-sync pipeline-build package --root ../pipeline-data --source radartutorial --source deagel --source virtualglobetrotting --source russianforces --source wikipedia --source commons --source armyrecognition --source fandom --source climateviewer --source cambridgepixel --model build/model --cache build/entity-vector-cache --output build/dataset.zip
 uv run --no-sync python tools/build_cli.py --bundle build/dataset.zip --output dist/pipelines
 uv run --no-sync python tools/accept_cli.py dist/pipelines build/dataset.zip
 uv run --no-sync python tools/evaluate_cli.py dist/pipelines --output build/retrieval-evaluation.json
@@ -198,6 +199,7 @@ of Git history. License notices remain embedded and available through the CLI.
 | [Army Recognition: Air Defense Radars](https://www.armyrecognition.com/military-products/army/radars/air-defense-radars) | Equipment articles in category 139 | 11 entities: ten radars and one optical sensor |
 | [Fandom Military Wiki: Russian and Soviet military radars](https://military-history.fandom.com/wiki/Category:Russian_and_Soviet_military_radars) | Reviewed category articles from the public MediaWiki API | 46 entities: 32 radars and 14 sites, with 53 article pages |
 | [ClimateViewer Fortress Russia](https://climateviewer.org/layers/geojson/2018/Fortress-Russia-SAM-Sites-ClimateViewer-3D.geojson) | Historical GeoJSON site markers | 383 sites: 291 radar, 65 SAM, 22 air bases, and 5 ABM |
+| [Cambridge Pixel Radar Database](https://cambridgepixel.com/resources/radar-database/) | Complete catalog rows and embedded ProductModel records | 385 entities: 384 radars and one passive ESM sensor, from 99 manufacturers |
 
 Radartutorial discovery follows English sitemaps, indexes, manufacturer names, and links.
 The crawler obeys robots.txt, limits concurrency to two, and applies delay/throttling.
@@ -814,7 +816,7 @@ unassigned overlay still change the dataset fingerprint. Fixture tests cover mal
 geometry, source scope, identity, uncertainty, license/provenance changes, response and
 HTML corruption, offline publication, and content-change gating.
 
-The combined nine-source bundle contains 3,809 entities, 4,541 evidence pages, and 14,502
+The initial nine-source bundle contained 3,809 entities, 4,541 evidence pages, and 14,502
 vectors. Windows and Linux amd64 acceptance round-trip all 383 site records, their generated HTML and
 complete Markdown, and the byte-exact original collection. All twelve ClimateViewer
 retrieval cases pass, including all eight named sites at rank one. All 53 required cases
@@ -825,6 +827,92 @@ Verification also passed 136 Python tests, lint/type checks, Go tests/vet, and a
 binary builds. Linux amd64 verification and exports also pass with networking disabled
 and a read-only filesystem. Linux arm64 verification passed under emulation. macOS binaries were
 cross-compiled locally; release publication still requires native macOS acceptance.
+
+### Cambridge Pixel discovery and extraction
+
+The `cambridgepixel` source captures the [Radar Database](https://cambridgepixel.com/resources/radar-database/)
+with one ordinary HTTP GET. On September 20, 2026 UTC, both the catalog and robots.txt
+returned HTTP 200 with the project user agent. Robots permits this resource and excludes
+the site's global search and several asset paths. Production uses no browser, search
+endpoint, manufacturer-site crawl, or media downloads.
+
+The page exposes application, manufacturer, frequency-band, and Current/Legacy selectors
+in a POST filter form, plus Apply/Clear controls. The initial response already contains
+all 385 models; a rendered agent-browser capture yielded the same identities. Selecting
+Legacy and attempting Apply in that browser session left all 385 rows displayed, so the
+filtered interface is not used to establish completeness. The full table includes 326
+Current and 59 Legacy records. There are no catalog-owned per-model detail pages in the
+captured table: 334 rows link to manufacturer references and 51 have no product URL.
+Those references remain links. The separate frequency-guide table, FAQs, menus, and
+marketing content do not become equipment entities.
+
+Each visible row has a corresponding JSON-LD `ProductModel`. Extraction compares every
+manufacturer, model, band, status, description, application list, and product URL between
+HTML and JSON-LD. All 385 records agreed in the live evaluation. Visible counts, declared
+counts, positions, identities, column layout, and required fields must agree before
+publication. This prevents a partial table, unexpected schema, or contradictory metadata
+from silently replacing the current corpus. The normal size and shrinkage guards apply.
+
+No native model IDs are provided. Keys hash the manufacturer and model designation with
+Unicode, whitespace, and case normalization, independently of row order and product URL.
+BAE Systems Watchman and Plessey Watchman therefore remain separate. A combined model
+designation such as HiPointer 100 / 150 remains one source record; variants are not
+invented. A substantive manufacturer/model rename changes the ID and needs identity
+review if continuity is required. Aliases retain the complete source model designation.
+VERA-NG is classified as a `sensor` because its source band and description identify
+passive ESM; passive broadcast radar Twinvis remains a `radar`.
+
+Each entity retains all seven catalog fields, the complete original ProductModel object
+in `evidence[].records`, readable Markdown, and generated HTML. Band strings, approximate
+values, unknowns, and manufacturer wording remain unnormalized. Applications and lifecycle
+status are categories; status reflects the catalog's claim, not independently verified
+operating availability. The source's reported update date is August 7, 2026, and its
+accuracy/staleness notice accompanies every record. Country is not inferred from a
+manufacturer's name.
+
+The original 1,289,631-byte HTML capture is stored once in the bundle and exported exactly
+by `get --format source` using any Cambridge Pixel entity ID. Ordinary record dumps do
+not repeat the entire catalog. Shared record responses now support HTML collections as
+well as JSON/GeoJSON, so future adapters can reuse the same extraction and export path.
+Repeated captures differed in transport bytes but produced identical extracted content;
+reordering rows or changing layout also preserves content identity, while record edits
+change it. Offline replay with networking disabled reproduced all 385 records.
+
+The source retains Cambridge Pixel's copyright notice. Its free-access metadata does not
+specify a redistribution license; obtain the necessary rights before including this
+content in a public dataset or release. Linked manufacturer content has separate terms
+and is not included in the capture.
+
+Eight queries compared three representations across all 385 entities using the pinned
+model and pure cosine ranking, without kind filtering or the hybrid name boost:
+
+| Embedding input | Vectors | Expected item first | Expected item in first five |
+| --- | --- | --- | --- |
+| Manufacturer and model names only | 770 | 2/8 | 2/8 |
+| Full extracted Markdown | 1,534 | 7/8 | 8/8 |
+| Name, description, band, status, and applications (selected) | 770 | 8/8 | 8/8 |
+
+The selected representation keeps all descriptive fields while excluding duplicate raw
+JSON, reference URLs, and attribution boilerplate from embedding. The broadcast-passive
+radar query improves from fourth with full Markdown to first. This small diagnostic is
+not a general accuracy estimate. Sixteen cases are committed for the actual CLI: ten
+named-item regressions and six semantic diagnostics, including the two Watchman records,
+naval versus land Giraffe models, VERA-NG, and source/kind filtering.
+
+The ten-source bundle contains 4,194 entities, 4,926 evidence pages, and 15,272 vectors.
+All sixteen Cambridge Pixel CLI cases return the expected item first on Windows and
+Linux amd64. The full Windows suite passes all 63 required checks across the ten sources;
+six pre-existing optional diagnostics remain misses. Windows acceptance verifies complete
+exports for all 385 new entities. Linux verifies representative exports across every
+source, twelve distinct new records, the byte-exact catalog capture, and all sixteen new
+queries with networking disabled and a read-only filesystem. The unfiltered
+`russian cheeseboard` query remains first in both modes on both platforms.
+
+Validation passed 153 Python tests, lint/type checks, Go tests/vet, the Python package
+build, and all five executable builds. Linux arm64 verification passed under emulation;
+macOS binaries were cross-compiled locally and still require native release acceptance.
+Offline replay produced identical entity, Markdown, and HTML files. Unchanged packaging
+reports `changed: false`, preserving the dataset ID and the data-driven release gate.
 
 ### Add another website
 
@@ -871,8 +959,9 @@ in `Evidence.records`, and item-specific `rendered_html` and Markdown. Keep `Evi
 equal to the captured collection request. Evidence identity then hashes the URL plus the
 record ID, allowing independent records in one response. The builder uses
 `html_origin: "record-rendered"` and `source_response.body_member` to refer to one
-checksum-verified `responses/SOURCE/URL_HASH.json` bundle member. This supports additional
-JSON/GeoJSON sources without duplicating an entire collection inside each entity dump.
+checksum-verified `responses/SOURCE/URL_HASH.json` or `.html` bundle member according to
+the captured content type. This supports JSON/GeoJSON and HTML catalog sources without
+duplicating an entire collection inside each entity dump.
 Preserve collection-level data changes in the source's semantic fingerprint when excluded
 features still belong to its original export, as ClimateViewer does for line overlays.
 Implement the separate `SupplementalDiscovery` protocol for discovery state not available
@@ -937,6 +1026,7 @@ pipelines search --source commons --kind radar "1L122-2E"
 pipelines search --source armyrecognition --kind sensor "MSP500 NASAMS"
 pipelines search --source fandom --kind radar "Russian Woodpecker"
 pipelines search --source climateviewer --kind site "BOLSHOYE SAVINO air base"
+pipelines search --source cambridgepixel --kind radar "BAE Systems Sampson"
 pipelines search --mode vector --kind radar "detect aircraft approaching an airport"
 pipelines similar --limit 5 radartutorial:8bdc6ce92fea3ca62de71395
 pipelines get radartutorial:8bdc6ce92fea3ca62de71395
@@ -951,6 +1041,8 @@ pipelines get armyrecognition:e4a5aecde1b187a0deffbab3
 pipelines get fandom:344747
 pipelines get climateviewer:fortress-russia-308b83193fb2a0e18ede7fbd
 pipelines get --format source climateviewer:fortress-russia-308b83193fb2a0e18ede7fbd > fortress-russia.geojson
+pipelines get cambridgepixel:bde71cdc6cc662ed8c60354b
+pipelines get --format source cambridgepixel:bde71cdc6cc662ed8c60354b > cambridge-radar-database.html
 ```
 
 Search emits JSON with `dataset_id`, query/mode, and `results`. Each result includes its
@@ -970,7 +1062,7 @@ and requires an evidence ID when the entity has multiple pages. API evidence is 
 `source_response.body_base64`, its content type and checksum, and `canonical_url`.
 Structured records instead use `html_origin: "record-rendered"`, complete original objects
 in `records`, and a `source_response.body_member` descriptor. `--format source` exports
-the byte-exact captured response: ordinary HTML, API JSON, or the whole shared GeoJSON
+the byte-exact captured response: ordinary HTML, API JSON, or the whole shared HTML/GeoJSON
 collection. Like HTML output, source output requires `--evidence PAGE_ID` for entities
 with multiple evidence pages. This keeps ordinary record dumps compact while retaining
 the entire source response for inspection.

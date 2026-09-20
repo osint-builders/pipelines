@@ -207,6 +207,10 @@ func TestMultipleEvidenceExportRequiresExplicitHTMLSelection(t *testing.T) {
 }
 
 func recordFixture(t *testing.T, mutate func(map[string]any)) *Dataset {
+	return recordFixtureType(t, "application/geo+json", mutate)
+}
+
+func recordFixtureType(t *testing.T, contentType string, mutate func(map[string]any)) *Dataset {
 	t.Helper()
 	d := fixture(t, false)
 	members := map[string][]byte{}
@@ -230,9 +234,14 @@ func recordFixture(t *testing.T, mutate func(map[string]any)) *Dataset {
 	page["id"] = hex.EncodeToString(digest[:])[:24]
 	page["html_origin"] = "record-rendered"
 	body := []byte(`{"features":[{"name":"Example","coordinates":[25,50]}]}`)
+	suffix := ".json"
+	if contentType == "Text/HTML; charset=utf-8" {
+		body = []byte("<!doctype html><table><tr><td>Example</td></tr></table>")
+		suffix = ".html"
+	}
 	bodyHash := sha256.Sum256(body)
-	member := "responses/sample/" + previous + ".json"
-	page["source_response"] = map[string]any{"url": page["url"], "content_type": "application/geo+json", "sha256": hex.EncodeToString(bodyHash[:]), "body_member": member}
+	member := "responses/sample/" + previous + suffix
+	page["source_response"] = map[string]any{"url": page["url"], "content_type": contentType, "sha256": hex.EncodeToString(bodyHash[:]), "body_member": member}
 	members[member] = body
 	html := []byte("<!doctype html><p>Example</p>")
 	htmlHash := sha256.Sum256(html)
@@ -302,5 +311,19 @@ func TestStructuredRecordExportsSharedOriginalWithoutInflatingJSON(t *testing.T)
 	}
 	if _, err := fixture(t, false).Export(secondID, "source", ""); err == nil {
 		t.Fatal("ambiguous original response accepted")
+	}
+}
+
+func TestStructuredRecordsPreserveOriginalHTMLCollection(t *testing.T) {
+	d := recordFixtureType(t, "Text/HTML; charset=utf-8", nil)
+	if err := d.Verify(); err != nil {
+		t.Fatal(err)
+	}
+	raw, err := d.Export(firstID, "source", "")
+	if err != nil || string(raw) != "<!doctype html><table><tr><td>Example</td></tr></table>" {
+		t.Fatal(string(raw), err)
+	}
+	if len(d.sourceResponses) != 1 {
+		t.Fatal("source response was not shared")
 	}
 }
