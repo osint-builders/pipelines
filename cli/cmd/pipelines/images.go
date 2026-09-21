@@ -24,7 +24,7 @@ func loadImageEncoder(ctx context.Context, d *dataset.Dataset) (*imageembedding.
 	return imageembedding.NewFromFS(ctx, d.Files, "image/model.json")
 }
 
-func searchImage(ctx context.Context, d *dataset.Dataset, filename, query string, filter dataset.Filter, limit int, output *json.Encoder) error {
+func searchImage(ctx context.Context, d *dataset.Dataset, filename, query string, filter dataset.Filter, limit int, observations bool, output *json.Encoder) error {
 	if !d.HasImages() {
 		return errors.New("this dataset has no image search model or gallery")
 	}
@@ -55,14 +55,23 @@ func searchImage(ctx context.Context, d *dataset.Dataset, filename, query string
 		}
 		queryType = "image_text"
 	}
-	results, err := d.SearchImages(encoded.Normalized, textVector, query, filter, limit)
+	var results []dataset.VisualResult
+	if observations {
+		results, err = d.SearchImagesWithObservations(encoded.Normalized, textVector, query, filter, limit)
+	} else {
+		results, err = d.SearchImages(encoded.Normalized, textVector, query, filter, limit)
+	}
 	if err != nil {
 		return err
 	}
 	digest := sha256.Sum256(body)
-	return output.Encode(map[string]any{"dataset_id": d.Manifest.DatasetID, "query": query,
+	response := map[string]any{"dataset_id": d.Manifest.DatasetID, "query": query,
 		"query_type": queryType, "mode": queryType, "query_image_sha256": hex.EncodeToString(digest[:]),
-		"match_status": "no_supported_match", "calibration_status": "uncalibrated", "results": results})
+		"match_status": "no_supported_match", "calibration_status": "uncalibrated", "results": results}
+	if observations {
+		response["observations"] = true
+	}
+	return output.Encode(response)
 }
 
 func readQueryImage(filename string) ([]byte, error) {

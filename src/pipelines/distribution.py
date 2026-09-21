@@ -269,6 +269,7 @@ def package(
     *,
     image_model: Path | None = None,
     image_selection: Path | None = None,
+    observations: Path | None = None,
 ) -> dict:
     from filelock import FileLock
 
@@ -286,6 +287,7 @@ def package(
             output,
             image_model=image_model,
             image_selection=image_selection,
+            observations=observations,
         )
 
 
@@ -298,15 +300,24 @@ def _package(
     *,
     image_model: Path | None = None,
     image_selection: Path | None = None,
+    observations: Path | None = None,
 ) -> dict:
     if image_selection is not None and image_model is None:
         raise ValueError("Image selection requires an image model")
+    if observations is not None and image_model is None:
+        raise ValueError("Observations require an image model and gallery")
     entities, html, responses = collect_artifacts(root, sources)
     digest = content_digest(entities)
-    format_version = 3 if image_model is not None else FORMAT_VERSION
+    format_version = (
+        4
+        if observations is not None
+        else (3 if image_model is not None else FORMAT_VERSION)
+    )
     recipe_spec = {"format": format_version, "search": SEARCH_VERSION, "model": LOCK}
     image_members: dict[str, bytes] = {}
     image_metadata: dict = {}
+    observation_members: dict[str, bytes] = {}
+    observation_metadata: dict = {}
     if image_model is not None:
         from pipelines.image_distribution import build_image_members
 
@@ -317,6 +328,18 @@ def _package(
             "metadata": image_metadata,
             "files": {
                 name: sha256(body) for name, body in sorted(image_members.items())
+            },
+        }
+    if observations is not None:
+        from pipelines.observation_distribution import build_observation_members
+
+        observation_members, observation_metadata = build_observation_members(
+            observations, image_members, image_metadata, model, cache
+        )
+        recipe_spec["observations"] = {
+            "metadata": observation_metadata,
+            "files": {
+                name: sha256(body) for name, body in sorted(observation_members.items())
             },
         }
     recipe = sha256(canonical(recipe_spec))
@@ -333,6 +356,12 @@ def _package(
                     from pipelines.image_distribution import validate_image_bundle
 
                     validate_image_bundle(previous, manifest, entities)
+                if observations is not None:
+                    from pipelines.observation_distribution import (
+                        validate_observation_bundle,
+                    )
+
+                    validate_observation_bundle(previous, manifest)
                 return {**manifest, "changed": False, "output": str(output)}
     encoder = Encoder(model)
     index = []
@@ -400,6 +429,7 @@ def _package(
     members["probes.json"] = canonical(probes)
     members["probes.f32"] = encoder.encode(probes)
     members.update(image_members)
+    members.update(observation_members)
     manifest = {
         "format_version": format_version,
         "content_sha256": digest,
@@ -414,6 +444,8 @@ def _package(
     }
     if image_model is not None:
         manifest["image"] = image_metadata
+    if observations is not None:
+        manifest["observations"] = observation_metadata
     members["manifest.json"] = canonical(manifest)
     if image_model is not None:
         from pipelines.image_distribution import validate_image_bundle
@@ -423,6 +455,12 @@ def _package(
             write_bundle(pending, members)
             with zipfile.ZipFile(pending) as archive:
                 validate_image_bundle(archive, manifest, entities)
+                if observations is not None:
+                    from pipelines.observation_distribution import (
+                        validate_observation_bundle,
+                    )
+
+                    validate_observation_bundle(archive, manifest)
             pending.replace(output)
         finally:
             pending.unlink(missing_ok=True)

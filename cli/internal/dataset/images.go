@@ -78,12 +78,18 @@ type ImageProbe struct {
 }
 
 type Match struct {
-	Channel     string  `json:"channel"`
-	Score       float64 `json:"score"`
-	EvidenceID  string  `json:"evidence_id"`
-	URL         string  `json:"url"`
-	MediaID     string  `json:"media_id,omitempty"`
-	ModelSHA256 string  `json:"model_sha256,omitempty"`
+	Channel              string  `json:"channel"`
+	Score                float64 `json:"score"`
+	EvidenceID           string  `json:"evidence_id"`
+	URL                  string  `json:"url"`
+	MediaID              string  `json:"media_id,omitempty"`
+	ModelSHA256          string  `json:"model_sha256,omitempty"`
+	Origin               string  `json:"origin,omitempty"`
+	ObservationID        string  `json:"observation_id,omitempty"`
+	RecipeSHA256         string  `json:"recipe_sha256,omitempty"`
+	ModelID              string  `json:"model_id,omitempty"`
+	ModelRevision        string  `json:"model_revision,omitempty"`
+	EmbeddingModelSHA256 string  `json:"embedding_model_sha256,omitempty"`
 }
 
 type VisualResult struct {
@@ -123,7 +129,7 @@ func validImageURL(value string) bool {
 func (d *Dataset) readImage(name string, maximum uint64) ([]byte, error) {
 	member := d.members[name]
 	if member == nil || member.UncompressedSize64 > maximum {
-		return nil, fmt.Errorf("missing or oversized image member: %s", name)
+		return nil, fmt.Errorf("missing or oversized bundle member: %s", name)
 	}
 	return d.Read(name)
 }
@@ -601,6 +607,17 @@ func (d *Dataset) MediaPreview(entityID, mediaID string) ([]byte, error) {
 }
 
 func (d *Dataset) SearchImages(imageVector, textVector []float32, query string, filter Filter, limit int) ([]VisualResult, error) {
+	return d.searchImages(imageVector, textVector, query, filter, limit, false)
+}
+
+func (d *Dataset) SearchImagesWithObservations(imageVector, textVector []float32, query string, filter Filter, limit int) ([]VisualResult, error) {
+	if len(textVector) == 0 {
+		return nil, errors.New("observations require a text query")
+	}
+	return d.searchImages(imageVector, textVector, query, filter, limit, true)
+}
+
+func (d *Dataset) searchImages(imageVector, textVector []float32, query string, filter Filter, limit int, observations bool) ([]VisualResult, error) {
 	if limit < 1 || limit > 100 {
 		return nil, errors.New("limit must be between 1 and 100")
 	}
@@ -646,8 +663,15 @@ func (d *Dataset) SearchImages(imageVector, textVector []float32, query string, 
 	}
 	sortVisual(results)
 	var textByID map[string]Result
+	var generated map[string]Match
 	if len(textVector) > 0 {
-		text, err := d.search(textVector, query, true, filter, len(d.Entities), "")
+		var text []Result
+		var err error
+		if observations {
+			text, generated, err = d.observedText(textVector, query, true, filter)
+		} else {
+			text, err = d.search(textVector, query, true, filter, len(d.Entities), "")
+		}
 		if err != nil {
 			return nil, err
 		}
@@ -677,9 +701,13 @@ func (d *Dataset) SearchImages(imageVector, textVector []float32, query string, 
 	}
 	for i := range results {
 		if text, ok := textByID[results[i].ID]; ok {
-			match, err := d.TextMatch(text)
-			if err != nil {
-				return nil, err
+			match, derived := generated[text.ID]
+			if !derived {
+				var err error
+				match, err = d.TextMatch(text)
+				if err != nil {
+					return nil, err
+				}
 			}
 			results[i].Matches[len(results[i].Matches)-1] = match
 		}

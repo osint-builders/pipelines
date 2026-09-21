@@ -42,6 +42,26 @@ def main() -> None:
     package.add_argument(
         "--image-selection", type=Path, help="Explicit gallery media ID selection"
     )
+    package.add_argument(
+        "--observations", type=Path, help="Cached image observation analysis"
+    )
+    observe = commands.add_parser(
+        "observe", help="Analyze indexed images from the local archive"
+    )
+    observe.add_argument("--root", type=Path, required=True)
+    observe.add_argument("--bundle", type=Path, required=True)
+    observe.add_argument("--ocr-model", type=Path)
+    observe.add_argument("--description-model", type=Path)
+    observe.add_argument(
+        "--device",
+        choices=("cpu", "cuda"),
+        default="cpu",
+        help="Description inference device",
+    )
+    observe.add_argument(
+        "--selection", type=Path, help="Restrict analysis to selected indexed media IDs"
+    )
+    observe.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
     output: dict | list[str]
     if args.command == "sources":
@@ -91,6 +111,18 @@ def main() -> None:
 
         download_model(args.output)
         output = {"model": str(args.output)}
+    elif args.command == "observe":
+        from pipelines.observations import observe as observe_images
+
+        output = observe_images(
+            args.root,
+            args.bundle,
+            args.output,
+            ocr_model=args.ocr_model,
+            description_model=args.description_model,
+            device=args.device,
+            selection=args.selection,
+        )
     else:
         from pipelines.distribution import package as create_package
 
@@ -102,6 +134,7 @@ def main() -> None:
             args.output,
             image_model=args.image_model,
             image_selection=args.image_selection,
+            observations=args.observations,
         )
         output = {
             key: value for key, value in result.items() if key not in {"files", "model"}
@@ -109,6 +142,7 @@ def main() -> None:
     print(json.dumps(output, ensure_ascii=True, indent=2))
     if isinstance(output, dict) and (
         (args.command == "audit" and not output["ok"])
+        or (args.command == "observe" and output["states"].get("failed", 0))
         or (
             args.command == "media"
             and args.download

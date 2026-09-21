@@ -26,9 +26,11 @@ const help = `pipelines - offline equipment and entity search
 Usage:
   pipelines search [--mode hybrid|vector] [--limit 10] [filters] "query"
   pipelines search --image PATH [--limit 10] [filters] ["query"]
+  pipelines search --observations [--image PATH] [--limit 10] [filters] "query"
   pipelines similar [--limit 10] [filters] SOURCE:ID
   pipelines get [--format json|markdown|html|source] [--evidence PAGE_ID] SOURCE:ID
   pipelines media [--id MEDIA_ID] [--output PATH] SOURCE:ID
+  pipelines observations [--id OBSERVATION_ID] SOURCE:ID
   pipelines info
   pipelines verify
   pipelines version
@@ -39,6 +41,7 @@ Place flags before the query or ID. Every search returns stable, source-qualifie
 JSON is the default output. Source export preserves the archived response bytes.
 Image queries accept local JPEG/PNG files up to 20 MiB and 40 million pixels.
 Image suggestions are uncalibrated. Media export writes the embedded preview.
+Generated OCR/descriptions are searched only with --observations and remain uncalibrated.
 All commands work offline. This executable never scrapes or downloads models.
 `
 
@@ -74,7 +77,7 @@ func runWithFiles(ctx context.Context, args []string, out io.Writer, files fs.FS
 		return nil
 	}
 	command := args[0]
-	if command != "search" && command != "similar" && command != "get" && command != "media" && command != "info" && command != "verify" {
+	if command != "search" && command != "similar" && command != "get" && command != "media" && command != "observations" && command != "info" && command != "verify" {
 		return fmt.Errorf("unknown command: %s", command)
 	}
 	flags := flag.NewFlagSet(command, flag.ContinueOnError)
@@ -82,6 +85,8 @@ func runWithFiles(ctx context.Context, args []string, out io.Writer, files fs.FS
 	limit := 10
 	mode, format, evidence := "hybrid", "json", ""
 	imagePath, mediaID, outputPath := "", "", ""
+	observationID := ""
+	useObservations := false
 	filter := dataset.Filter{}
 	if command == "search" || command == "similar" {
 		flags.IntVar(&limit, "limit", 10, "maximum results")
@@ -92,6 +97,7 @@ func runWithFiles(ctx context.Context, args []string, out io.Writer, files fs.FS
 	if command == "search" {
 		flags.StringVar(&mode, "mode", "hybrid", "search mode")
 		flags.StringVar(&imagePath, "image", "", "local JPEG or PNG query")
+		flags.BoolVar(&useObservations, "observations", false, "include generated OCR and descriptions")
 	}
 	if command == "get" {
 		flags.StringVar(&format, "format", "json", "output format")
@@ -100,6 +106,9 @@ func runWithFiles(ctx context.Context, args []string, out io.Writer, files fs.FS
 	if command == "media" {
 		flags.StringVar(&mediaID, "id", "", "select a media record")
 		flags.StringVar(&outputPath, "output", "", "write its embedded preview to a new file")
+	}
+	if command == "observations" {
+		flags.StringVar(&observationID, "id", "", "select a generated observation")
 	}
 	if err := flags.Parse(args[1:]); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
@@ -114,10 +123,13 @@ func runWithFiles(ctx context.Context, args []string, out io.Writer, files fs.FS
 	if imageQuery && (strings.TrimSpace(imagePath) == "" || explicit["mode"]) {
 		return errors.New("--image requires a local file and cannot be combined with --mode")
 	}
-	if explicit["id"] && strings.TrimSpace(mediaID) == "" || explicit["output"] && (strings.TrimSpace(outputPath) == "" || mediaID == "") {
+	if explicit["id"] && ((command == "media" && strings.TrimSpace(mediaID) == "") || (command == "observations" && strings.TrimSpace(observationID) == "")) || explicit["output"] && (strings.TrimSpace(outputPath) == "" || mediaID == "") {
 		return errors.New("--id must not be empty; --output requires --id and a new file path")
 	}
-	needsArgument := command == "search" || command == "similar" || command == "get" || command == "media"
+	needsArgument := command == "search" || command == "similar" || command == "get" || command == "media" || command == "observations"
+	if useObservations && imageQuery && flags.NArg() == 0 {
+		return errors.New("--observations requires a text query")
+	}
 	if imageQuery && flags.NArg() > 1 || !imageQuery && (needsArgument && flags.NArg() != 1 || !needsArgument && flags.NArg() != 0) {
 		return errors.New("incorrect arguments; quote the query and place flags before it (see --help)")
 	}
@@ -145,6 +157,9 @@ func runWithFiles(ctx context.Context, args []string, out io.Writer, files fs.FS
 	if err != nil {
 		return err
 	}
+	if useObservations && !d.HasObservations() {
+		return errors.New("this dataset has no generated observations")
+	}
 	output := json.NewEncoder(out)
 	output.SetIndent("", "  ")
 	switch command {
@@ -158,7 +173,7 @@ func runWithFiles(ctx context.Context, args []string, out io.Writer, files fs.FS
 			}
 			calibration = "uncalibrated"
 		}
-		return output.Encode(map[string]any{"version": version, "dataset_id": d.Manifest.DatasetID, "content_sha256": d.Manifest.ContentSHA256, "entities": d.Manifest.Entities, "evidence_pages": d.Manifest.EvidencePages, "chunks": d.Manifest.Chunks, "model": d.Manifest.Model, "sources": d.Manifest.Sources, "image_available": d.HasImages(), "image": d.Manifest.Image, "image_model": imageModel, "image_calibration_status": calibration})
+		return output.Encode(map[string]any{"version": version, "dataset_id": d.Manifest.DatasetID, "content_sha256": d.Manifest.ContentSHA256, "entities": d.Manifest.Entities, "evidence_pages": d.Manifest.EvidencePages, "chunks": d.Manifest.Chunks, "model": d.Manifest.Model, "sources": d.Manifest.Sources, "image_available": d.HasImages(), "image": d.Manifest.Image, "image_model": imageModel, "image_calibration_status": calibration, "observations_available": d.HasObservations(), "observations": d.Manifest.Observations})
 	case "get":
 		raw, err := d.Export(value, format, evidence)
 		if err != nil {
@@ -183,6 +198,13 @@ func runWithFiles(ctx context.Context, args []string, out io.Writer, files fs.FS
 			return err
 		}
 		return output.Encode(records)
+	case "observations":
+		records, err := d.Observations(value, observationID)
+		if err != nil {
+			return err
+		}
+		output.SetEscapeHTML(false)
+		return output.Encode(map[string]any{"dataset_id": d.Manifest.DatasetID, "entity_id": value, "observations": records.Observations, "recipes": records.Recipes})
 	case "similar":
 		vector, err := d.EntityVector(value)
 		if err != nil {
@@ -199,7 +221,7 @@ func runWithFiles(ctx context.Context, args []string, out io.Writer, files fs.FS
 		}
 	}
 	if imageQuery {
-		return searchImage(ctx, d, imagePath, value, filter, limit, output)
+		return searchImage(ctx, d, imagePath, value, filter, limit, useObservations, output)
 	}
 	if command == "verify" {
 		probes, err := verifyText(ctx, d)
@@ -210,7 +232,15 @@ func runWithFiles(ctx context.Context, args []string, out io.Writer, files fs.FS
 		if err != nil {
 			return err
 		}
-		return output.Encode(map[string]any{"ok": true, "dataset_id": d.Manifest.DatasetID, "entities": d.Manifest.Entities, "evidence_pages": d.Manifest.EvidencePages, "probes": probes, "image_probes": imageProbes})
+		report := map[string]any{"ok": true, "dataset_id": d.Manifest.DatasetID, "entities": d.Manifest.Entities, "evidence_pages": d.Manifest.EvidencePages, "probes": probes, "image_probes": imageProbes}
+		if d.HasObservations() {
+			count, err := verifyObservations(ctx, d)
+			if err != nil {
+				return err
+			}
+			report["observation_probes"] = count
+		}
+		return output.Encode(report)
 	}
 	encoder, err := embedding.New(ctx, d.Files)
 	if err != nil {
@@ -220,6 +250,13 @@ func runWithFiles(ctx context.Context, args []string, out io.Writer, files fs.FS
 	vector, err := encoder.Encode(ctx, value)
 	if err != nil {
 		return err
+	}
+	if useObservations {
+		results, err := d.SearchObservations(vector, value, mode == "hybrid", filter, limit)
+		if err != nil {
+			return err
+		}
+		return output.Encode(map[string]any{"dataset_id": d.Manifest.DatasetID, "query": value, "query_type": "text", "mode": mode, "observations": true, "match_status": "no_supported_match", "calibration_status": "uncalibrated", "results": results})
 	}
 	results, err := d.Search(vector, value, mode == "hybrid", filter, limit, "")
 	if err != nil {

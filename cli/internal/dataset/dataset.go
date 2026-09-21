@@ -23,17 +23,18 @@ type Model struct {
 	Dimensions int    `json:"dimensions"`
 }
 type Manifest struct {
-	FormatVersion int               `json:"format_version"`
-	DatasetID     string            `json:"dataset_id"`
-	ContentSHA256 string            `json:"content_sha256"`
-	RecipeSHA256  string            `json:"recipe_sha256"`
-	Entities      int               `json:"entities"`
-	EvidencePages int               `json:"evidence_pages"`
-	Chunks        int               `json:"chunks"`
-	Model         Model             `json:"model"`
-	Sources       []string          `json:"sources"`
-	Files         map[string]string `json:"files"`
-	Image         *ImageManifest    `json:"image,omitempty"`
+	FormatVersion int                  `json:"format_version"`
+	DatasetID     string               `json:"dataset_id"`
+	ContentSHA256 string               `json:"content_sha256"`
+	RecipeSHA256  string               `json:"recipe_sha256"`
+	Entities      int                  `json:"entities"`
+	EvidencePages int                  `json:"evidence_pages"`
+	Chunks        int                  `json:"chunks"`
+	Model         Model                `json:"model"`
+	Sources       []string             `json:"sources"`
+	Files         map[string]string    `json:"files"`
+	Image         *ImageManifest       `json:"image,omitempty"`
+	Observations  *ObservationManifest `json:"observations,omitempty"`
 }
 type Entity struct {
 	ID         string   `json:"id"`
@@ -69,6 +70,7 @@ type Dataset struct {
 	members         map[string]*zip.File
 	images          *imageData
 	evidenceURLs    map[int]map[string]string
+	observations    *observationData
 }
 
 func Open(data []byte) (*Dataset, error) {
@@ -90,10 +92,11 @@ func Open(data []byte) (*Dataset, error) {
 	if err = json.Unmarshal(raw, &d.Manifest); err != nil {
 		return nil, err
 	}
-	if (d.Manifest.FormatVersion != 2 && d.Manifest.FormatVersion != 3) || d.Manifest.Model.Dimensions != 384 {
+	if (d.Manifest.FormatVersion < 2 || d.Manifest.FormatVersion > 4) || d.Manifest.Model.Dimensions != 384 {
 		return nil, errors.New("unsupported dataset format or embedding dimensions")
 	}
-	if (d.Manifest.FormatVersion == 3) != (d.Manifest.Image != nil) {
+	if (d.Manifest.FormatVersion >= 3) != (d.Manifest.Image != nil) ||
+		(d.Manifest.FormatVersion == 4) != (d.Manifest.Observations != nil) {
 		return nil, errors.New("dataset format does not match image extension")
 	}
 	if len(d.Manifest.DatasetID) != 64 {
@@ -193,7 +196,12 @@ func (d *Dataset) Verify() error {
 		}
 	}
 	if d.HasImages() {
-		return d.verifyImages()
+		if err := d.verifyImages(); err != nil {
+			return err
+		}
+	}
+	if d.HasObservations() {
+		return d.LoadObservations()
 	}
 	return nil
 }

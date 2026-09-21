@@ -3,7 +3,7 @@
 Help researchers and educators find static entities quickly using names, descriptions,
 specifications, and images, with every result linked to captured evidence.
 
-**Progress:** 4/10 milestones verified. **Active:** M5, ready for user verification.
+**Progress:** 5/10 milestones verified. **Active:** M6, OCR and visual descriptions.
 
 **Branch:** `feature/multimodal-entity-search`.
 
@@ -23,8 +23,8 @@ commands and the source table.
 | M2 — Shared media evidence and archive | M1 | Verified by user; `55d4046`, 250 tests and GitHub CI passed; offline compatibility confirmed |
 | M3 — Two-source media pilot | M2 | Verified by user; `ba855a3`, 2,799 saved files, 294 tests and CI passed; two diagram cases remain unscored |
 | M4 — Portable image encoder | M1, M3 | Verified by user; `e02bbeb`, 391 tests and CI passed; all five native targets pass 23 parity probes with network restrictions verified |
-| M5 — Image and combined queries | M2, M3, M4 | Ready for verification; `9bb1574`, 426 tests and CI pass; full pilot CLI, offline acceptance, held-out rankings, and Windows resource checks complete |
-| M6 — OCR and visual descriptions | M3, M5 | Planned |
+| M5 — Image and combined queries | M2, M3, M4 | Verified by user; `9bb1574`, 426 tests and CI pass; full pilot CLI, offline acceptance, held-out rankings, and Windows resource checks complete |
+| M6 — OCR and visual descriptions | M3, M5 | In progress: cached local analysis and opt-in CLI implemented; full pilot processing and retrieval checks underway |
 | M7 — Better text and combined ranking | M1, M5, M6 | Planned |
 | M8 — Entity relationships and precise filters | M1, M7 | Planned |
 | M9 — Media coverage across all sources | M3, M5, M6 | Planned |
@@ -369,19 +369,38 @@ and 20 subsequent fresh processes per mode (filesystem caches were not cleared):
 All local resource limits pass. The repeated text probe is 5.9% slower than M1,
 and its peak memory is 10.5% above M1's measured maximum, within the 20% limits.
 These are local probe measurements; full native resource gates remain M10.
-Details: `build/m5/performance.json`. The local CLI is ready for inspection; no
-release was published. M6 has not started and awaits user verification of M5.
+Details: `build/m5/performance.json`. No release was published. The user's continuation
+verified M5 and authorized M6.
 
 ## M6 — OCR and visual descriptions
 
-- [ ] Extract text from markings, labels, and diagrams while retaining image regions and extraction confidence where available.
-- [ ] Generate concise visual descriptions during dataset construction, with the model and processing recipe recorded.
-- [ ] Store generated observations separately from source statements and structured specifications.
-- [ ] Index OCR and descriptions as evidence-linked text, with their origin visible in search results.
+- [x] Extract text from markings, labels, and diagrams while retaining image regions and extraction confidence where available.
+- [x] Generate concise visual descriptions during dataset construction, with the model and processing recipe recorded.
+- [x] Store generated observations separately from source statements and structured specifications.
+- [x] Index OCR and descriptions as evidence-linked text, with their origin visible in search results.
 - [ ] Reuse unchanged analysis and verify that OCR/descriptions improve held-out retrieval without increasing false identification.
 
 Complete when visual details become searchable through text and every derived statement
 can be traced to an image. Heavy analysis models run during construction, not CLI queries.
+
+Implemented `pipeline-build observe`, format-4 bundles, `search --observations TEXT`,
+and `observations SOURCE:ID`. Default source-only search is preserved. Generated matches
+carry their origin, image, captured evidence, model revision, and processing recipe;
+descriptions have no invented confidence score. Uncalibrated generated queries return
+ranked suggestions with `no_supported_match`.
+
+Build-time engines: pinned RapidOCR detector/orientation/Cyrillic recognizer graphs
+(18.59 MB) and Qwen3-VL-2B-Instruct (4.27 GB). The CLI embeds only the generated text,
+provenance, and MiniLM vectors. Six gallery images informed caption selection; occasional
+unsupported details remain. OCR can return publisher credits or background text and
+confuses some Latin/Cyrillic markings. These strings do not become source facts or aliases.
+
+The restricted nine-image gallery produced 18 observations with no failures or network
+attempts. Full analysis of the 1,055 indexed pilot views is running using two local GPUs.
+The 23 new manual query cases were frozen before retrieval results; their author had seen
+engine pilot summaries, so this is a provisional comparison rather than a blinded study.
+Reports are under `build/m6/`; held-out retrieval, real binary acceptance, and final
+coverage remain in progress. M7 has not started.
 
 ## M7 — Better text and combined ranking
 
