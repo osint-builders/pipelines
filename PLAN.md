@@ -265,8 +265,8 @@ vector, preview, and runtime costs must still fit together at M10. A half-stored
 10,000-view gallery requires 9.77 MiB for 512-dimensional vectors before metadata.
 Measurements and artifact hashes are in `build/m4/performance.json`.
 
-Validation in progress: 379 Python tests and Go tests/vet pass locally; regular
-GitHub CI passes at `cef302b`. Twenty
+Validation in progress: 385 Python tests and Go tests/vet pass in regular
+GitHub CI at `a5d49a7`. Twenty
 procedural image probes cover orientation, color, alpha, resizing/cropping, and
 normalization; three additional tensors isolate graph execution. Windows passes
 23/23 real-model parity probes. All ten real pilot images also pass, with minimum
@@ -276,7 +276,12 @@ Linux amd64/arm64 pass all probes with networking disabled. Native checks are
 rerunning with network isolation on all five targets: Linux namespaces, macOS
 sandboxing, and a Windows rule blocking the probe's outbound traffic. Windows and
 macOS require an OS-denied connection before and after inference. The Intel Mac
-verifier now avoids installing an unused Python inference runtime.
+verifier now avoids installing an unused Python inference runtime. A second
+Linux export produced different model bytes from the same checkpoint; the pinned
+checksum check rejected them. The exporter now requires and records AVX2 CPU
+arithmetic; a fresh local export matches both original graph hashes exactly.
+The final native run will check this correction. Model selection and checksum
+gates remain unchanged; query execution still supports all five targets.
 The root README and existing text CLI behavior remain unchanged. M5 waits for
 user verification of M4.
 

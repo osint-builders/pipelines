@@ -1,7 +1,8 @@
 """Export pinned MobileCLIP image towers for offline encoder evaluation.
 
 Export environment: torch 2.14.0+cpu, torchvision 0.29.0+cpu, timm 1.0.29,
-safetensors 0.8.0, onnx 1.23.0. Native OpenCLIP dfndr2b preprocessing is
+safetensors 0.8.0, onnx 1.23.0, x86_64 with AVX2/FMA3 and AVX2 ATen dispatch.
+Native OpenCLIP dfndr2b preprocessing is
 explicitly selected instead of the timm port's generic transform defaults.
 """
 
@@ -9,6 +10,8 @@ import argparse
 import hashlib
 import importlib.metadata
 import json
+import os
+import platform
 import urllib.request
 from pathlib import Path
 from typing import Any, TypedDict
@@ -134,7 +137,24 @@ def validate_export(actual: Any, expected: Any) -> dict:
     return {"cosine": similarity, "max_abs": float(np.max(np.abs(actual - expected)))}
 
 
+def configure_export_cpu() -> dict[str, str]:
+    if platform.machine().lower() not in {"amd64", "x86_64"}:
+        raise ValueError("Model export requires an x86_64 CPU with AVX2/FMA3")
+    # Reparameterization folds weights with ATen; pin its arithmetic before import.
+    os.environ["ATEN_CPU_CAPABILITY"] = "avx2"
+    import torch
+
+    capabilities = torch.cpu.get_capabilities()
+    if not all(capabilities.get(feature) for feature in ("avx2", "fma3")):
+        raise ValueError("Model export requires an x86_64 CPU with AVX2/FMA3")
+    if torch.backends.cpu.get_cpu_capability() != "AVX2":
+        raise ValueError("Model export requires AVX2 dispatch; use a fresh process")
+    return {"architecture": "x86_64", "aten_cpu_capability": "avx2"}
+
+
 def prepare(directory: Path, name: str, *, download: bool = False) -> list[dict]:
+    cpu = configure_export_cpu()
+
     import onnx
     import onnxruntime as ort
     import timm
@@ -201,6 +221,7 @@ def prepare(directory: Path, name: str, *, download: bool = False) -> list[dict]
             "normalization": "l2",
             "preprocess": vars(recipe),
             "export": {
+                "cpu": cpu,
                 "opset": 17,
                 "reparameterized": True,
                 "batch": 1,
