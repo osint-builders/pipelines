@@ -3,7 +3,7 @@
 Help researchers and educators find static entities quickly using names, descriptions,
 specifications, and images, with every result linked to captured evidence.
 
-**Progress:** 8/10 milestones verified. **Active:** M9 ready for verification.
+**Progress:** 9/10 milestones verified. **Active:** M10 in progress.
 
 **Branch:** `feature/multimodal-entity-search`.
 
@@ -27,8 +27,8 @@ commands and the source table.
 | M6 — OCR and visual descriptions | M3, M5 | Verified by user; `3bb8c29`, 542 tests and CI pass; 1,694 observations, cache reuse, held-out ranking and offline CLI checks complete; opt-in text resource gaps tracked in M10 |
 | M7 — Better text and combined ranking | M1, M5, M6 | Verified by user; `0d20f4a`, CI and offline acceptance pass; 116 baseline ranks preserved, new text 18/18 within five; latency and calibration gaps tracked in M10 |
 | M8 — Entity relationships and precise filters | M1, M7 | Verified by user; `beafc67b`, CI and offline acceptance pass; 63 evidence checks, 116 unchanged baseline ranks; resource gaps tracked in M10 |
-| M9 — Media coverage across all sources | M3, M5, M6 | Ready for verification; `62d438c`, 822 tests and CI pass; all 11 sources audited, 9,696 saved media records, deterministic offline rebuild and Windows/Linux CLI acceptance |
-| M10 — Quality gates and compact releases | M4–M9 | Planned |
+| M9 — Media coverage across all sources | M3, M5, M6 | Verified by user; `62d438c`, 822 tests and CI pass; all 11 sources audited, 9,696 saved media records, deterministic offline rebuild and Windows/Linux CLI acceptance |
+| M10 — Quality gates and compact releases | M4–M9 | In progress; runtime profiling, compact gallery allocation, evaluation coverage, and release identity/validation |
 
 Advance in milestone order and stop for user verification between milestones.
 Agents may work concurrently within the active milestone; dependencies do not authorize
@@ -771,9 +771,36 @@ Reports: `coverage*.json`, `member-preservation.json`, `public-package.json`,
 `gallery-cached-analysis-report.json`, `image-roundtrip.json`,
 `text-regression-comparison.json`, `windows-acceptance.json`, `linux-acceptance.json`,
 `performance.json`, `resource-gates.json`, and `distribution-size.json`.
-M9 is ready for user verification. M10 remains planned; no release was published.
+The user's continuation verified M9 and authorized M10. No release was published.
 
 ## M10 — Quality gates and compact releases
+
+Work is split across runtime profiling, quality/coverage evaluation, release tooling, and
+compact gallery allocation. M9 artifacts and frozen query/seed fixtures remain intact.
+The current held-out seed has seven positive photo groups, below M1's release minimum
+of 100; expanded reviewed inputs and valid calibration remain required before release.
+
+The user has no existing reviewed image-query set. A local source-grounded review
+queue now contains 508 candidate entities; candidate duplicate groups and captions
+require visual review before any new split or ground-truth claim. It does not replace
+the frozen seed or establish release quality.
+
+Runtime profiling identified a redundant embedded-bundle copy and ZIP inflation of
+models/vectors. ReaderAt loading removes the copy; storing binary members without
+inner compression removes repeated inflation while the downloadable ZIP still
+compresses them. Diagnostic samples preserve all 15 M9 JSON responses and pass all
+ten embedded probes: text 1.162–1.176 s, image 1.658–1.671 s, combined 2.765–2.783 s,
+observation text 2.073–2.127 s, and filtered text 1.846–1.866 s. Maximum observed
+memory is 743 MiB and compressed size 237.46 MiB. Final isolated/native measurements
+remain required; these three-run diagnostics are not the release resource report.
+
+Preview allocation now preserves its round-robin entity order under the byte budget.
+Development-only comparison and visual inspection selected full-view 320-pixel JPEG
+previews at quality 65: six previews use 66,873 bytes versus 175,190 at 512/75.
+Their original-to-preview embedding cosine averages 0.944 (minimum 0.928); this
+measures exported-preview changes, not held-out retrieval. Original media, vectors,
+and OCR inputs remain intact. Preview settings and ZIP storage enter recipe identity
+and invalidate the appropriate cached build. Full-gallery coverage is being rebuilt.
 
 - [ ] Run the frozen evaluation suite for text, image, combined, OCR, filters, and entity relationships; report results by task and source.
 - [ ] Verify top-result accuracy, recall within the first five results, confusable variants, and no-match behavior meet M1's targets.

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
@@ -170,11 +171,24 @@ func runWithFiles(ctx context.Context, args []string, out io.Writer, files fs.FS
 	if command == "search" && len([]rune(value)) > 1000 {
 		return errors.New("query exceeds 1000 characters")
 	}
-	data, err := fs.ReadFile(files, "data/dataset.zip")
+	bundle, err := files.Open("data/dataset.zip")
 	if err != nil {
 		return errors.New("this development build has no dataset; build a bundle or download a release binary")
 	}
-	d, err := dataset.Open(data)
+	defer bundle.Close()
+	info, err := bundle.Stat()
+	if err != nil {
+		return err
+	}
+	reader, ok := bundle.(io.ReaderAt)
+	if !ok {
+		data, err := io.ReadAll(bundle)
+		if err != nil {
+			return err
+		}
+		reader = bytes.NewReader(data)
+	}
+	d, err := dataset.OpenReader(reader, info.Size())
 	if err != nil {
 		return err
 	}

@@ -69,3 +69,23 @@ def test_bundle_is_deterministic_and_preserves_binary_payload(tmp_path: Path) ->
     assert first.read_bytes() == second.read_bytes()
     with zipfile.ZipFile(first) as archive:
         assert archive.read("html/page.html") == members["html/page.html"]
+
+
+def test_runtime_binary_members_need_no_zip_inflation(tmp_path: Path) -> None:
+    members = {
+        "model/model.onnx": b"graph" * 100,
+        "image/image.onnx": b"image graph" * 100,
+        "vectors.f32": b"vectors" * 100,
+        "image/vectors.f16": b"image vectors" * 100,
+        "observations/vectors.f32": b"observation vectors" * 100,
+        "entities/source/entity.json": b'{"title":"radar"}',
+    }
+    output = tmp_path / "runtime.zip"
+    write_bundle(output, members)
+    with zipfile.ZipFile(output) as archive:
+        for name, body in members.items():
+            assert archive.read(name) == body
+            expected = (
+                zipfile.ZIP_DEFLATED if name.endswith(".json") else zipfile.ZIP_STORED
+            )
+            assert archive.getinfo(name).compress_type == expected

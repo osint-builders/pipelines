@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"io/fs"
 	"math"
 	"sort"
@@ -84,7 +85,13 @@ type Dataset struct {
 }
 
 func Open(data []byte) (*Dataset, error) {
-	files, err := zip.NewReader(bytes.NewReader(data), int64(len(data)))
+	return OpenReader(bytes.NewReader(data), int64(len(data)))
+}
+
+// OpenReader keeps the immutable archive in its original backing storage.
+// The caller must keep reader available for the lifetime of the dataset.
+func OpenReader(reader io.ReaderAt, size int64) (*Dataset, error) {
+	files, err := zip.NewReader(reader, size)
 	if err != nil {
 		return nil, err
 	}

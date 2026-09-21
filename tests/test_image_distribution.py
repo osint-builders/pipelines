@@ -1,6 +1,8 @@
 import json
 import zipfile
+from copy import deepcopy
 from dataclasses import asdict
+from io import BytesIO
 from pathlib import Path
 
 import numpy as np
@@ -205,6 +207,34 @@ def test_selection_does_not_read_unselected_originals(
     assert metadata["vectors"] == 1
     assert report["outcomes"] == {"indexed": 1, "selection": 1}
     validate(setup, members, metadata)
+
+
+def test_compact_preview_preserves_full_view_and_original_vectors(
+    setup: tuple[Path, list[dict], Path], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    original = Image.new("RGB", (1200, 600), "blue")
+    original.paste("red", (0, 0, 100, 600))
+    original.paste("green", (1100, 0, 1200, 600))
+    body = BytesIO()
+    original.save(body, format="PNG")
+    captured = add(setup, "wide.png", body=body.getvalue())
+    members, _, report = build(setup)
+    row = json.loads(members["image/index.json"])[0]
+    preview = Image.open(BytesIO(members[row["preview"]["member"]]))
+    assert preview.size == (320, 160)
+    assert preview.getpixel((2, 80))[0] > 200
+    assert preview.getpixel((317, 80))[1] > 100
+    assert ImageEncoder.calls.count(captured["sha256"]) == 1
+    original_vectors = members["image/vectors.f16"]
+    original_recipe = report["preview_recipe"]
+    monkeypatch.setattr(image_distribution, "PREVIEW_EDGE", 256)
+    changed, _, changed_report = build(setup)
+    changed_row = json.loads(changed["image/index.json"])[0]
+    assert changed_row["preview"]["width"] == 256
+    assert changed_row["preview"]["sha256"] != row["preview"]["sha256"]
+    assert changed_report["preview_recipe"] != original_recipe
+    assert changed["image/vectors.f16"] == original_vectors
+    assert ImageEncoder.calls.count(captured["sha256"]) == 1
 
 
 def test_sibling_reference_union_preserves_publisher_context(
@@ -412,6 +442,55 @@ def test_diverse_views_and_preview_budget_are_explicit(
     validate(setup, members, metadata)
 
 
+def test_preview_budget_covers_entities_before_extra_views(
+    setup: tuple[Path, list[dict], Path], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from pipelines import snapshot
+
+    root, entities, _ = setup
+    manifest, _ = snapshot.load_snapshot(root / entities[0]["source"])
+    second = deepcopy(entities[0])
+    second["id"] = second["source"] + ":second"
+    entities.append(second)
+    monkeypatch.setattr(
+        snapshot, "load_snapshot", lambda directory: (manifest, entities)
+    )
+    pictures = []
+    for color in ("red", "green", "blue", "yellow"):
+        stream = BytesIO()
+        Image.new("RGB", (24, 16), color).save(stream, format="PNG")
+        pictures.append(stream.getvalue())
+    pictures.sort(key=sha256)
+    for position, body in enumerate(pictures):
+        owner = entities[0] if position < 3 else second
+        add(
+            setup,
+            f"view-{position}.png",
+            body=body,
+            references=[MediaReference(owner["id"], owner["evidence"][0]["id"])],
+        )
+    members, _, _ = build(setup)
+    sizes = [
+        len(body)
+        for name, body in members.items()
+        if name.startswith("image/previews/")
+    ]
+    assert 2 * max(sizes) < 3 * min(sizes)
+    monkeypatch.setattr(image_distribution, "MAX_PREVIEW_BYTES", 2 * max(sizes))
+    members, metadata, report = build(setup)
+    indexed = [
+        row
+        for row in json.loads(members["image/index.json"])
+        if row["vector_index"] is not None
+    ]
+    assert {ref["entity_id"] for row in indexed for ref in row["references"]} == {
+        entity["id"] for entity in entities
+    }
+    assert metadata["vectors"] == 2
+    assert report["outcomes"] == {"indexed": 2, "preview_budget": 2}
+    validate(setup, members, metadata)
+
+
 @pytest.mark.parametrize(
     "failure",
     ["nan", "norm", "size", "reference", "ownership", "preview", "model", "orphan"],
@@ -478,6 +557,7 @@ def test_package_default_stays_format2_and_image_changes_only_recipe(
         canonical(
             {
                 "format": 2,
+                "storage": distribution.STORAGE_VERSION,
                 "search": {
                     "metadata": first["search"],
                     "files": {
@@ -526,6 +606,13 @@ def test_package_default_stays_format2_and_image_changes_only_recipe(
     refreshed = distribution.package(*arguments, root / "text.zip")
     assert refreshed["content_sha256"] == first["content_sha256"]
     assert refreshed["files"]["vectors.f32"] == first["files"]["vectors.f32"]
+    assert distribution.package(*arguments, root / "text.zip")["changed"] is False
+    monkeypatch.setattr(distribution, "STORAGE_VERSION", "alternative-storage-policy")
+    repackaged = distribution.package(*arguments, root / "text.zip")
+    assert repackaged["changed"] is True
+    assert repackaged["content_sha256"] == refreshed["content_sha256"]
+    assert repackaged["dataset_id"] != refreshed["dataset_id"]
+    assert repackaged["files"] == refreshed["files"]
     assert distribution.package(*arguments, root / "text.zip")["changed"] is False
     with pytest.raises(ValueError, match="requires"):
         distribution.package(

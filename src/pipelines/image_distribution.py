@@ -23,6 +23,8 @@ if TYPE_CHECKING:
 MAX_VECTORS = 10_000
 MAX_PREVIEW_BYTES = 32 * 1024 * 1024
 MAX_VIEWS = 8
+PREVIEW_EDGE = 320
+PREVIEW_QUALITY = 65
 IMAGE_LOCK_PATH = Path(__file__).with_name("image_model.lock.json")
 MODEL_KEYS = (
     "schema_version",
@@ -176,7 +178,7 @@ def _families(records: list[dict]) -> list[list[dict]]:
     return [result[key] for key in sorted(result)]
 
 
-def _diverse(vectors: dict, owners: dict[str, set[str]]) -> set[str]:
+def _diverse(vectors: dict, owners: dict[str, set[str]]) -> list[str]:
     import numpy as np
 
     by_entity: dict[str, list[str]] = defaultdict(list)
@@ -201,6 +203,7 @@ def _diverse(vectors: dict, owners: dict[str, set[str]]) -> set[str]:
                 )
         proposals[entity] = picked
     selected: set[str] = set()
+    ordered: list[str] = []
     counts: Counter = Counter()
     for position in range(MAX_VIEWS):
         for entity in sorted(proposals):
@@ -215,8 +218,9 @@ def _diverse(vectors: dict, owners: dict[str, set[str]]) -> set[str]:
             if len(selected) >= MAX_VECTORS:
                 break
             selected.add(digest)
+            ordered.append(digest)
             counts.update(owners[digest])
-    return selected
+    return ordered
 
 
 def _preview(input_path: Path, output_path: Path) -> None:
@@ -225,11 +229,11 @@ def _preview(input_path: Path, output_path: Path) -> None:
     from pipelines.image_preprocess import _decode
 
     image = _decode(input_path.read_bytes())
-    image.thumbnail((512, 512), Image.Resampling.LANCZOS)
+    image.thumbnail((PREVIEW_EDGE, PREVIEW_EDGE), Image.Resampling.LANCZOS)
     image.save(
         output_path,
         format="JPEG",
-        quality=75,
+        quality=PREVIEW_QUALITY,
         subsampling=2,
         optimize=False,
         progressive=False,
@@ -387,10 +391,10 @@ def build_image_members(
         settings={"model": lock, "dtype": "float16-le"},
     )
     preview_recipe = ProcessingRecipe(
-        version="exif-white-fullview-jpeg-v1",
+        version="exif-white-fullview-jpeg-v2",
         settings={
-            "max_edge": 512,
-            "quality": 75,
+            "max_edge": PREVIEW_EDGE,
+            "quality": PREVIEW_QUALITY,
             "subsampling": 2,
             "resampling": "lanczos",
             "pillow": pillow_version,
@@ -466,8 +470,9 @@ def build_image_members(
                         ref["entity_id"] for ref in row["references"]
                     )
         selected = _diverse(vectors, owners_by_hash)
+        selected_set = set(selected)
         preview_bytes, previews = 0, {}
-        for digest in sorted(selected):
+        for digest in selected:
             body = store.derive(digest, preview_recipe, _preview).read_bytes()
             preview_hash = sha256(body)
             member = f"image/previews/{preview_hash}.jpg"
@@ -493,7 +498,7 @@ def build_image_members(
     for row in rows:
         if not row["exclusion_reason"]:
             digest = row["sha256"]
-            if digest not in selected:
+            if digest not in selected_set:
                 row["exclusion_reason"] = "view_budget"
             elif digest not in previews:
                 row["exclusion_reason"] = "preview_budget"
@@ -512,7 +517,7 @@ def build_image_members(
         "excluded_occurrences": excluded_occurrences,
         "capture_sha256": sha256(canonical(capture_identity)),
         "selection": sorted(chosen) if chosen is not None else None,
-        "selection_method": "original-groups-farthest-first-round-robin-v1",
+        "selection_method": "original-groups-farthest-first-preview-round-robin-v2",
         "max_views_per_entity": MAX_VIEWS,
         "max_vectors": MAX_VECTORS,
         "max_preview_bytes": MAX_PREVIEW_BYTES,

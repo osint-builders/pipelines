@@ -14,6 +14,7 @@ from pipelines.snapshot import load_snapshot
 
 FORMAT_VERSION = 2
 SEARCH_VERSION = "bm25-minilm-v1"
+STORAGE_VERSION = "runtime-binaries-stored-v1"
 LOCK = json.loads(Path(__file__).with_name("model.lock.json").read_text())
 
 
@@ -254,7 +255,11 @@ def write_bundle(output: Path, members: dict[str, bytes]) -> None:
     ) as archive:
         for name, body in sorted(members.items()):
             info = zipfile.ZipInfo(name, date_time=(1980, 1, 1, 0, 0, 0))
-            info.compress_type = zipfile.ZIP_DEFLATED
+            info.compress_type = (
+                zipfile.ZIP_STORED
+                if name.endswith((".onnx", ".f32", ".f16"))
+                else zipfile.ZIP_DEFLATED
+            )
             info.external_attr = 0o100644 << 16
             archive.writestr(info, body, compresslevel=9)
     temporary.replace(output)
@@ -322,7 +327,11 @@ def _package(
         if observations is not None
         else (3 if image_model is not None else FORMAT_VERSION)
     )
-    recipe_spec = {"format": format_version, "model": LOCK}
+    recipe_spec = {
+        "format": format_version,
+        "model": LOCK,
+        "storage": STORAGE_VERSION,
+    }
     image_members: dict[str, bytes] = {}
     image_metadata: dict = {}
     observation_members: dict[str, bytes] = {}
