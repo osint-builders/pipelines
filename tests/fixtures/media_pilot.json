@@ -1,0 +1,325 @@
+{
+  "schema_version": 1,
+  "scope": "M3 source-context review inventory; no image retrieval scores or exact-variant ground truth. Benchmark splits remain unassigned except existing M1 photographs.",
+  "seed_fixture": "multimodal.json",
+  "records": [
+    {
+      "id": "militaryperiscope:media:7cbf8ab4af09cd269e68e067",
+      "url": "https://militaryperiscope.com/wt/media/original_images/weapons_images_new/1543933112_p-r-e_w0007382_.jpg",
+      "sha256": "a08c920b450371b50917ed025fcce62d76db4c27945f7d17faaa608d69be7f18",
+      "entity_ids": [
+        "militaryperiscope:318615"
+      ],
+      "evidence_ids": [
+        "7f355815c976e24496024a3d"
+      ],
+      "kind": "photograph",
+      "visual_observation": "A white and red four-engine aircraft stands outside a hangar, viewed from the front-left. The image contains the label P-X during roll out and a Japanese defense-source credit.",
+      "association_limitation": "Source associates this rollout photograph with P-1. The visible P-X label supports a development/family association; it does not independently establish a production variant.",
+      "benchmark_split": "unassigned"
+    },
+    {
+      "id": "militaryperiscope:media:562821fd8f48a64e77747137",
+      "url": "https://militaryperiscope.com/wt/media/original_images/KF-21_2.jpg",
+      "sha256": "cdbaaa9428f32742362341bfe546afad2315584cc992395e07dc5502f26f87b4",
+      "entity_ids": [
+        "militaryperiscope:332592"
+      ],
+      "evidence_ids": [
+        "95d0c9575a5cbe924499224b"
+      ],
+      "kind": "photograph",
+      "visual_observation": "A twin-tail military jet is airborne with landing gear extended. The underside, wing planform, and externally visible fittings are clear; a South Korean DAPA credit appears below.",
+      "association_limitation": "Consistent with the source KF-21 family association. No exact block, prototype identity, weapons fit, or service status is verified from this image.",
+      "benchmark_split": "unassigned"
+    },
+    {
+      "id": "militaryperiscope:media:2be75331b6bcb817b0eb04c8",
+      "url": "https://militaryperiscope.com/wt/media/original_images/2022-02/CAVS%20HAPC%20sourced.jpg",
+      "sha256": "fef6279b830da41924ec8c7be3186cb573959cc4b353a9012c0c1ef69cc9a572",
+      "entity_ids": [
+        "militaryperiscope:333786"
+      ],
+      "evidence_ids": [
+        "db348fb4980017438fc85390"
+      ],
+      "kind": "photograph",
+      "visual_observation": "A wheeled armored vehicle with a roof-mounted gun is shown from the front-right in grass. The publisher overlay reads CAVS HAPC and credits Patria.",
+      "association_limitation": "Source labels a CAVS family example. The overlay can make retrieval artificially easy; no independent variant identification is claimed.",
+      "benchmark_split": "unassigned"
+    },
+    {
+      "id": "militaryperiscope:media:b0b400edb974d1e933d659eb",
+      "url": "https://militaryperiscope.com/wt/media/original_images/2020-12/Karrar%20left%20front%20sourced.jpg",
+      "sha256": "715ebe2afb1aa19baae4e82516136f1b7b1e5087147a6777abcaad0ce9a5764e",
+      "entity_ids": [
+        "militaryperiscope:333217"
+      ],
+      "evidence_ids": [
+        "db7ce35a7a1c110e0f82f5d6"
+      ],
+      "kind": "photograph",
+      "visual_observation": "A tracked tank with a long gun, turret fittings, and an Iranian flag is photographed in a dry mountainous landscape. The photograph carries an Iranian Government credit.",
+      "association_limitation": "The source caption is Karrar left side. Treat as a publisher-linked family image; visible equipment details do not independently establish an exact variant or operational status.",
+      "benchmark_split": "unassigned"
+    },
+    {
+      "id": "militaryperiscope:media:9f1e904b393461f783fdbfca",
+      "url": "https://militaryperiscope.com/wt/media/original_images/LTAMDS_1_.jpg",
+      "sha256": "b05f84fa965edd5f790638c2ed813d1eacd74f8c47b18f79f2fdcf158eb1e959",
+      "entity_ids": [
+        "militaryperiscope:406305"
+      ],
+      "evidence_ids": [
+        "43153278326d05b68e461b93"
+      ],
+      "kind": "equipment_presentation",
+      "visual_observation": "A trailer-mounted radar assembly has a large raised rectangular panel, smaller side panel, equipment cabinets, and stabilizing legs. A Raytheon credit appears against a sunset background.",
+      "association_limitation": "Appropriate visual equipment context for the LTAMDS source record. The manufacturer presentation may be composed or retouched; it is not independent evidence of a specific fielded configuration.",
+      "benchmark_split": "unassigned"
+    },
+    {
+      "id": "militaryperiscope:media:08da827164ce68e6d23dbca8",
+      "url": "https://militaryperiscope.com/wt/media/original_images/2019-12/Lanza3.jpg",
+      "sha256": "8c39183ad6b5b1acdc99c6a277ec383a88dc539f24a585e25c786f1f3fd61573",
+      "entity_ids": [
+        "militaryperiscope:332515"
+      ],
+      "evidence_ids": [
+        "ff682bc432816b358aa18368"
+      ],
+      "kind": "photograph",
+      "visual_observation": "A broad rectangular slatted radar antenna stands on a support structure with stabilizing legs. LTR-20 and an Indra credit are readable in the lower-left.",
+      "association_limitation": "The source record covers Lanza; this photo is specifically publisher-labeled LTR-20. Preserve that subtype caption and do not automatically label every Lanza image as the same variant.",
+      "benchmark_split": "unassigned"
+    },
+    {
+      "id": "militaryperiscope:media:38296e8c423edc7c93bee38a",
+      "url": "https://militaryperiscope.com/wt/media/original_images/2019-09/Kuznetsov%20Air%20Wing%20Sourced.jpg",
+      "sha256": "9eb0fa235eba046da0d446f00fc7eb36db0a8084391bde348de61230757b5f74",
+      "entity_ids": [
+        "militaryperiscope:332304"
+      ],
+      "evidence_ids": [
+        "9b5f6dec2d07e26a66c6539d"
+      ],
+      "kind": "photograph",
+      "visual_observation": "An aircraft carrier is photographed at sea from above its bow. The curved forward flight deck, island, parked fixed-wing aircraft, and helicopters are visible.",
+      "association_limitation": "Source caption associates the carrier with KUZNETSOV. Multiple aircraft are secondary subjects; their presence is not evidence that the image belongs to separate aircraft entity records.",
+      "benchmark_split": "unassigned"
+    },
+    {
+      "id": "militaryperiscope:media:22edbd7d0092a89847eee22f",
+      "url": "https://militaryperiscope.com/wt/media/original_images/Chinese_Ming_class.jpg",
+      "sha256": "a4476b197ba7663073e7556e1942f0bce423ba475f210ad16b5032171e7076ae",
+      "entity_ids": [
+        "militaryperiscope:406101"
+      ],
+      "evidence_ids": [
+        "d7b8eb7fdc00d22a16a552ad"
+      ],
+      "kind": "photograph",
+      "visual_observation": "A dark submarine is underway on the surface. Its publisher overlay explicitly reads Chinese Ming class and credits the Chinese Ministry of Defense.",
+      "association_limitation": "The archive links this generic Chinese Ming-class illustration to MINYE KYAW HTIN (72). This is a related class/example association, not verified imagery of the exact named vessel. Flag for cautious evaluation labeling.",
+      "benchmark_split": "unassigned"
+    },
+    {
+      "id": "militaryperiscope:media:1516027eab8c8822951169b0",
+      "url": "https://militaryperiscope.com/wt/media/original_images/weapons_images_new/1543933095_airships_w0007780_.jpg",
+      "sha256": "9949ddb811beddb742c9404934a8408c2ba5b2cd8ba299c289873eb54411b4f6",
+      "entity_ids": [
+        "militaryperiscope:317977"
+      ],
+      "evidence_ids": [
+        "446f6e8f8bcf4aca254b73f9"
+      ],
+      "kind": "photograph_and_diagram_composite",
+      "visual_observation": "One tall composite contains two photographs of a white tethered aerostat and a lower illustrated operational diagram with several labeled lines over a coastline.",
+      "association_limitation": "The source labels the whole composite AU-21 Puma. Its panels cannot be counted as independent photographs; the diagram annotations are publisher claims, not measurements established by this review.",
+      "benchmark_split": "unassigned"
+    },
+    {
+      "id": "militaryperiscope:media:76483d8b361a839bb96d9a7f",
+      "url": "https://militaryperiscope.com/wt/media/original_images/Next_Generation_Interceptor.png",
+      "sha256": "d92721f02e9e1d159be8e3943a7e1f1f814e6f2b80b5f8d834faac35d28d27c7",
+      "entity_ids": [
+        "militaryperiscope:406321"
+      ],
+      "evidence_ids": [
+        "c346fac6b545f75ba6cf129c"
+      ],
+      "kind": "concept_rendering",
+      "visual_observation": "A dark rocket-like object rises against an aurora and mountain background in a stylized launch illustration with a Lockheed Martin credit.",
+      "association_limitation": "The source associates this concept illustration with Next Generation Interceptor. Do not treat its appearance as a photograph of built or deployed hardware.",
+      "benchmark_split": "unassigned"
+    },
+    {
+      "id": "militaryperiscope:media:bf79596f2bcbbccd0076ae67",
+      "url": "https://militaryperiscope.com/wt/media/original_images/Liberia_LPf9mvn.png",
+      "sha256": "8d0a1bf8244c3dc80155a9c1be271ce2de1bbf7f20c334400d75181c9ef47878",
+      "entity_ids": [
+        "militaryperiscope:315890"
+      ],
+      "evidence_ids": [
+        "35f7e416f4e54f2986c6a3a6"
+      ],
+      "kind": "map",
+      "visual_observation": "A labeled map outlines Liberia and neighboring countries, with Monrovia, several other places, coastlines, rivers, and a scale visible.",
+      "association_limitation": "Correct contextual association with the Liberia country record. This is geographic reference material, not an image of its armed-forces equipment or a current force-location claim.",
+      "benchmark_split": "unassigned"
+    },
+    {
+      "id": "militaryperiscope:media:402f7c7c631adccf1ebad0bb",
+      "url": "https://militaryperiscope.com/wt/media/original_images/2024_Hensoldt_Org.png",
+      "sha256": "ad92adfbf080028445ed7bd18221fdf086a53724d69be3c7d5408572da2fffe0",
+      "entity_ids": [
+        "militaryperiscope:406651"
+      ],
+      "evidence_ids": [
+        "5beb49af2e96ed4ace98f1f4"
+      ],
+      "kind": "organization_chart",
+      "visual_observation": "A corporate diagram has Hensoldt at the top, branches labeled Sensors and Optronics, and lists of business areas beneath them.",
+      "association_limitation": "Correct supporting evidence for the Hensoldt company profile. It should remain a company/document image, not be treated as an equipment photograph or proof that every listed product family is depicted.",
+      "benchmark_split": "unassigned"
+    },
+    {
+      "id": "commons:media:0bc85ce675c62698557770d3",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/7/78/MAKS-2009-211.jpg?utm_source=commons.wikimedia.org&utm_campaign=index&utm_content=original",
+      "sha256": "9f875455e8417d595748079920191faeb52ff696434a250dbf0b7ecaf90ecdab",
+      "entity_ids": [
+        "commons:54320786"
+      ],
+      "evidence_ids": [
+        "77e98441df9f37ab8a02c2fb"
+      ],
+      "kind": "photograph",
+      "visual_observation": "Compact green radar assembly on a tripod, with attached boxes/cabling and a laptop unit, photographed at an exhibition. Vehicles and visitors occupy the background.",
+      "association_limitation": "Source associates the foreground display with 1L122E; the separate tracked 1L122-2E photograph is visibly different. Identity remains source-attributed. Background assets and people are not additional inferred entity matches.",
+      "benchmark_split": "development",
+      "seed_media_id": "commons-77e98441df9f37ab8a02c2fb"
+    },
+    {
+      "id": "commons:media:0874596c179cb7904bf1f78b",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/e/e8/MAKS-2009-214.jpg?utm_source=commons.wikimedia.org&utm_campaign=index&utm_content=original",
+      "sha256": "5be7a8738c49ccc3f5cd446e92f31f8c683083f313bb658f42038c0cfffb2d3a",
+      "entity_ids": [
+        "commons:54320747"
+      ],
+      "evidence_ids": [
+        "412ff0c2ff5a573ed05b6393"
+      ],
+      "kind": "photograph",
+      "visual_observation": "Tracked green vehicle carrying a raised rectangular radar panel, seen from rear three-quarter angle at an outdoor exhibition.",
+      "association_limitation": "Source associates this display with 1L122-2E. It is a separate photograph from the tripod 1L122E example; foreground vehicle is clear, but crop/variant ground truth still needs benchmark-specific review.",
+      "benchmark_split": "unassigned"
+    },
+    {
+      "id": "commons:media:11511a1e17550f777432179a",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/d/da/Dunai3M_radar_side.jpg?utm_source=commons.wikimedia.org&utm_campaign=index&utm_content=original",
+      "sha256": "9e2178b35f9a89bce09c367a8aa618de8d4f87939562b740427e14f9998522e2",
+      "entity_ids": [
+        "commons:18438063"
+      ],
+      "evidence_ids": [
+        "3e0d6058462a943f7cdf12cb"
+      ],
+      "kind": "site_context_photograph",
+      "visual_observation": "Long weathered building facade with brickwork, doors and ventilation openings. No antenna face or distinguishing radar assembly is visible.",
+      "association_limitation": "Source category associates this building with Dunai radar. Treat as contextual site imagery, not a confirmed visual depiction of the radar apparatus or a clean equipment-identification positive.",
+      "benchmark_split": "unassigned"
+    },
+    {
+      "id": "commons:media:0a071e5bad35df18d75ba6bd",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/3/30/Doghouse_dunay3_kh7_transmitter.jpg?utm_source=commons.wikimedia.org&utm_campaign=index&utm_content=original",
+      "sha256": "9e30eeb3de00ae2694d4ef7b27db6ab0209811f6c8485ba06e6f97060ea0d4f0",
+      "entity_ids": [
+        "commons:18438063"
+      ],
+      "evidence_ids": [
+        "ea193ac4cba26f151bf60370"
+      ],
+      "kind": "satellite_photograph",
+      "visual_observation": "Small grayscale overhead image showing an elongated compound with parallel linear structures and surrounding roads/vegetation.",
+      "association_limitation": "Caption identifies a historical Dunay-3 transmitter building. Resolution and overhead geometry limit identity verification; retain source context and do not assert operational details from the image.",
+      "benchmark_split": "unassigned"
+    },
+    {
+      "id": "commons:media:070a6f3193fb30f46c270941",
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/aa/Knife_Rest_A.png/1280px-Knife_Rest_A.png?utm_source=commons.wikimedia.org&utm_campaign=index&utm_content=thumbnail&_=20230717122911",
+      "sha256": "dc1b6e91503e89219512f977014c6395a05606e15dc21675b1711d6bc8db3b87",
+      "entity_ids": [
+        "commons:134527222"
+      ],
+      "evidence_ids": [
+        "df30446257d3b5703927a8b0"
+      ],
+      "kind": "diagram",
+      "visual_observation": "Black-and-white engineering drawing with front, side and perspective views of a mast-mounted array, labeled dimensions and guy wires.",
+      "association_limitation": "A clear technical drawing rather than a photograph. P-8 association comes from the source record; all views belong to one drawing and must share one evaluation group. Dimensions are visible source markings, not independently verified specifications.",
+      "benchmark_split": "unassigned"
+    },
+    {
+      "id": "commons:media:00c865a93429b5378e451ca7",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/1/1e/P-18-radar-P-15-substation.jpg?utm_source=commons.wikimedia.org&utm_campaign=index&utm_content=original",
+      "sha256": "e301a37f3858b555f7ef6badc9e09a365a97b6e60b33891765777ece9ed43d36",
+      "entity_ids": [
+        "commons:5895255",
+        "commons:9787661"
+      ],
+      "evidence_ids": [
+        "d59f9a4a63ed484da27fb3f0"
+      ],
+      "kind": "photograph",
+      "visual_observation": "Museum display showing multiple mesh antennas, a tall mast, a truck body and a separate trailer beneath trees.",
+      "association_limitation": "The file is linked to both P-18 and P-15. Caption mixes designations and the visible assets require subject-level review; do not turn whole-image category membership into two confirmed equipment labels. Multiple-object ambiguity is correctly recorded.",
+      "benchmark_split": "unassigned"
+    },
+    {
+      "id": "commons:media:00167d7496938e7d16515838",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/8/84/Oboronexpo2014part2-31.jpg?utm_source=commons.wikimedia.org&utm_campaign=index&utm_content=original",
+      "sha256": "f2ef85565d1546d9b07dec8e0da239157ea184e7e370a0a3b69e871b9aba1503",
+      "entity_ids": [
+        "commons:49967512"
+      ],
+      "evidence_ids": [
+        "8d3fc854b9f33346a38e3ec0"
+      ],
+      "kind": "photograph",
+      "visual_observation": "Several adjacent military exhibits with large raised antenna panels; tracked vehicle and upright central equipment dominate the foreground. Other equipment is cropped at both edges.",
+      "association_limitation": "Source associates the file with 9S19M2. Several prominent neighboring systems are present, so whole-frame embeddings may emphasize a different exhibit. Retain source attribution and prefer reviewed target localization before identity evaluation.",
+      "benchmark_split": "unassigned"
+    },
+    {
+      "id": "commons:media:04631b576adffa8df5fcb189",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/a/a3/Acquisition_Radar_%22P-18%22_%28274198020%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=index&utm_content=original",
+      "sha256": "47e639cfffd029495ee9d2de9a37dc8c96a23dc77dc36fea6166fd2fff413f64",
+      "entity_ids": [
+        "commons:31661698"
+      ],
+      "evidence_ids": [
+        "9dff48d17b8e3960fe66ac69"
+      ],
+      "kind": "photograph",
+      "visual_observation": "Tall lattice-like antenna array viewed edge-on beside a camouflaged shelter and trailer in a wooded setting; the top is clipped by the frame.",
+      "association_limitation": "The archived filename says P-18 while the reviewed entity association is Nebo-SV. The caption only gives event context. Preserve this source disagreement and exclude it from strict identity ground truth until independently reviewed.",
+      "benchmark_split": "unassigned"
+    },
+    {
+      "id": "commons:media:03251793a5f6ac1b9abdfa17",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/3/34/96L6E_at_the_MAKS-2011_%2801%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=index&utm_content=original",
+      "sha256": "ec139a93f6900e762f82b8dcca0a6693593a5bd4f824e6ca60e524b7b35a9922",
+      "entity_ids": [
+        "commons:49483718"
+      ],
+      "evidence_ids": [
+        "e5861bb23b36732c197cf0ab"
+      ],
+      "kind": "photograph",
+      "visual_observation": "Large wheeled radar vehicle with a raised rectangular array, stabilizing jacks and an exhibition placard, photographed from front three-quarter angle.",
+      "association_limitation": "Source associates this photograph with 96L6E; foreground equipment is clearly visible. This is an exact previously pending M1 gallery file, but the independent paired query photograph has not been reviewed here. Do not score the pending unseen-view case until its pair and group independence are checked.",
+      "benchmark_split": "gallery",
+      "seed_media_id": "commons-e5861bb23b36732c197cf0ab"
+    }
+  ]
+}

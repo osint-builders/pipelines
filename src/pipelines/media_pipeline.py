@@ -66,7 +66,68 @@ def read_media(
                 if record["state"] == "saved"
             }:
                 store.body(digest)
+    if entities is not None:
+        report["coverage"] = media_coverage(report, entities)
     return report
+
+
+def media_coverage(report: dict, entities: list[dict]) -> dict:
+    """Count URL outcomes and original groups separately for every entity."""
+    by_entity: dict[str, list[dict]] = defaultdict(list)
+    for record in report["records"]:
+        for identity in {ref["entity_id"] for ref in record["references"]}:
+            by_entity[identity].append(record)
+    rows = []
+    for entity in sorted(entities, key=lambda item: item["id"]):
+        records = by_entity[entity["id"]]
+        counts = {
+            state: 0
+            for state in ("pending", "saved", "failed", "excluded", "unassociated")
+        }
+        groups: set[str] = set()
+        for record in records:
+            occurrences = [
+                item
+                for item in record.get("occurrences", [])
+                if any(
+                    ref["entity_id"] == entity["id"]
+                    for ref in item.get("references", record["references"])
+                )
+            ]
+            eligible = [
+                item
+                for item in occurrences
+                if item["associated"] and not item["exclusion_reason"]
+            ]
+            state = record["state"]
+            if record.get("occurrences") and not eligible:
+                state = "excluded"
+            counts[state] += 1
+            if state == "saved":
+                groups.update(item["original_url"] for item in eligible)
+                if not record.get("occurrences"):
+                    groups.add(record["url"])
+        rows.append(
+            {
+                "entity_id": entity["id"],
+                "discovered": len(records),
+                **counts,
+                "saved_original_groups": len(groups),
+            }
+        )
+    return {
+        "entities": len(entities),
+        "with_candidates": sum(bool(row["discovered"]) for row in rows),
+        "with_saved_media": sum(bool(row["saved"]) for row in rows),
+        "without_candidates": [
+            row["entity_id"] for row in rows if not row["discovered"]
+        ],
+        "multiple_subject_records": sum(
+            len({ref["entity_id"] for ref in record["references"]}) > 1
+            for record in report["records"]
+        ),
+        "by_entity": rows,
+    }
 
 
 def media_summary(report: dict) -> dict:
@@ -148,6 +209,10 @@ def _discover(source: Source, root: Path, manifest: dict, entities: list[dict]) 
             for candidate in source.discover_media(
                 url, archive.body(page), owners[url]
             ):
+                if candidate.page_url and candidate.page_url != url:
+                    raise ValueError(
+                        "Media occurrence must belong to its archived page"
+                    )
                 if any(
                     (reference.entity_id, reference.evidence_id) not in known
                     for reference in candidate.references
@@ -176,6 +241,7 @@ def media(source: Source, root: Path, *, download: bool = False) -> dict:
             with MediaStore(root, read_only=True) as store:
                 result = store.manifest(source.id, archive_id)
             _references(result, entities)
+            result["coverage"] = media_coverage(result, entities)
             result.update(supported=True, **media_summary(result))
             atomic_json(checkpoint, result)
             return result

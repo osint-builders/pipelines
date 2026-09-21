@@ -3,9 +3,11 @@ import http.client
 import json
 import os
 import re
+import threading
 import time
 import urllib.error
 import urllib.request
+from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime
 from email.utils import parsedate_to_datetime
 from pathlib import Path
@@ -16,6 +18,7 @@ from pipelines.media import MAX_IMAGE_BYTES, MediaStore, _resolved_path
 from pipelines.sources.base import AuthenticatedSource, Source
 
 MAX_ATTEMPTS = 3
+MAX_WORKERS = 8
 MAX_REDIRECTS = 5
 REQUEST_TIMEOUT = 30
 CHUNK_BYTES = 64 * 1024
@@ -44,9 +47,43 @@ class _Restart(_Failure):
         super().__init__("representation_changed", transient=True)
 
 
+class _Stopped(Exception):
+    pass
+
+
 class _NoRedirect(urllib.request.HTTPRedirectHandler):
     def redirect_request(self, *args: object, **kwargs: object) -> None:
         return None
+
+
+class _Pacer:
+    def __init__(self, source: Source) -> None:
+        self.interval = max(0.0, float(getattr(source, "media_request_interval", 0)))
+        self.parallel = getattr(source, "media_workers", 1) > 1
+        self.last_request: float | None = None
+        self.lock = threading.Lock()
+        self.stopped = threading.Event()
+
+    def pause(self, delay: float) -> bool:
+        return not self.stopped.wait(delay)
+
+    def defer(self, error: _Failure) -> bool:
+        return error.delay > 60 or (
+            self.parallel and error.status == 503 and error.retry_after is not None
+        )
+
+    def wait(self) -> bool:
+        with self.lock:
+            if self.stopped.is_set():
+                return False
+            if self.last_request is not None:
+                remaining = self.interval - (time.monotonic() - self.last_request)
+                if remaining > 0 and not self.pause(remaining):
+                    return False
+            if self.stopped.is_set():
+                return False
+            self.last_request = time.monotonic()
+            return True
 
 
 def _origin(url: str) -> tuple[str, str, int]:
@@ -121,6 +158,7 @@ def _open(
     url: str,
     allowed: set[tuple[str, str, int]],
     resume_headers: dict[str, str],
+    pacer: _Pacer,
 ) -> tuple[object, str]:
     opener = urllib.request.build_opener(_NoRedirect())
     seed_origins = {_origin(seed) for seed in source.seeds}
@@ -133,7 +171,10 @@ def _open(
         if url in visited:
             raise _Failure("redirect_loop")
         visited.add(url)
-        headers = {"User-Agent": "pipelines-media/1", "Accept-Encoding": "identity"}
+        headers = {
+            "User-Agent": "pipelines/0.1 (+https://github.com/osint-builders/pipelines)",
+            "Accept-Encoding": "identity",
+        }
         if credential_origin == origin and isinstance(source, AuthenticatedSource):
             try:
                 for key, value in source.request_headers(url).items():
@@ -149,6 +190,8 @@ def _open(
             except Exception:
                 raise _Failure("source_headers_failed") from None
         headers.update(resume_headers)
+        if not pacer.wait():
+            raise _Stopped()
         try:
             response = opener.open(
                 urllib.request.Request(url, headers=headers), timeout=REQUEST_TIMEOUT
@@ -211,6 +254,7 @@ def _download(
     url: str,
     partial: Path,
     metadata: Path,
+    pacer: _Pacer,
 ) -> dict:
     state = _partial_state(partial, metadata, url)
     offset = partial.stat().st_size if state else 0
@@ -219,7 +263,7 @@ def _download(
         if state
         else {}
     )
-    response, final_url = _open(source, url, allowed, headers)
+    response, final_url = _open(source, url, allowed, headers, pacer)
     try:
         status = response.status  # type: ignore[attr-defined]
         response_headers = response.headers  # type: ignore[attr-defined]
@@ -227,13 +271,16 @@ def _download(
             if status == 416 and offset:
                 raise _Restart()
             delay, retry_after = _retry_after(response_headers.get("Retry-After", ""))
-            raise _Failure(
+            failure = _Failure(
                 f"http_{status}",
                 transient=status in _TRANSIENT_STATUSES,
                 status=status,
                 delay=delay,
                 retry_after=retry_after,
             )
+            if status in {401, 403, 429} or pacer.defer(failure):
+                pacer.stopped.set()
+            raise failure
         content_type = (
             response_headers.get("Content-Type", "").split(";", 1)[0].strip().lower()
         )
@@ -331,14 +378,92 @@ def _download(
         response.close()  # type: ignore[attr-defined]
 
 
+def _capture_record(
+    source: Source,
+    archive_id: str,
+    record: dict,
+    store: MediaStore,
+    allowed: set[tuple[str, str, int]],
+    temporary: Path,
+    pacer: _Pacer,
+) -> None:
+    if record["state"] in {"excluded", "unassociated"} or pacer.stopped.is_set():
+        return
+    media_id = record["id"]
+    if record["state"] == "saved":
+        try:
+            store.body(record["sha256"])
+            return
+        except (OSError, ValueError):
+            store.mark(
+                source.id, archive_id, media_id, "failed", "blob_integrity_mismatch"
+            )
+    filename = hashlib.sha256(media_id.encode()).hexdigest()
+    partial, metadata = temporary / f"{filename}.part", temporary / f"{filename}.json"
+    if any(
+        not _resolved_path(path).is_relative_to(_resolved_path(temporary))
+        for path in (partial, metadata, metadata.with_suffix(".tmp"))
+    ):
+        raise ValueError("Media partial path escapes the temporary directory")
+    for attempt in range(MAX_ATTEMPTS):
+        if pacer.stopped.is_set():
+            return
+        try:
+            _origin(record["url"])
+            result = _download(source, allowed, record["url"], partial, metadata, pacer)
+            try:
+                store.save(
+                    source.id,
+                    archive_id,
+                    media_id,
+                    partial,
+                    content_type=result["content_type"],
+                    final_url=result["final_url"],
+                    http_status=result["http_status"],
+                )
+            except (ValueError, OSError) as error:
+                raise _Failure(
+                    getattr(error, "code", "invalid_image"),
+                    status=result["http_status"],
+                ) from None
+            _remove_partial(partial, metadata)
+            return
+        except _Stopped:
+            return
+        except _Failure as error:
+            if isinstance(error, _Restart) or not error.transient:
+                _remove_partial(partial, metadata)
+            deferred = pacer.defer(error)
+            if deferred or error.status in {401, 403, 429}:
+                pacer.stopped.set()
+            store.mark(
+                source.id,
+                archive_id,
+                media_id,
+                "pending" if deferred else "failed",
+                error.code,
+                http_status=error.status,
+                retry_after=error.retry_after,
+            )
+            if (
+                pacer.stopped.is_set()
+                or not error.transient
+                or attempt + 1 == MAX_ATTEMPTS
+                or not pacer.pause(error.delay or min(attempt + 1, 2))
+            ):
+                return
+
+
 def capture_media(source: Source, root: Path, archive_id: str) -> dict:
     """Capture registered media while the caller holds the source writer lock."""
     source_id, archive_id = _component(source.id), _component(archive_id)
+    workers = getattr(source, "media_workers", 1)
+    if type(workers) is not int or not 1 <= workers <= MAX_WORKERS:
+        raise ValueError(f"media_workers must be an integer from 1 to {MAX_WORKERS}")
     origins = getattr(source, "media_origins", ())
     allowed = {_origin(origin) for origin in origins}
     temporary = root / "media" / "tmp" / source_id / archive_id
-    store = MediaStore(root)
-    try:
+    with MediaStore(root) as store:
         if not _resolved_path(temporary).is_relative_to(_resolved_path(root / "media")):
             raise ValueError("Media temporary directory escapes the archive")
         temporary.mkdir(parents=True, exist_ok=True)
@@ -352,84 +477,50 @@ def capture_media(source: Source, root: Path, archive_id: str) -> dict:
                         return store.manifest(source_id, archive_id)
                 except (ValueError, TypeError):
                     pass
-        for record in records:
-            media_id = record["id"]
-            filename = hashlib.sha256(media_id.encode()).hexdigest()
-            if record["state"] in {"excluded", "unassociated"}:
-                continue
-            if record["state"] == "saved":
-                try:
-                    store.body(record["sha256"])
-                    continue
-                except (OSError, ValueError):
-                    store.mark(
-                        source_id,
-                        archive_id,
-                        media_id,
-                        "failed",
-                        "blob_integrity_mismatch",
-                    )
-            partial, metadata = (
-                temporary / f"{filename}.part",
-                temporary / f"{filename}.json",
-            )
-            if any(
-                not _resolved_path(path).is_relative_to(_resolved_path(temporary))
-                for path in (partial, metadata, metadata.with_suffix(".tmp"))
-            ):
-                raise ValueError("Media partial path escapes the temporary directory")
-            stop = False
-            for attempt in range(MAX_ATTEMPTS):
-                try:
-                    _origin(record["url"])
-                    result = _download(
-                        source, allowed, record["url"], partial, metadata
-                    )
-                    try:
-                        store.save(
-                            source_id,
-                            archive_id,
-                            media_id,
-                            partial,
-                            content_type=result["content_type"],
-                            final_url=result["final_url"],
-                            http_status=result["http_status"],
-                        )
-                    except (ValueError, OSError):
-                        raise _Failure(
-                            "invalid_image", status=result["http_status"]
-                        ) from None
-                    _remove_partial(partial, metadata)
+        pacer = _Pacer(source)
+        if workers == 1:
+            for record in records:
+                if pacer.stopped.is_set():
                     break
-                except _Failure as error:
-                    if isinstance(error, _Restart) or not error.transient:
-                        _remove_partial(partial, metadata)
-                    deferred = error.delay > 60
-                    store.mark(
-                        source_id,
-                        archive_id,
-                        media_id,
-                        "pending" if deferred else "failed",
-                        error.code,
-                        http_status=error.status,
-                        retry_after=error.retry_after,
-                    )
-                    if (
-                        deferred
-                        or error.status in {401, 403}
-                        or (error.status == 429 and attempt + 1 == MAX_ATTEMPTS)
-                    ):
-                        stop = True
-                    if (
-                        stop
-                        or deferred
-                        or not error.transient
-                        or attempt + 1 == MAX_ATTEMPTS
-                    ):
-                        break
-                    time.sleep(error.delay or min(attempt + 1, 2))
-            if stop:
-                break
+                _capture_record(
+                    source, archive_id, record, store, allowed, temporary, pacer
+                )
+        elif records:
+            jobs = iter(records)
+            jobs_lock = threading.Lock()
+
+            def worker() -> None:
+                try:
+                    with MediaStore(root) as worker_store:
+                        while True:
+                            with jobs_lock:
+                                record = (
+                                    None if pacer.stopped.is_set() else next(jobs, None)
+                                )
+                            if record is None:
+                                return
+                            _capture_record(
+                                source,
+                                archive_id,
+                                record,
+                                worker_store,
+                                allowed,
+                                temporary,
+                                pacer,
+                            )
+                except BaseException:
+                    pacer.stopped.set()
+                    raise
+
+            with ThreadPoolExecutor(max_workers=workers) as executor:
+                try:
+                    futures = [
+                        executor.submit(worker)
+                        for _ in range(min(workers, len(records)))
+                    ]
+                    for future in futures:
+                        future.result()
+                except BaseException:
+                    pacer.stopped.set()
+                    raise
         return store.manifest(source_id, archive_id)
-    finally:
-        store.close()

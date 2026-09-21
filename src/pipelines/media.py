@@ -25,11 +25,20 @@ _STATES = {"pending", "saved", "failed", "excluded", "unassociated"}
 _MIMES = {"JPEG": "image/jpeg", "PNG": "image/png", "WEBP": "image/webp"}
 
 
+class MediaValidationError(ValueError):
+    def __init__(self, message: str, code: str = "invalid_image") -> None:
+        super().__init__(message)
+        self.code = code
+
+
 @dataclass(frozen=True)
 class MediaReference:
     entity_id: str
     evidence_id: str
     caption: str = ""
+    section: str = ""
+    ambiguous: bool = False
+    association: str = "source_context"
 
 
 @dataclass(frozen=True)
@@ -37,6 +46,11 @@ class MediaCandidate:
     url: str
     references: list[MediaReference] = field(default_factory=list)
     exclusion_reason: str = ""
+    role: str = "original"
+    original_url: str = ""
+    page_url: str = ""
+    caption: str = ""
+    section: str = ""
 
 
 @dataclass(frozen=True)
@@ -108,21 +122,31 @@ def recipe_key(sha256: str, recipe: ProcessingRecipe) -> str:
 
 def _decode(body: bytes, content_type: str) -> dict:
     if not body or len(body) > MAX_IMAGE_BYTES:
-        raise ValueError("Image exceeds the byte limit or is empty")
+        raise MediaValidationError(
+            "Image exceeds the byte limit or is empty", "image_too_large"
+        )
     mime = content_type.split(";", 1)[0].strip().lower()
     try:
         with Image.open(BytesIO(body)) as image:
             expected_mime = _MIMES.get(image.format or "")
             if expected_mime is None:
-                raise ValueError(
-                    "Unsupported image format; expected JPEG, PNG, or WEBP"
+                raise MediaValidationError(
+                    "Unsupported image format; expected JPEG, PNG, or WEBP",
+                    "unsupported_image_format",
                 )
             if mime != expected_mime:
-                raise ValueError("Image MIME type does not match its decoded format")
+                raise MediaValidationError(
+                    "Image MIME type does not match its decoded format",
+                    "image_mime_mismatch",
+                )
             if image.width * image.height > MAX_IMAGE_PIXELS:
-                raise ValueError("Image exceeds the decoded pixel limit")
+                raise MediaValidationError(
+                    "Image exceeds the decoded pixel limit", "decoded_image_too_large"
+                )
             if getattr(image, "n_frames", 1) != 1:
-                raise ValueError("Animated images are not supported")
+                raise MediaValidationError(
+                    "Animated images are not supported", "animated_image"
+                )
             image.verify()
         with Image.open(BytesIO(body)) as image:
             image.load()
@@ -135,7 +159,7 @@ def _decode(body: bytes, content_type: str) -> dict:
                 for x in range(8):
                     bits = (bits << 1) | (pixels[y * 9 + x] > pixels[y * 9 + x + 1])
     except (OSError, SyntaxError, Image.DecompressionBombError) as exc:
-        raise ValueError("Invalid or truncated image") from exc
+        raise MediaValidationError("Invalid or truncated image") from exc
     return {
         "content_type": expected_mime,
         "width": width,
@@ -270,6 +294,13 @@ class MediaStore:
             self.db.execute("BEGIN IMMEDIATE")
             for candidate in candidates:
                 identity = media_id(source, candidate.url)
+                if candidate.role not in {"original", "preview"}:
+                    raise ValueError("Media role must be original or preview")
+                if candidate.role == "preview" and not candidate.original_url:
+                    raise ValueError("Media previews require an original URL")
+                for url in (candidate.original_url, candidate.page_url):
+                    if url:
+                        _url(url)
                 references = [asdict(reference) for reference in candidate.references]
                 for reference in candidate.references:
                     prefix, separator, native = reference.entity_id.partition(":")
@@ -310,20 +341,73 @@ class MediaStore:
                     }
                 else:
                     value = self._record(source, archive, identity)
-                combined = {
-                    _json(reference): reference for reference in value["references"]
-                }
+                previous = [
+                    {
+                        "section": "",
+                        "ambiguous": False,
+                        "association": "source_context",
+                        **reference,
+                    }
+                    for reference in value["references"]
+                ]
+                combined = {_json(reference): reference for reference in previous}
                 combined.update(
                     {_json(reference): reference for reference in references}
                 )
                 value["references"] = [combined[key] for key in sorted(combined)]
+                occurrence = {
+                    "page_url": candidate.page_url,
+                    "role": candidate.role,
+                    "original_url": candidate.original_url or candidate.url,
+                    "exclusion_reason": candidate.exclusion_reason,
+                    "associated": bool(references),
+                    "caption": candidate.caption,
+                    "section": candidate.section,
+                    "references": [
+                        {"entity_id": ref.entity_id, "evidence_id": ref.evidence_id}
+                        for ref in candidate.references
+                    ],
+                }
+
+                def occurrence_key(item: dict) -> str:
+                    return _json(
+                        {
+                            key: val
+                            for key, val in item.items()
+                            if key
+                            not in {"references", "associated", "exclusion_reason"}
+                        }
+                    )
+
+                occurrences = {
+                    occurrence_key(item): item for item in value.get("occurrences", [])
+                }
+                key = occurrence_key(occurrence)
+                old_refs = occurrences.get(key, {}).get("references", [])
+                pairs = {_json(ref): ref for ref in old_refs + occurrence["references"]}
+                occurrence["references"] = [pairs[key] for key in sorted(pairs)]
+                occurrence["associated"] = bool(occurrence["references"])
+                occurrences[key] = occurrence
+                value["occurrences"] = [occurrences[key] for key in sorted(occurrences)]
+                eligible = any(
+                    item["associated"] and not item["exclusion_reason"]
+                    for item in value["occurrences"]
+                )
+                reasons = sorted(
+                    {
+                        item["exclusion_reason"]
+                        for item in value["occurrences"]
+                        if item["exclusion_reason"]
+                    }
+                )
                 if value["state"] != "saved":
-                    if candidate.exclusion_reason:
-                        value.update(state="excluded", error=candidate.exclusion_reason)
+                    if eligible:
+                        if value["state"] in {"excluded", "unassociated"}:
+                            value.update(state="pending", error="")
+                    elif reasons:
+                        value.update(state="excluded", error="; ".join(reasons))
                     elif not value["references"]:
                         value.update(state="unassociated", error="")
-                    elif value["state"] == "unassociated":
-                        value.update(state="pending", error="")
                 self._put(value)
 
     def records(self, source: str, archive: str) -> list[dict]:

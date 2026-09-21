@@ -3,7 +3,7 @@
 Help researchers and educators find static entities quickly using names, descriptions,
 specifications, and images, with every result linked to captured evidence.
 
-**Progress:** 1/10 milestones verified. **Active:** M2, awaiting user verification.
+**Progress:** 2/10 milestones verified. **Active:** M3, implementation and live pilot.
 
 **Branch:** `feature/multimodal-entity-search`.
 
@@ -20,8 +20,8 @@ commands and the source table.
 | Milestone | Depends on | Status |
 | --- | --- | --- |
 | M1 — Baseline and acceptance targets | Existing CLI | Verified by user; `5102380`, baseline and seed checks passed; four visual cases tracked for M3 |
-| M2 — Shared media evidence and archive | M1 | Ready for verification: 250 tests; offline archive and full-corpus compatibility reports |
-| M3 — Two-source media pilot | M2 | Planned |
+| M2 — Shared media evidence and archive | M1 | Verified by user; `55d4046`, 250 tests and GitHub CI passed; offline compatibility confirmed |
+| M3 — Two-source media pilot | M2 | In progress: source adapters, shared coverage reporting, live capture and visual inspection |
 | M4 — Portable image encoder | M1, M3 | Planned |
 | M5 — Image and combined queries | M2, M3, M4 | Planned |
 | M6 — OCR and visual descriptions | M3, M5 | Planned |
@@ -144,19 +144,50 @@ retained links to seven entities, and reused a derived preview without recomputi
 With network access disabled, all 11 existing sources loaded: 4,337 entities and 5,090
 evidence pages, with the exact M1 text content hash unchanged.
 Reports: `build/m2/archive-smoke.json`, `build/m2/compatibility.json`,
-`build/m2/tests.xml`. All generated data stays outside Git. Await user verification
-before starting M3.
+`build/m2/tests.xml`. All generated data stays outside Git. User verification authorizes M3.
 
 ## M3 — Two-source media pilot
 
-- [ ] Capture Military Periscope images from structured content blocks, preserving captions and section/subject associations.
+- [x] Capture Military Periscope images from structured content blocks, preserving captions and section/subject associations.
 - [ ] Capture Wikimedia Commons media from file records, resolving original files and available previews.
 - [ ] Exclude navigation graphics and unrelated illustrations; represent ambiguous or multiple depicted entities explicitly.
 - [ ] Publish media manifests and coverage reports for both sources through the shared pipeline.
-- [ ] Select representative pilot images for retrieval evaluation and inspect their entity associations.
+- [x] Select representative pilot images for retrieval evaluation and inspect their entity associations.
 
 Complete when both sources use the same media workflow and every discovered candidate
 has a recorded outcome. Failed downloads remain visible and resumable.
+
+Working scope: implement both adapters against the existing archived pages, retain
+original/preview relationships and page-level subject context, then capture through
+the shared downloader. Publish per-entity coverage and inspect representative saved
+images. Keep text exports unchanged and preserve the M1 query/gallery separation.
+M4 remains gated on user verification of this milestone.
+
+Shared support now retains discovery occurrences, captions, sections, preview parents,
+and ambiguous associations. Eligible occurrences take precedence over unrelated uses
+of the same URL. Coverage distinguishes captured URLs from original-image groups;
+source request pacing is shared. Initial inspection found 455 structured Military
+Periscope originals, one additional inline image, and 1,374 Commons file pages.
+Text snapshot hashes are recorded in `build/m3/text-before.json`.
+
+Military Periscope capture is complete: 427 saved, no failures, 29 unassociated
+collection images, and two excluded navigation logos; 132/143 entities have images.
+Offline publication and audit passed with the exact text export hash unchanged.
+Commons capture resumed successfully after a throttle at 612 saved. Its manifest includes original
+files, one selected raster preview per file, redundant-preview exclusions, and explicit
+unsupported/oversized outcomes. Shared capture now uses bounded workers, one rate
+limit across requests and redirects, and immediate stopping on throttling. Commons
+resumes after Retry-After with four workers and request starts spaced one second
+apart. No saved images need downloading again. All 294 tests, Ruff, mypy, and the
+Python package build pass; the final live coverage audit remains in progress.
+
+The reviewed inventory is [media_pilot.json](tests/fixtures/media_pilot.json): 12
+Military Periscope and nine Commons images. Associations remain source context;
+review notes identify class illustrations, concept renderings, site photographs,
+multiple subjects, and conflicting labels. Existing M1 photograph splits are retained.
+The Bofors record still has only its original diagram, so its independent-gallery gap
+remains open. Other pending seed pairs will be checked as Commons capture completes.
+Detailed visual reviews and the Military Periscope audit are under `build/m3/`.
 
 ## M4 — Portable image encoder
 

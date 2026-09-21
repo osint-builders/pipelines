@@ -1,7 +1,9 @@
 import hashlib
 import json
 import threading
+import time
 from collections.abc import Callable, Iterator
+from concurrent.futures import Future
 from email.utils import formatdate
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from io import BytesIO
@@ -22,6 +24,8 @@ class LocalSource:
     id = "test"
     version = "1"
     minimum_entities = 1
+    media_request_interval = 0.0
+    media_workers = 1
 
     def __init__(self, origin: str, *extra_origins: str) -> None:
         self.seeds: tuple[str, ...] = (origin + "/catalog",)
@@ -164,6 +168,33 @@ def test_completed_images_reuse_offline_and_never_store_headers(
     )
 
 
+def test_source_request_interval_is_observed(
+    tmp_path: Path, servers: Any, png: bytes, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def handler(request: BaseHTTPRequestHandler) -> None:
+        if request.path == "/a":
+            reply(request, status=302, headers={"Location": "/redirected"})
+        else:
+            reply(request, png)
+
+    server = servers(handler)
+    source = LocalSource(server.origin)
+    source.media_request_interval = 2.0
+    register(tmp_path, server.origin + "/a", server.origin + "/b")
+    sleeps: list[float] = []
+
+    def pause(self: object, delay: float) -> bool:
+        sleeps.append(delay)
+        return True
+
+    monkeypatch.setattr(media_download.time, "monotonic", lambda: 100.0)
+    monkeypatch.setattr(media_download._Pacer, "pause", pause)
+    capture_media(source, tmp_path, "run")
+    assert sleeps == [2.0, 2.0]
+    assert len(server.requests) == 3
+    assert "github.com/osint-builders/pipelines" in server.requests[0][1]["User-Agent"]
+
+
 @pytest.mark.parametrize("validator", ["etag", "last_modified"])
 def test_interrupted_transfer_resumes_across_runs(
     tmp_path: Path,
@@ -232,7 +263,7 @@ def test_unvalidated_partials_restart(
     monkeypatch: pytest.MonkeyPatch,
     headers: dict[str, str],
 ) -> None:
-    monkeypatch.setattr(media_download.time, "sleep", lambda _: None)
+    monkeypatch.setattr(media_download._Pacer, "pause", lambda self, delay: True)
     count = 0
 
     def serve(request: BaseHTTPRequestHandler) -> None:
@@ -258,7 +289,7 @@ def test_changed_or_malformed_resume_never_concatenates(
     monkeypatch: pytest.MonkeyPatch,
     change: str,
 ) -> None:
-    monkeypatch.setattr(media_download.time, "sleep", lambda _: None)
+    monkeypatch.setattr(media_download._Pacer, "pause", lambda self, delay: True)
     count = 0
 
     def serve(request: BaseHTTPRequestHandler) -> None:
@@ -366,7 +397,12 @@ def test_retry_after_is_honored_and_long_backoff_is_deferred(
     tmp_path: Path, servers: Any, png: bytes, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     delays: list[float] = []
-    monkeypatch.setattr(media_download.time, "sleep", delays.append)
+
+    def pause(self: object, delay: float) -> bool:
+        delays.append(delay)
+        return True
+
+    monkeypatch.setattr(media_download._Pacer, "pause", pause)
     count = 0
 
     def serve(request: BaseHTTPRequestHandler) -> None:
@@ -433,6 +469,8 @@ def test_nonimages_and_invalid_images_remain_visible_failures(
         if kind == "html"
         else "image_too_large"
         if kind == "oversized"
+        else "image_mime_mismatch"
+        if kind == "wrong_mime"
         else "invalid_image"
     )
     assert len(server.requests) == 1
@@ -518,7 +556,7 @@ def test_corrupt_completed_blob_is_recaptured(
 def test_transient_failures_have_bounded_retries(
     tmp_path: Path, servers: Any, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setattr(media_download.time, "sleep", lambda _: None)
+    monkeypatch.setattr(media_download._Pacer, "pause", lambda self, delay: True)
     server = servers(lambda request: reply(request, status=503))
     register(tmp_path, server.origin + "/image")
     capture_media(LocalSource(server.origin), tmp_path, "run")
@@ -526,14 +564,14 @@ def test_transient_failures_have_bounded_retries(
     assert records(tmp_path)[0]["error"] == "http_503"
 
 
-def test_exhausted_rate_limit_stops_other_source_requests(
+def test_observed_rate_limit_stops_other_source_requests(
     tmp_path: Path, servers: Any, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setattr(media_download.time, "sleep", lambda _: None)
+    monkeypatch.setattr(media_download._Pacer, "pause", lambda self, delay: True)
     server = servers(lambda request: reply(request, status=429))
     register(tmp_path, server.origin + "/one", server.origin + "/two")
     capture_media(LocalSource(server.origin), tmp_path, "run")
-    assert len(server.requests) == 3
+    assert len(server.requests) == 1
     assert sorted(record["state"] for record in records(tmp_path)) == [
         "failed",
         "pending",
@@ -591,3 +629,254 @@ def test_modified_partial_restarts_without_range(
     capture_media(source, tmp_path, "run")
     assert records(tmp_path)[0]["state"] == "saved"
     assert len(server.requests) == 2
+
+
+def test_parallel_capture_is_bounded_and_reuses_verified_objects_offline(
+    tmp_path: Path, servers: Any, png: bytes
+) -> None:
+    gate = threading.Barrier(4)
+    lock = threading.Lock()
+    active = maximum = started = 0
+
+    def serve(request: BaseHTTPRequestHandler) -> None:
+        nonlocal active, maximum, started
+        with lock:
+            number = started
+            started += 1
+            active += 1
+            maximum = max(maximum, active)
+        if number < 4:
+            gate.wait(timeout=5)
+        with lock:
+            reply(request, png)
+            active -= 1
+
+    server = servers(serve)
+    source = LocalSource(server.origin)
+    source.media_workers = 4
+    register(tmp_path, *(server.origin + f"/{number}" for number in range(12)))
+    report = capture_media(source, tmp_path, "run")
+    assert maximum == 4
+    assert report["counts"]["saved"] == 12
+    assert len(server.requests) == 12
+    with MediaStore(tmp_path, read_only=True) as store:
+        assert all(store.body(record["sha256"]) == png for record in report["records"])
+    before = records(tmp_path)
+    source.media_origins = ()
+    capture_media(source, tmp_path, "run")
+    assert records(tmp_path) == before
+    assert len(server.requests) == 12
+    assert not list((tmp_path / "media" / "tmp").rglob("*.part"))
+
+
+def test_parallel_requests_and_redirects_share_one_pacing_interval(
+    tmp_path: Path, servers: Any, png: bytes
+) -> None:
+    received: list[float] = []
+    lock = threading.Lock()
+
+    def serve(request: BaseHTTPRequestHandler) -> None:
+        with lock:
+            received.append(time.monotonic())
+        if request.path.startswith("/redirected/"):
+            reply(request, png)
+        else:
+            reply(
+                request, status=302, headers={"Location": "/redirected" + request.path}
+            )
+
+    server = servers(serve)
+    source = LocalSource(server.origin)
+    source.media_workers = 3
+    source.media_request_interval = 0.06
+    register(tmp_path, *(server.origin + f"/{number}" for number in range(3)))
+    report = capture_media(source, tmp_path, "run")
+    assert report["counts"]["saved"] == 3
+    assert len(received) == 6
+    assert all(right - left >= 0.035 for left, right in zip(received, received[1:]))
+
+
+@pytest.mark.parametrize("status", [401, 403, 429, 503])
+def test_parallel_auth_and_throttle_stop_new_jobs_and_inflight_retries(
+    tmp_path: Path, servers: Any, png: bytes, status: int
+) -> None:
+    gate = threading.Barrier(4)
+    lock = threading.Lock()
+    started = 0
+
+    def serve(request: BaseHTTPRequestHandler) -> None:
+        nonlocal started
+        with lock:
+            number = started
+            started += 1
+        if number < 4:
+            gate.wait(timeout=5)
+        if number == 0:
+            reply(
+                request,
+                status=status,
+                headers={"Retry-After": "120"} if status == 503 else {},
+            )
+        else:
+            time.sleep(0.05)
+            reply(
+                request,
+                png if number == 1 else b"",
+                200 if number == 1 else 503,
+                headers={"Retry-After": "30"},
+            )
+
+    server = servers(serve)
+    source = LocalSource(server.origin)
+    source.media_workers = 4
+    register(tmp_path, *(server.origin + f"/{number}" for number in range(10)))
+    report = capture_media(source, tmp_path, "run")
+    assert len(server.requests) == 4
+    assert report["counts"]["saved"] == 1
+    assert sum(record["error"] == f"http_{status}" for record in report["records"]) >= 1
+    assert (
+        sum(
+            record["state"] == "pending" and not record["error"]
+            for record in report["records"]
+        )
+        == 6
+    )
+
+
+def test_throttle_cancels_workers_waiting_for_request_slot(
+    tmp_path: Path, servers: Any
+) -> None:
+    server = servers(lambda request: reply(request, status=429))
+    source = LocalSource(server.origin)
+    source.media_workers = 4
+    source.media_request_interval = 0.15
+    register(tmp_path, *(server.origin + f"/{number}" for number in range(8)))
+    report = capture_media(source, tmp_path, "run")
+    assert len(server.requests) == 1
+    assert report["counts"]["failed"] == 1
+    assert report["counts"]["pending"] == 7
+
+
+def test_parallel_capture_resumes_only_the_interrupted_original(
+    tmp_path: Path, servers: Any, png: bytes, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(media_download, "MAX_ATTEMPTS", 1)
+    counts: dict[str, int] = {}
+    lock = threading.Lock()
+
+    def serve(request: BaseHTTPRequestHandler) -> None:
+        with lock:
+            counts[request.path] = counts.get(request.path, 0) + 1
+            attempt = counts[request.path]
+        if request.path == "/interrupted" and attempt == 1:
+            reply(request, png, headers={"ETag": '"v1"'}, truncate=40)
+        elif request.path == "/interrupted":
+            assert request.headers["Range"] == "bytes=40-"
+            assert request.headers["If-Range"] == '"v1"'
+            reply(
+                request,
+                png[40:],
+                206,
+                headers={
+                    "ETag": '"v1"',
+                    "Content-Range": f"bytes 40-{len(png) - 1}/{len(png)}",
+                },
+            )
+        else:
+            reply(request, png)
+
+    server = servers(serve)
+    source = LocalSource(server.origin)
+    source.media_workers = 2
+    register(tmp_path, server.origin + "/complete", server.origin + "/interrupted")
+    first = capture_media(source, tmp_path, "run")
+    assert first["counts"]["saved"] == first["counts"]["failed"] == 1
+    second = capture_media(source, tmp_path, "run")
+    assert second["counts"]["saved"] == 2
+    assert counts == {"/complete": 1, "/interrupted": 2}
+    with MediaStore(tmp_path, read_only=True) as store:
+        assert all(store.body(record["sha256"]) == png for record in second["records"])
+    assert not list((tmp_path / "media" / "tmp").rglob("*.part"))
+
+
+@pytest.mark.parametrize("workers", [0, -1, 9, True, 2.5])
+def test_invalid_worker_limits_fail_before_requests(
+    tmp_path: Path, servers: Any, workers: object, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    server = servers(lambda request: reply(request))
+    source = LocalSource(server.origin)
+    monkeypatch.setattr(source, "media_workers", workers)
+    register(tmp_path, server.origin + "/image")
+    with pytest.raises(ValueError, match="media_workers"):
+        capture_media(source, tmp_path, "run")
+    assert server.requests == []
+
+
+def test_unsupported_decoded_format_has_actionable_failure_code(
+    tmp_path: Path, servers: Any
+) -> None:
+    output = BytesIO()
+    Image.new("RGB", (4, 4)).save(output, format="GIF")
+    server = servers(
+        lambda request: reply(
+            request, output.getvalue(), headers={"Content-Type": "image/gif"}
+        )
+    )
+    register(tmp_path, server.origin + "/image")
+    report = capture_media(LocalSource(server.origin), tmp_path, "run")
+    assert report["records"][0]["error"] == "unsupported_image_format"
+    assert report["counts"]["failed"] == 1
+
+
+def test_parallel_short_retry_after_defers_the_whole_source(
+    tmp_path: Path, servers: Any
+) -> None:
+    server = servers(
+        lambda request: reply(request, status=503, headers={"Retry-After": "30"})
+    )
+    source = LocalSource(server.origin)
+    source.media_workers = 4
+    source.media_request_interval = 0.15
+    register(tmp_path, *(server.origin + f"/{number}" for number in range(8)))
+    report = capture_media(source, tmp_path, "run")
+    assert len(server.requests) == 1
+    assert report["counts"]["pending"] == 8
+    deferred = [record for record in report["records"] if record["error"]]
+    assert len(deferred) == 1
+    assert deferred[0]["error"] == "http_503"
+    assert deferred[0]["retry_after"]
+    assert capture_media(source, tmp_path, "run")["counts"]["pending"] == 8
+    assert len(server.requests) == 1
+
+
+def test_main_thread_interrupt_stops_queue_before_executor_shutdown(
+    tmp_path: Path, servers: Any, png: bytes, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    inflight = threading.Event()
+    lock = threading.Lock()
+    started = 0
+
+    def serve(request: BaseHTTPRequestHandler) -> None:
+        nonlocal started
+        with lock:
+            started += 1
+            if started == 2:
+                inflight.set()
+        time.sleep(0.15)
+        reply(request, png)
+
+    def interrupted_result(self: Future[Any], timeout: float | None = None) -> Any:
+        assert inflight.wait(timeout=5)
+        raise KeyboardInterrupt()
+
+    monkeypatch.setattr(Future, "result", interrupted_result)
+    server = servers(serve)
+    source = LocalSource(server.origin)
+    source.media_workers = 2
+    register(tmp_path, *(server.origin + f"/{number}" for number in range(8)))
+    with pytest.raises(KeyboardInterrupt):
+        capture_media(source, tmp_path, "run")
+    assert len(server.requests) == 2
+    current = records(tmp_path)
+    assert sum(record["state"] == "saved" for record in current) == 2
+    assert sum(record["state"] == "pending" for record in current) == 6

@@ -10,10 +10,11 @@ from urllib.parse import parse_qsl, urlencode, urlsplit
 
 from markdownify import markdownify
 
+from pipelines.media import MediaCandidate
 from pipelines.model import Entity, EntityKind, Evidence, Fact
 from pipelines.sources.militaryperiscope.content import document, render
+from pipelines.sources.militaryperiscope.media import ORIGIN, candidates, media_url
 
-ORIGIN = "https://militaryperiscope.com"
 API = ORIGIN + "/wt/api/nextjs/v1/page_by_path/"
 TOC = ORIGIN + "/wt/api/nextjs/v1/trial_content/"
 TRIAL = ORIGIN + "/trial-access/"
@@ -164,6 +165,8 @@ class MilitaryPeriscope:
     version = "1"
     seeds: tuple[str, ...] = (TOC, TRIAL)
     minimum_entities = 143
+    media_origins = (ORIGIN,)
+    media_request_interval = 0.2
 
     def __init__(self) -> None:
         self.subjects: dict[str, dict] = {}
@@ -191,6 +194,8 @@ class MilitaryPeriscope:
         return page_url(pairs[0][1])
 
     def request_headers(self, url: str) -> dict[str, str]:
+        if media_url(url) == url:
+            return {"Accept": "image/jpeg,image/png,image/webp"}
         if self.normalize(url) != url:
             raise ValueError("Credentials requested outside Military Periscope scope")
         cookie = os.environ.get("MILITARYPERISCOPE_COOKIE", "").strip()
@@ -210,6 +215,13 @@ class MilitaryPeriscope:
             "Cookie": cookie,
             "Accept": "application/json" if url != TRIAL else "text/html",
         }
+
+    def discover_media(
+        self, url: str, body: bytes, entities: list[dict]
+    ) -> Iterable[MediaCandidate]:
+        if self.normalize(url) != url:
+            raise ValueError("Outside Military Periscope scope")
+        return candidates(url, body, entities)
 
     def discover(self, url: str, body: bytes) -> list[str]:
         if self.normalize(url) != url:

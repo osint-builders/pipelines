@@ -15,10 +15,79 @@ from pipelines.audit import audit
 from pipelines.build import build, publish
 from pipelines.distribution import collect_artifacts
 from pipelines.media import MediaCandidate, MediaReference, MediaStore, media_id
-from pipelines.media_pipeline import media
+from pipelines.media_pipeline import media, media_coverage
 from pipelines.snapshot import load_snapshot, status
 
 IMAGE_URL = "https://images.example/radar.png"
+
+
+def test_coverage_counts_original_groups_and_missing_entities() -> None:
+    entities = [{"id": "fixture:a"}, {"id": "fixture:b"}, {"id": "fixture:c"}]
+    references = [{"entity_id": entity["id"]} for entity in entities[:2]]
+    report = {
+        "records": [
+            {
+                "url": url,
+                "state": state,
+                "references": references,
+                "occurrences": [
+                    {
+                        "original_url": IMAGE_URL,
+                        "associated": True,
+                        "exclusion_reason": "",
+                    }
+                ],
+            }
+            for url, state in [
+                (IMAGE_URL, "saved"),
+                (IMAGE_URL + "?small", "saved"),
+                (IMAGE_URL + "?missing", "failed"),
+            ]
+        ]
+    }
+    coverage = media_coverage(report, entities)
+    assert coverage["with_saved_media"] == 2
+    assert coverage["without_candidates"] == ["fixture:c"]
+    assert coverage["multiple_subject_records"] == 3
+    assert coverage["by_entity"][0]["saved_original_groups"] == 1
+    assert coverage["by_entity"][0]["saved"] == 2
+    assert coverage["by_entity"][0]["failed"] == 1
+
+
+def test_coverage_excludes_unrelated_occurrences_of_a_saved_url() -> None:
+    report: dict = {
+        "records": [
+            {
+                "url": IMAGE_URL,
+                "state": "saved",
+                "references": [{"entity_id": "fixture:a"}, {"entity_id": "fixture:b"}],
+                "occurrences": [
+                    {
+                        "original_url": IMAGE_URL,
+                        "associated": True,
+                        "exclusion_reason": "",
+                        "references": [{"entity_id": "fixture:a"}],
+                    },
+                    {
+                        "original_url": "https://example.org/unrelated.png",
+                        "associated": True,
+                        "exclusion_reason": "unrelated",
+                        "references": [{"entity_id": "fixture:b"}],
+                    },
+                ],
+            }
+        ]
+    }
+    coverage = media_coverage(report, [{"id": "fixture:a"}, {"id": "fixture:b"}])
+    assert coverage["with_saved_media"] == 1
+    assert coverage["by_entity"][0]["saved_original_groups"] == 1
+    assert coverage["by_entity"][1]["saved"] == 0
+    assert coverage["by_entity"][1]["excluded"] == 1
+    assert coverage["by_entity"][1]["saved_original_groups"] == 0
+    report["records"][0]["occurrences"].pop()
+    coverage = media_coverage(report, [{"id": "fixture:a"}, {"id": "fixture:b"}])
+    assert coverage["by_entity"][1]["saved"] == 0
+    assert coverage["by_entity"][1]["excluded"] == 1
 
 
 class ImageSource(SmallSource):

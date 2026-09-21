@@ -21,6 +21,62 @@ from pipelines.media import (
 URL = "https://images.example/radar.png"
 
 
+@pytest.mark.parametrize("reverse", [False, True])
+def test_occurrences_keep_context_and_eligible_capture_wins(
+    tmp_path: Path, reverse: bool
+) -> None:
+    items = [
+        MediaCandidate(
+            URL, exclusion_reason="navigation", page_url="https://example.org/index"
+        ),
+        MediaCandidate(
+            URL,
+            [MediaReference("fixture:radar", "evidence-1", "View", "Overview", True)],
+            role="preview",
+            original_url="https://images.example/original.png",
+            page_url="https://example.org/detail",
+        ),
+    ]
+    with MediaStore(tmp_path) as store:
+        store.register("fixture", "run", reversed(items) if reverse else items)
+        store.register("fixture", "run", items)
+        row = store.records("fixture", "run")[0]
+    assert row["state"] == "pending"
+    assert len(row["occurrences"]) == 2
+    assert row["references"][0]["section"] == "Overview"
+    assert row["references"][0]["ambiguous"] is True
+    assert {item["original_url"] for item in row["occurrences"]} == {
+        URL,
+        "https://images.example/original.png",
+    }
+
+
+def test_preview_requires_its_original(tmp_path: Path) -> None:
+    with MediaStore(tmp_path) as store, pytest.raises(ValueError, match="original URL"):
+        store.register("fixture", "run", [MediaCandidate(URL, role="preview")])
+
+
+def test_rediscovery_updates_exclusion_decision_for_the_same_occurrence(
+    tmp_path: Path,
+) -> None:
+    reference = MediaReference("fixture:radar", "evidence")
+    with MediaStore(tmp_path) as store:
+        store.register("fixture", "run", [MediaCandidate(URL, [reference])])
+        store.mark(
+            "fixture", "run", media_id("fixture", URL), "failed", "image_too_large"
+        )
+        store.register(
+            "fixture",
+            "run",
+            [MediaCandidate(URL, [reference], "declared_image_too_large")],
+        )
+        row = store.records("fixture", "run")[0]
+        assert row["state"] == "excluded"
+        assert len(row["occurrences"]) == 1
+        store.register("fixture", "run", [MediaCandidate(URL, [reference])])
+        assert store.records("fixture", "run")[0]["state"] == "pending"
+
+
 def candidate(source: str = "fixture", url: str = URL) -> MediaCandidate:
     return MediaCandidate(
         url, [MediaReference(f"{source}:radar", "evidence-1", "Side view")]
