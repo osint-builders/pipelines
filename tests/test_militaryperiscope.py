@@ -27,7 +27,7 @@ from pipelines.sources.militaryperiscope import (
     entity_kind,
     page_url,
 )
-from pipelines.sources.militaryperiscope_content import render
+from pipelines.sources.militaryperiscope.content import render
 
 WEAPON = "/weapons/aircraft/aerostats/example/overview/"
 COUNTRY = "/armedforces/africa/example/overview/"

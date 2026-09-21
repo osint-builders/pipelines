@@ -12,9 +12,7 @@ from pipelines.sources.html import text
 ORIGIN = "https://www.armyrecognition.com"
 CATALOG = "/military-products/army/radars/air-defense-radars"
 SEED = ORIGIN + CATALOG
-SUBJECTS = json.loads(
-    Path(__file__).with_name("armyrecognition_subjects.json").read_text()
-)
+SUBJECTS = json.loads(Path(__file__).with_name("subjects.json").read_text())
 TERMS = ORIGIN + "/legal-information"
 
 

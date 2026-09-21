@@ -31,6 +31,18 @@ class PreparedSource(Protocol):
 
 
 @runtime_checkable
+class AuditedSource(Protocol):
+    def audit(
+        self,
+        entities: list[dict],
+        responses: dict[str, bytes],
+        html: dict[str, bytes],
+    ) -> dict:
+        """Check source-specific coverage; responses use URLs, HTML uses evidence IDs."""
+        ...
+
+
+@runtime_checkable
 class AuthenticatedSource(Protocol):
     def request_headers(self, url: str) -> dict[str, str]:
         """Return HTTP headers for a source URL."""

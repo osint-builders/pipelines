@@ -11,7 +11,7 @@ from urllib.parse import parse_qsl, urlencode, urlsplit
 from markdownify import markdownify
 
 from pipelines.model import Entity, EntityKind, Evidence, Fact
-from pipelines.sources.militaryperiscope_content import document, render
+from pipelines.sources.militaryperiscope.content import document, render
 
 ORIGIN = "https://militaryperiscope.com"
 API = ORIGIN + "/wt/api/nextjs/v1/page_by_path/"
@@ -280,6 +280,16 @@ class MilitaryPeriscope:
                         self.restricted.add(current)
                     self.subjects[current] = node
                     pending.extend(self.discover(current, saved[current]))
+
+    def audit(
+        self,
+        entities: list[dict],
+        responses: dict[str, bytes],
+        html: dict[str, bytes],
+    ) -> dict:
+        from pipelines.sources.militaryperiscope.audit import audit_snapshot
+
+        return audit_snapshot(self, entities, responses, html)
 
     def extract(self, url: str, body: bytes, names: list[str]) -> list[Entity]:
         if self.normalize(url) != url:

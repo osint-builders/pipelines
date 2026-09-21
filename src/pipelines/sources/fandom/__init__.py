@@ -126,7 +126,7 @@ class Fandom:
 
     def __init__(self) -> None:
         self.catalog: dict[str, dict] = json.loads(
-            Path(__file__).with_name("fandom_pages.json").read_text(encoding="utf-8")
+            Path(__file__).with_name("pages.json").read_text(encoding="utf-8")
         )
         self.members: dict[str, str] = {}
         self.license: dict[str, str] = {}

@@ -66,9 +66,7 @@ class Commons:
 
     def __init__(self) -> None:
         self.catalog: dict[str, dict[str, str]] = json.loads(
-            Path(__file__)
-            .with_name("commons_categories.json")
-            .read_text(encoding="utf-8")
+            Path(__file__).with_name("categories.json").read_text(encoding="utf-8")
         )
         self.subjects: dict[str, dict] = {}
         self.owners: dict[str, set[str]] = {}

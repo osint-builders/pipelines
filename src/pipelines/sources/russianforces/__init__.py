@@ -17,9 +17,7 @@ FEED = ORIGIN + "/atom.xml"
 ARTICLE = re.compile(r"/blog/\d{4}/\d{2}/[a-z0-9_-]+\.shtml$")
 ATOM = "{http://www.w3.org/2005/Atom}"
 COSMOS = re.compile(r"(?<![\w-])Cosmos[- ](\d{1,5})(?![\w-])", re.I)
-CATALOG = json.loads(
-    Path(__file__).with_name("russianforces_entities.json").read_text()
-)
+CATALOG = json.loads(Path(__file__).with_name("entities.json").read_text())
 
 
 def pattern(aliases: list[str]) -> re.Pattern:

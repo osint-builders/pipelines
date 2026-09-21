@@ -10,7 +10,7 @@ def main() -> None:
     )
     commands = parser.add_subparsers(dest="command", required=True)
     commands.add_parser("sources", help="List installed source adapters")
-    for name in ("crawl", "extract", "status"):
+    for name in ("crawl", "extract", "status", "audit"):
         command = commands.add_parser(name)
         command.add_argument("source")
         command.add_argument("--root", type=Path, required=True)
@@ -18,6 +18,9 @@ def main() -> None:
             command.add_argument(
                 "archive", help="Saved archive ID; no website requests"
             )
+        elif name == "audit":
+            command.add_argument("--binary", type=Path, help="Also verify CLI exports")
+            command.add_argument("--output", type=Path, help="Save the JSON report")
     model = commands.add_parser("model", help="Download the pinned embedding model")
     model.add_argument("--output", type=Path, required=True)
     package = commands.add_parser(
@@ -54,6 +57,15 @@ def main() -> None:
         if args.source not in source_names():
             parser.error(f"Unknown source: {args.source}")
         output = status(args.root / args.source)
+    elif args.command == "audit":
+        from pipelines.archive import atomic_json
+        from pipelines.audit import audit
+        from pipelines.registry import get_source
+
+        output = audit(get_source(args.source), args.root, args.binary)
+        if args.output:
+            args.output.parent.mkdir(parents=True, exist_ok=True)
+            atomic_json(args.output, output)
     elif args.command == "model":
         from pipelines.distribution import download_model
 
