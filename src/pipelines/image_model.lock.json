@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "id": "apple/MobileCLIP2-S0",
+  "variant": "fp16-storage",
+  "checkpoint": {
+    "id": "apple/MobileCLIP2-S0",
+    "architecture": "fastvit_mci0",
+    "repository": "timm/fastvit_mci0.apple_mclip2_dfndr2b",
+    "revision": "577a2e992da2c7ba7cadc2a490bcfadfb2d69bce",
+    "sha256": "70a995b7e7385126d0db94ee3d395d7fd3c251ce6d8dcd4f4c8d8fc7c29e3d04",
+    "bytes": 45921320
+  },
+  "file": "mobileclip2-s0-fp16-storage.onnx",
+  "sha256": "98fcec8894b5fcd85bf3604bf9fd18cd0f027ccdd18169256a2f0921ffada234",
+  "bytes": 22846664,
+  "input": "pixel_values",
+  "output": "image_features",
+  "shape": [
+    1,
+    3,
+    256,
+    256
+  ],
+  "dimensions": 512,
+  "normalization": "l2",
+  "preprocess": {
+    "size": 256,
+    "resize_shortest_edge": 256,
+    "mean": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "std": [
+      1.0,
+      1.0,
+      1.0
+    ],
+    "version": "exif-white-pillow-bilinear-aa-center-f32-v1"
+  },
+  "export": {
+    "opset": 17,
+    "reparameterized": true,
+    "batch": 1,
+    "tool": "tools/prepare_image_model.py",
+    "torchscript_export": true,
+    "packages": {
+      "torch": "2.14.0+cpu",
+      "torchvision": "0.29.0+cpu",
+      "timm": "1.0.29",
+      "safetensors": "0.8.0",
+      "onnx": "1.23.0"
+    }
+  },
+  "export_probe": {
+    "cosine": 0.9999864101409912,
+    "max_abs": 0.0009504258632659912
+  }
+}

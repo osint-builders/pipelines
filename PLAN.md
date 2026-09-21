@@ -3,7 +3,7 @@
 Help researchers and educators find static entities quickly using names, descriptions,
 specifications, and images, with every result linked to captured evidence.
 
-**Progress:** 2/10 milestones verified. **Active:** M3, ready for user verification.
+**Progress:** 3/10 milestones verified. **Active:** M4, encoder research and runtime validation.
 
 **Branch:** `feature/multimodal-entity-search`.
 
@@ -21,8 +21,8 @@ commands and the source table.
 | --- | --- | --- |
 | M1 — Baseline and acceptance targets | Existing CLI | Verified by user; `5102380`, baseline and seed checks passed; four visual cases tracked for M3 |
 | M2 — Shared media evidence and archive | M1 | Verified by user; `55d4046`, 250 tests and GitHub CI passed; offline compatibility confirmed |
-| M3 — Two-source media pilot | M2 | Ready for verification; `69d28b2`, `build/m3/coverage.json`, `build/m3/tests.xml`; 2,799 saved files and 294 tests |
-| M4 — Portable image encoder | M1, M3 | Planned |
+| M3 — Two-source media pilot | M2 | Verified by user; `ba855a3`, 2,799 saved files, 294 tests and CI passed; two diagram cases remain unscored |
+| M4 — Portable image encoder | M1, M3 | In progress: compact S0 selected on development data; local Go proof passed, native platform checks pending |
 | M5 — Image and combined queries | M2, M3, M4 | Planned |
 | M6 — OCR and visual descriptions | M3, M5 | Planned |
 | M7 — Better text and combined ranking | M1, M5, M6 | Planned |
@@ -209,20 +209,69 @@ platforms, and the offline Docker smoke check. All three final seed/pilot fixtur
 checks pass, including the 27 locally cached image hashes.
 Concurrency checks use controlled admission timing and explicit stop events, so
 throttle, retry, and interrupt checks do not depend on local HTTP response speed.
-The real pacing and cancellation paths remain exercised. M4 waits for user
-verification of M3.
+The real pacing and cancellation paths remain exercised. Final CI passed at `ba855a3`.
+User verification authorizes M4.
 
 ## M4 — Portable image encoder
 
-- [ ] Benchmark compact candidates, beginning with MobileCLIP2-S0, against a retrieval-quality reference model.
-- [ ] Prove the selected exported model works in the CLI's pure-Go runtime before committing to it.
-- [ ] Match Python and Go image preprocessing and embeddings using fixed image probes, including orientation, color, resize, crop, and normalization.
-- [ ] Compare full-precision and smaller model/vector representations against M1's quality and resource budgets.
-- [ ] Pin model files, hashes, dimensions, preprocessing, and output normalization in the build manifest.
-- [ ] Decide whether direct text-to-image search warrants shipping a paired text encoder; image-only encoding supports the initial image-query path.
+- [x] Benchmark compact candidates, beginning with MobileCLIP2-S0, against a retrieval-quality reference model.
+- [x] Prove the selected exported model works in the CLI's pure-Go runtime before committing to it.
+- [x] Match Python and Go image preprocessing and embeddings using fixed image probes, including orientation, color, resize, crop, and normalization.
+- [x] Compare full-precision and smaller model/vector representations against M1's quality and resource budgets.
+- [x] Pin model files, hashes, dimensions, preprocessing, and output normalization in the build manifest.
+- [x] Decide whether direct text-to-image search warrants shipping a paired text encoder; image-only encoding supports the initial image-query path.
+- [ ] Pass real-model parity and offline execution checks on all five supported native targets.
 
 Complete when the selected model passes parity and offline execution checks on every
 supported platform and architecture. Report measured size, memory, and latency.
+
+Selected model: MobileCLIP2-S0, with float16 stored weights converted to float32
+for execution. The graph returns 512 dimensions and the encoder applies L2
+normalization. `src/pipelines/image_model.lock.json` pins checkpoint revision/hash,
+export settings, graph hash, shape, preprocessing, and normalization. Paired visual
+text encoding remains deferred under the frozen first-release contract.
+
+One offline interface in Python and Go verifies the model before inference. Both
+use the same EXIF orientation, alpha-on-white, bilinear antialiasing, center crop,
+and float32 normalization recipe. Source images remain unchanged. The image-only
+port matched Apple's full checkpoint on the initial probe. Heavy export tooling
+runs only during construction; the Go runtime has no native-library dependency.
+
+The selection was frozen on development data before held-out evaluation, using
+`build/m4/selection.json`. S0 float32, S0 half-stored, and the larger MobileCLIP2-B
+reference all rank 6/6 development positives first against nine gallery entities.
+On held-out inputs, selected S0 ranks 8/9 positives first and within five, with
+6/7 underlying photograph groups passing all their cases. The stowed Lanza truck
+is missed; B also misses it globally, but retrieves it within five with a source
+filter. Half precision for weights or stored gallery vectors causes no ranking
+regression. One sky negative has a score only; abstention is M5 work. Two combined
+queries and two diagrams without independent references stay unscored.
+
+This small seed cannot establish release quality: six development positives have
+no negative controls, nine held-out positives share seven photograph groups, and
+the release sample minimums remain unmet. Frozen acceptance targets are unchanged.
+Reports: `build/m4/development-encoders.json`, `build/m4/evaluation-encoders.json`.
+
+Windows encoder measurements on the M1 reference machine:
+
+| Representation | Model / zipped model | First process | Repeated process p95 (20 launches) | Peak OS working set |
+| --- | --- | ---: | ---: | ---: |
+| Float32 | 43.4 / 40.3 MiB | 0.812 s | 0.894 s | 213.6 MiB |
+| Float16 storage, float32 execution | 21.8 / 20.2 MiB | 0.708 s | 0.748 s | 181.8 MiB |
+
+These include image decoding and model loading, but exclude the text bundle and
+entity search. First observed launch is not a cache-cleared cold start. The model,
+vector, preview, and runtime costs must still fit together at M10. A half-stored
+10,000-view gallery requires 9.77 MiB for 512-dimensional vectors before metadata.
+Measurements and artifact hashes are in `build/m4/performance.json`.
+
+Validation in progress: 379 Python tests and Go tests/vet pass locally. Twenty
+procedural image probes cover orientation, color, alpha, resizing/cropping, and
+normalization; three additional tensors isolate graph execution. Windows passes
+23/23 real-model parity probes. Native Linux amd64/arm64 and macOS amd64/arm64
+checks, including enforced offline Linux execution, are queued for CI.
+The root README and existing text CLI behavior remain unchanged. M5 waits for
+user verification of M4.
 
 ## M5 — Image and combined queries
 

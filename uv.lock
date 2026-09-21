@@ -769,6 +769,11 @@ build = [
     { name = "pillow" },
     { name = "scrapy" },
 ]
+image = [
+    { name = "numpy" },
+    { name = "onnxruntime" },
+    { name = "pillow" },
+]
 vector = [
     { name = "filelock" },
     { name = "numpy" },
@@ -789,13 +794,16 @@ requires-dist = [
     { name = "filelock", marker = "extra == 'build'", specifier = ">=3.20,<4" },
     { name = "filelock", marker = "extra == 'vector'", specifier = ">=3.20,<4" },
     { name = "markdownify", marker = "extra == 'build'", specifier = ">=1.2,<2" },
+    { name = "numpy", marker = "extra == 'image'", specifier = ">=2.3,<3" },
     { name = "numpy", marker = "extra == 'vector'", specifier = ">=2.3,<3" },
+    { name = "onnxruntime", marker = "extra == 'image'", specifier = ">=1.24,<2" },
     { name = "onnxruntime", marker = "extra == 'vector'", specifier = ">=1.24,<2" },
     { name = "pillow", marker = "extra == 'build'", specifier = ">=12.3,<13" },
+    { name = "pillow", marker = "extra == 'image'", specifier = ">=12.3,<13" },
     { name = "scrapy", marker = "extra == 'build'", specifier = ">=2.19,<3" },
     { name = "tokenizers", marker = "extra == 'vector'", specifier = ">=0.22,<1" },
 ]
-provides-extras = ["build", "vector"]
+provides-extras = ["build", "vector", "image"]
 
 [package.metadata.requires-dev]
 dev = [
