@@ -670,17 +670,59 @@ def test_parallel_capture_is_bounded_and_reuses_verified_objects_offline(
 
 
 def test_parallel_requests_and_redirects_share_one_pacing_interval(
-    tmp_path: Path, servers: Any, png: bytes
+    tmp_path: Path, servers: Any, png: bytes, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    received: list[float] = []
+    received: list[tuple[str, int, float]] = []
     lock = threading.Lock()
+    clock = 100.0
+    admission = threading.local()
+    initial_requests = threading.Barrier(3)
+
+    def monotonic() -> float:
+        with lock:
+            return clock
+
+    class ObservedPacer(media_download._Pacer):
+        @property
+        def last_request(self) -> float | None:
+            return self._last_request
+
+        @last_request.setter
+        def last_request(self, value: float | None) -> None:
+            self._last_request = value
+            if value is not None:
+                admission.ticket = (id(self), value)
+
+        def pause(self, delay: float) -> bool:
+            nonlocal clock
+            with lock:
+                clock += delay
+            return not self.stopped.is_set()
+
+    build_opener = media_download.urllib.request.build_opener
+
+    def observed_opener(*handlers: object) -> Any:
+        opener = build_opener(*handlers)
+        open_request = opener.open
+
+        def observed_open(request: Any, timeout: int) -> Any:
+            pacer_id, admitted_at = admission.ticket
+            del admission.ticket
+            with lock:
+                received.append((request.full_url, pacer_id, admitted_at))
+            return open_request(request, timeout=timeout)
+
+        return SimpleNamespace(open=observed_open)
+
+    monkeypatch.setattr(media_download, "time", SimpleNamespace(monotonic=monotonic))
+    monkeypatch.setattr(media_download, "_Pacer", ObservedPacer)
+    monkeypatch.setattr(media_download.urllib.request, "build_opener", observed_opener)
 
     def serve(request: BaseHTTPRequestHandler) -> None:
-        with lock:
-            received.append(time.monotonic())
         if request.path.startswith("/redirected/"):
             reply(request, png)
         else:
+            initial_requests.wait(timeout=5)
             reply(
                 request, status=302, headers={"Location": "/redirected" + request.path}
             )
@@ -693,7 +735,16 @@ def test_parallel_requests_and_redirects_share_one_pacing_interval(
     report = capture_media(source, tmp_path, "run")
     assert report["counts"]["saved"] == 3
     assert len(received) == 6
-    assert all(right - left >= 0.035 for left, right in zip(received, received[1:]))
+    assert {url for url, _, _ in received} == {
+        server.origin + prefix + str(number)
+        for number in range(3)
+        for prefix in ("/", "/redirected/")
+    }
+    assert len({pacer_id for _, pacer_id, _ in received}) == 1
+    admitted = sorted(value for _, _, value in received)
+    assert [
+        right - left for left, right in zip(admitted, admitted[1:])
+    ] == pytest.approx([source.media_request_interval] * 5)
 
 
 @pytest.mark.parametrize("status", [401, 403, 429, 503])

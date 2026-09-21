@@ -21,7 +21,7 @@ commands and the source table.
 | --- | --- | --- |
 | M1 — Baseline and acceptance targets | Existing CLI | Verified by user; `5102380`, baseline and seed checks passed; four visual cases tracked for M3 |
 | M2 — Shared media evidence and archive | M1 | Verified by user; `55d4046`, 250 tests and GitHub CI passed; offline compatibility confirmed |
-| M3 — Two-source media pilot | M2 | In progress: source adapters, shared coverage reporting, live capture and visual inspection |
+| M3 — Two-source media pilot | M2 | In progress: `00e7fd9`; 294 tests; MP complete, Commons capture running, 21 images reviewed |
 | M4 — Portable image encoder | M1, M3 | Planned |
 | M5 — Image and combined queries | M2, M3, M4 | Planned |
 | M6 — OCR and visual descriptions | M3, M5 | Planned |
@@ -180,6 +180,10 @@ limit across requests and redirects, and immediate stopping on throttling. Commo
 resumes after Retry-After with four workers and request starts spaced one second
 apart. No saved images need downloading again. All 294 tests, Ruff, mypy, and the
 Python package build pass; the final live coverage audit remains in progress.
+Both offline publications preserve their previous text export hashes. Commons has
+passed 1,000 saved images. Linux, Go, and Docker CI passed. The Windows pacing test
+now checks deterministic client admissions instead of server arrival timing; its
+targeted check passed ten repeated Windows runs. The full CI rerun is pending.
 
 The reviewed inventory is [media_pilot.json](tests/fixtures/media_pilot.json): 12
 Military Periscope and nine Commons images. Associations remain source context;
