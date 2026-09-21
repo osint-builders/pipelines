@@ -250,13 +250,13 @@ def write_bundle(output: Path, members: dict[str, bytes]) -> None:
     output.parent.mkdir(parents=True, exist_ok=True)
     temporary = output.with_suffix(".tmp")
     with zipfile.ZipFile(
-        temporary, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=6
+        temporary, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=9
     ) as archive:
         for name, body in sorted(members.items()):
             info = zipfile.ZipInfo(name, date_time=(1980, 1, 1, 0, 0, 0))
             info.compress_type = zipfile.ZIP_DEFLATED
             info.external_attr = 0o100644 << 16
-            archive.writestr(info, body)
+            archive.writestr(info, body, compresslevel=9)
     temporary.replace(output)
 
 

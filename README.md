@@ -3,6 +3,121 @@
 Scrape equipment sources into one offline CLI. Search radars, emitters, vehicles, sites,
 and other items by name or meaning; follow a stable ID to the complete captured evidence.
 
+## Download the latest CLI
+
+Get the [latest release](https://github.com/osint-builders/pipelines/releases/latest).
+Extract the download to get **one standalone executable** containing the search model,
+index, and captured evidence. No Python, API key, model download, or running service is needed.
+
+**Release dataset:** 10 sources, **4,194 entities**, **4,926 evidence pages**,
+and **15,272 vectors**. Military Periscope's authenticated trial corpus is retained
+only in the separate local build. Run `pipelines info` to inspect the downloaded dataset.
+
+| Platform | Download |
+| --- | --- |
+| Windows x86-64 | [pipelines-windows-amd64.zip](https://github.com/osint-builders/pipelines/releases/latest/download/pipelines-windows-amd64.zip) |
+| Linux x86-64 | [pipelines-linux-amd64.tar.xz](https://github.com/osint-builders/pipelines/releases/latest/download/pipelines-linux-amd64.tar.xz) |
+| Linux ARM64 | [pipelines-linux-arm64.tar.xz](https://github.com/osint-builders/pipelines/releases/latest/download/pipelines-linux-arm64.tar.xz) |
+| macOS Intel | [pipelines-darwin-amd64.tar.xz](https://github.com/osint-builders/pipelines/releases/latest/download/pipelines-darwin-amd64.tar.xz) |
+| macOS Apple Silicon | [pipelines-darwin-arm64.tar.xz](https://github.com/osint-builders/pipelines/releases/latest/download/pipelines-darwin-arm64.tar.xz) |
+
+Download [SHA256SUMS](https://github.com/osint-builders/pipelines/releases/latest/download/SHA256SUMS)
+to check the archive, extract `pipelines` (`pipelines.exe` on Windows), and place it
+on your PATH. Unix archives preserve executable permissions. Run `pipelines verify`
+to validate the embedded data and model. The executable can also run directly from any folder.
+
+With [GitHub CLI](https://cli.github.com/) installed, these commands select one release
+and verify its checksum before use. Run them in an empty download directory.
+
+**Windows (PowerShell):**
+
+```powershell
+$repo = 'osint-builders/pipelines'
+$tag = gh release view --repo $repo --json tagName --jq .tagName
+if ($LASTEXITCODE -ne 0) { throw 'Cannot find latest release' }
+$asset = 'pipelines-windows-amd64.zip'
+gh release download $tag --repo $repo --pattern $asset --pattern SHA256SUMS
+if ($LASTEXITCODE -ne 0) { throw 'Download failed' }
+$expected = ((Get-Content SHA256SUMS | Where-Object { $_.EndsWith("  $asset") }) -split '\s+')[0]
+if ((Get-FileHash $asset -Algorithm SHA256).Hash -ne $expected) { throw 'Checksum mismatch' }
+Expand-Archive -LiteralPath $asset -DestinationPath .
+.\pipelines.exe verify
+.\pipelines.exe search "russian cheeseboard"
+```
+
+**Linux/macOS (Bash):**
+
+```bash
+set -e
+case "$(uname -s)-$(uname -m)" in
+  Linux-x86_64) asset=pipelines-linux-amd64.tar.xz ;;
+  Linux-aarch64|Linux-arm64) asset=pipelines-linux-arm64.tar.xz ;;
+  Darwin-x86_64) asset=pipelines-darwin-amd64.tar.xz ;;
+  Darwin-arm64) asset=pipelines-darwin-arm64.tar.xz ;;
+  *) echo "Unsupported platform" >&2; exit 1 ;;
+esac
+repo=osint-builders/pipelines
+tag=$(gh release view --repo "$repo" --json tagName --jq .tagName)
+gh release download "$tag" --repo "$repo" --pattern "$asset" --pattern SHA256SUMS
+grep "  $asset$" SHA256SUMS > selected.sha256
+if command -v sha256sum >/dev/null; then
+  sha256sum --check selected.sha256
+else
+  shasum -a 256 --check selected.sha256
+fi
+tar -xJf "$asset"
+./pipelines verify
+./pipelines search "russian cheeseboard"
+```
+
+Repeat the download for an update; each binary contains a fixed dataset.
+`pipelines info` reports its sources and counts, and `pipelines version` identifies the build.
+
+## CLI API
+
+The API is a command-line process interface: pass arguments and read JSON from stdout.
+It does not start an HTTP server. Search, lookup, export, and verification work offline.
+
+| Command (prefix with `pipelines`) | Result |
+| --- | --- |
+| `search [--mode hybrid\|vector] [--limit N] [filters] "query"` | Ranked entities; default hybrid adds name/alias boost; vector uses cosine only |
+| `similar [--limit N] [filters] SOURCE:ID` | Identity-vector neighbors, excluding input entity |
+| `get [--format json\|markdown\|html\|source] [--evidence PAGE_ID] SOURCE:ID` | Complete entity/evidence; JSON default |
+| `info`, `version`, `notices` | Dataset/model/counts/sources; executable version; model/dependency licenses |
+| `verify`, `--help` | Bundle integrity, relationships, normalized vectors, Python/Go parity; usage |
+
+Flags precede query/ID. Filters: `--source`, `--kind`, `--category`, applied before limit
+(default 10; range 1-100). Queries: at most 1,000 characters/256 model tokens. No country/
+numeric-fact/radius filters, cross-source resolution, or attachment OCR. Consumer commands
+never crawl or update data.
+
+```sh
+pipelines search "russian cheeseboard"
+pipelines search --source deagel "M142 HIMARS wheeled rocket artillery launcher"
+pipelines search --mode vector --kind radar "detect aircraft approaching an airport"
+pipelines similar --limit 5 radartutorial:8bdc6ce92fea3ca62de71395
+pipelines get radartutorial:8bdc6ce92fea3ca62de71395
+pipelines get --format markdown radartutorial:8bdc6ce92fea3ca62de71395
+pipelines get --format source cambridgepixel:bde71cdc6cc662ed8c60354b > radar-database.html
+```
+
+Search JSON: `dataset_id`, query/mode, `results`; results contain `id`, title, source URL,
+kind, categories, aliases, `score`, `cosine`, `name_match`, snippet, `evidence_id`.
+Empty evidence ID means identity match; scores are similarity, not confidence/verified facts.
+
+| Export | Contents |
+| --- | --- |
+| JSON | Complete entity/all evidence: Markdown, provenance, HTML (`html_base64` for non-UTF-8) |
+| Markdown | All retained pages joined; optional `--evidence PAGE_ID` selects one |
+| HTML | Exact ordinary capture or derived API/article/record document; multiple pages require evidence ID |
+| Source | Byte-exact HTML/API JSON/whole shared collection; multiple pages require evidence ID |
+| API metadata | `html_origin: api-rendered`, `canonical_url`, `source_response` URL/type/SHA-256/`body_base64` |
+| Collection metadata | `html_origin: record-rendered`, complete `records`, checksum-verified `source_response.body_member`: shared `responses/SOURCE/URL_HASH.json` or `.html` |
+
+Failures: nonzero exit, JSON `error` on stderr. All consumer operations work offline.
+
+## Local dataset and development
+
 **Local dataset:** 11 sources, **4,337 entities**, **5,090 evidence pages**, **19,379 vectors**.
 Captured/evaluated September 20, 2026 UTC. Dataset ID:
 `572bc6071b705821d35d2b12264efdc6e7e29545dc23def6fd62b2c58db68802`.
@@ -66,11 +181,45 @@ Current workstation data root: `C:/Users/erikz/.hai/reference-data/`; model/cach
 Latest retrieval report: `build/militaryperiscope-evaluation/cli-retrieval.json`;
 CMANO access captures: `build/cmano-evaluation/`.
 
+Distribution builds: `build/public-release/dataset.zip` and `dist/public-release/`
+contain the 10-source release. `build/dataset-compact.zip` and `dist/release/`
+contain the full 11-source local build, including the private trial corpus.
+Release validation and compression measurements are in `build/release-tools/`.
+
 Military Periscope trial setup, coverage, and offline replay:
 [source notes](docs/sources/militaryperiscope.md). Local evaluation/export reports:
 `build/militaryperiscope-evaluation/`.
 
 ## Release mechanics
+
+To build the five standalone binaries on a local workstation:
+
+```sh
+uv run --no-sync python tools/build_release.py --bundle build/public-release/dataset.zip --directory dist/public-release
+```
+
+This produces the executables, one compressed download per platform,
+`dataset-manifest.json`, and `SHA256SUMS`. Builds use
+`CGO_ENABLED=0`, trimmed paths, stripped debug/symbol tables, and a compressed embedded
+dataset. Downloads use maximum ZIP compression on Windows and XZ level 9 extreme on
+Linux/macOS. Each archive is checked against its executable; compression adds no
+runtime startup cost. The host binary is verified; run acceptance on the other operating systems
+before claiming native validation. Nothing is uploaded by the build helper.
+
+After acceptance, publish the prepared assets manually with GitHub CLI authentication:
+
+```sh
+uv run --no-sync python tools/release.py publish --repo osint-builders/pipelines --directory dist/public-release --tag cli-DATASET_ID --target COMMIT_SHA --notes-file dist/public-release/release-notes.md
+```
+
+Use the full dataset ID from `dataset-manifest.json`, the committed build's SHA, and
+prepared notes describing included sources and validation. The helper uploads a draft,
+checks all seven assets, then marks it as the latest release. Existing published assets
+cannot be overwritten. The manual CI workflow below is an alternative to local builds.
+
+Create public bundles with `pipeline-build package` and explicit `--source` selections.
+The workstation's full `build/dataset.zip` includes authenticated trial data intended
+for local consumption; the public bundle omits `militaryperiscope`.
 
 1. Crawl/extract, package, build, run acceptance/retrieval checks.
 2. Resolve source redistribution requirements; scraping success does not establish rights.
@@ -86,9 +235,9 @@ Military Periscope trial setup, coverage, and offline replay:
 | Trigger | [Release CLI](.github/workflows/release-cli.yml) is manual-only; ordinary CI never publishes datasets/binaries. |
 | Change gate | Fingerprint covers entity metadata, full Markdown, search text; excludes retrieval timestamps, raw HTML hashes, API envelopes. Transport-only/code-only/model-only changes do not trigger release; model/recipe hashes remain tracked. |
 | Unchanged data | Skip build/publication; preserve dataset ID. Byte checksums still protect integrity. |
-| Platforms | Native Linux/macOS amd64+arm64 and Windows amd64, `CGO_ENABLED=0`; identical verified bundle. Linux amd64 additionally verifies offline/read-only. |
-| Publication | All five jobs and asset-completeness checks pass before publishing draft; existing binaries never overwritten. |
-| Artifacts | Input `data-CONTENT_SHA256`; release `cli-DATASET_ID`; five executables, `dataset-manifest.json`, `SHA256SUMS`; embedded notices. |
+| Platforms | Linux/macOS amd64+arm64 and Windows amd64, `CGO_ENABLED=0`; identical verified bundle. CI uses native runners; local builds cross-compile foreign targets. Linux amd64 additionally verifies offline/read-only. |
+| Publication | CI requires all five jobs; manual local builds supply explicit validation notes. Asset-completeness checks pass before publishing draft; existing binaries never overwritten. |
+| Artifacts | Input `data-CONTENT_SHA256`; release `cli-DATASET_ID`; five archives containing one executable each, `dataset-manifest.json`, `SHA256SUMS`; embedded notices. |
 
 ### To-do
 
@@ -97,8 +246,12 @@ Military Periscope trial setup, coverage, and offline replay:
   export on Windows and all 18 source retrieval checks on Windows/Linux.
 - [ ] Capture Serbia's subscription-only Force Structures chapter when authorized
   access or an export is available; its restricted response is already archived.
-- [ ] Review redistribution rights/select a permitted source subset; stage and publish the
-  first CLI release. Complete native acceptance for both macOS targets and all release jobs.
+- [ ] Publish the first CLI release with the 10-source public bundle; retain the
+  authenticated Military Periscope corpus in the local build.
+- [ ] Complete native acceptance for both macOS targets; retain source-specific
+  attribution and review source terms for intended redistribution/reuse.
+- [x] Build compact single-binary downloads and document installation and the CLI API
+  at the top of this README. Public builds exclude the authenticated trial corpus.
 - [ ] Back up producer archives, snapshots, model, and bundle independently of Git.
 - [ ] Resume CMANO when original pages/export are accessible; current implementation is blocked.
 - [ ] Improve the six semantic misses below; broaden independent/ambiguous-name evaluations.
@@ -227,7 +380,7 @@ accuracy estimates. Selected text keeps technical content; full evidence remains
   stealth query rank 45; Deagel sound/infrared outside top 20. Khotilovo second without name.
 - Improvements: Santa Teresa RSS rank 72 -> 1; Cyprus full 24 -> 3; Chekhov 5 -> 1;
   Army Recognition Arrow 5 -> 1, Polish helicopter 2 -> 1; Cambridge passive radar 4 -> 1.
-- Passed: **168 Python tests**, lint/format/types, package build, Go tests/vet; offline
+- Passed: **172 Python tests**, lint/format/types, package build, Go tests/vet; offline
   replay, unchanged packaging (`changed: false`). Coverage: scope/identity/schema,
   pagination/resume/failures, preservation, filters/ranking, exact exports, release gates.
 - Five binaries built. Windows/Linux amd64 verified; Linux offline/read-only; arm64
@@ -294,53 +447,3 @@ in [sources.toml](src/pipelines/sources.toml). Shared producer/CLI need no websi
   when discovery changes invalidate unfinished crawls.
 - Layout: producer `src/pipelines/`; consumer `cli/`; helpers `tools/`; tests/fixtures
   `tests/`; CI/manual releases `.github/workflows/`.
-
-## CLI API and installation
-
-Download from [GitHub Releases](https://github.com/osint-builders/pipelines/releases), or
-build locally if unavailable. Verify `SHA256SUMS`; rename to `pipelines` (`pipelines.exe`
-on Windows), place on PATH; Linux/macOS: `chmod +x pipelines`.
-
-| Platform | Asset |
-| --- | --- |
-| Linux x86-64 / ARM64 | `pipelines-linux-amd64` / `pipelines-linux-arm64` |
-| macOS Intel / Apple Silicon | `pipelines-darwin-amd64` / `pipelines-darwin-arm64` |
-| Windows x86-64 | `pipelines-windows-amd64.exe` |
-
-| Command (prefix with `pipelines`) | Result |
-| --- | --- |
-| `search [--mode hybrid\|vector] [--limit N] [filters] "query"` | Ranked entities; default hybrid adds name/alias boost; vector uses cosine only |
-| `similar [--limit N] [filters] SOURCE:ID` | Identity-vector neighbors, excluding input entity |
-| `get [--format json\|markdown\|html\|source] [--evidence PAGE_ID] SOURCE:ID` | Complete entity/evidence; JSON default |
-| `info`, `version`, `notices` | Dataset/model/counts/sources; executable version; model/dependency licenses |
-| `verify`, `--help` | Bundle integrity, relationships, normalized vectors, Python/Go parity; usage |
-
-Flags precede query/ID. Filters: `--source`, `--kind`, `--category`, applied before limit
-(default 10; range 1-100). Queries: at most 1,000 characters/256 model tokens. No country/
-numeric-fact/radius filters, cross-source resolution, or attachment OCR. Consumer commands
-never crawl or update data.
-
-```sh
-pipelines search "russian cheeseboard"
-pipelines search --source deagel "M142 HIMARS wheeled rocket artillery launcher"
-pipelines search --mode vector --kind radar "detect aircraft approaching an airport"
-pipelines similar --limit 5 radartutorial:8bdc6ce92fea3ca62de71395
-pipelines get radartutorial:8bdc6ce92fea3ca62de71395
-pipelines get --format markdown radartutorial:8bdc6ce92fea3ca62de71395
-pipelines get --format source cambridgepixel:bde71cdc6cc662ed8c60354b > radar-database.html
-```
-
-Search JSON: `dataset_id`, query/mode, `results`; results contain `id`, title, source URL,
-kind, categories, aliases, `score`, `cosine`, `name_match`, snippet, `evidence_id`.
-Empty evidence ID means identity match; scores are similarity, not confidence/verified facts.
-
-| Export | Contents |
-| --- | --- |
-| JSON | Complete entity/all evidence: Markdown, provenance, HTML (`html_base64` for non-UTF-8) |
-| Markdown | All retained pages joined; optional `--evidence PAGE_ID` selects one |
-| HTML | Exact ordinary capture or derived API/article/record document; multiple pages require evidence ID |
-| Source | Byte-exact HTML/API JSON/whole shared collection; multiple pages require evidence ID |
-| API metadata | `html_origin: api-rendered`, `canonical_url`, `source_response` URL/type/SHA-256/`body_base64` |
-| Collection metadata | `html_origin: record-rendered`, complete `records`, checksum-verified `source_response.body_member`: shared `responses/SOURCE/URL_HASH.json` or `.html` |
-
-Failures: nonzero exit, JSON `error` on stderr. All consumer operations work offline.

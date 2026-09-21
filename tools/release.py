@@ -3,14 +3,129 @@
 import argparse
 import hashlib
 import json
+import lzma
 import os
 import re
 import shutil
 import subprocess
+import tarfile
 import tempfile
+import zipfile
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
+from typing import IO
 
 from build_cli import verify_bundle
+
+BINARY_TARGETS = (
+    ("linux", "amd64", "pipelines-linux-amd64"),
+    ("linux", "arm64", "pipelines-linux-arm64"),
+    ("darwin", "amd64", "pipelines-darwin-amd64"),
+    ("darwin", "arm64", "pipelines-darwin-arm64"),
+    ("windows", "amd64", "pipelines-windows-amd64.exe"),
+)
+
+
+def archive_name(system: str, binary_name: str) -> str:
+    return binary_name.removesuffix(".exe") + (
+        ".zip" if system == "windows" else ".tar.xz"
+    )
+
+
+def stream_digest(member: IO[bytes]) -> bytes:
+    digest = hashlib.sha256()
+    while block := member.read(1024 * 1024):
+        digest.update(block)
+    return digest.digest()
+
+
+def archive_matches(path: Path, binary: Path, system: str) -> bool:
+    """Verify the single executable in an archive without extracting to disk."""
+    expected = hashlib.sha256(binary.read_bytes()).digest()
+    try:
+        if system == "windows":
+            with zipfile.ZipFile(path) as archive:
+                if archive.namelist() != ["pipelines.exe"]:
+                    return False
+                with archive.open("pipelines.exe") as zip_member:
+                    return stream_digest(zip_member) == expected
+        with tarfile.open(path, "r:xz") as archive:
+            members = archive.getmembers()
+            if (
+                len(members) != 1
+                or members[0].name != "pipelines"
+                or not members[0].isfile()
+                or members[0].mode != 0o755
+            ):
+                return False
+            tar_member = archive.extractfile(members[0])
+            assert tar_member is not None
+            with tar_member:
+                return stream_digest(tar_member) == expected
+    except (
+        OSError,
+        ValueError,
+        EOFError,
+        tarfile.TarError,
+        zipfile.BadZipFile,
+        lzma.LZMAError,
+    ):
+        return False
+
+
+def compress_binary(directory: Path, target: tuple[str, str, str]) -> str:
+    system, _, name = target
+    binary = directory / name
+    if not binary.is_file():
+        raise ValueError(f"Missing release binary: {name}")
+    output = directory / archive_name(system, name)
+    if output.exists() and archive_matches(output, binary, system):
+        return output.name
+    temporary = output.with_suffix(output.suffix + ".tmp")
+    if system == "windows":
+        with zipfile.ZipFile(temporary, "w") as archive:
+            info = zipfile.ZipInfo("pipelines.exe", date_time=(1980, 1, 1, 0, 0, 0))
+            info.external_attr = 0o100755 << 16
+            archive.writestr(
+                info,
+                binary.read_bytes(),
+                compress_type=zipfile.ZIP_DEFLATED,
+                compresslevel=9,
+            )
+    else:
+        with (
+            lzma.open(temporary, "wb", preset=9 | lzma.PRESET_EXTREME) as compressed,
+            tarfile.open(
+                fileobj=compressed, mode="w", format=tarfile.USTAR_FORMAT
+            ) as archive,
+        ):
+            tar_info = tarfile.TarInfo("pipelines")
+            tar_info.size = binary.stat().st_size
+            tar_info.mode = 0o755
+            with binary.open("rb") as member:
+                archive.addfile(tar_info, member)
+    if not archive_matches(temporary, binary, system):
+        raise ValueError(f"Compressed executable failed verification: {name}")
+    temporary.replace(output)
+    return output.name
+
+
+def prepare_assets(directory: Path) -> list[str]:
+    # Two compressors bound memory usage with the maximum LZMA dictionary.
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        names = list(
+            pool.map(lambda target: compress_binary(directory, target), BINARY_TARGETS)
+        )
+    names.append("dataset-manifest.json")
+    (directory / "SHA256SUMS").write_text(
+        "".join(
+            f"{hashlib.sha256((directory / name).read_bytes()).hexdigest()}  {name}\n"
+            for name in names
+        ),
+        encoding="utf-8",
+        newline="\n",
+    )
+    return [*names, "SHA256SUMS"]
 
 
 def gh(*arguments: str) -> str:
@@ -130,7 +245,14 @@ def stage(repo: str, bundle: Path) -> None:
     )
 
 
-def publish(repo: str, directory: Path, tag: str) -> None:
+def publish(
+    repo: str,
+    directory: Path,
+    tag: str,
+    *,
+    target: str | None = None,
+    notes_file: Path | None = None,
+) -> None:
     manifest = json.loads((directory / "dataset-manifest.json").read_text())
     if tag != "cli-" + manifest["dataset_id"]:
         raise ValueError("Release tag does not match dataset")
@@ -138,31 +260,19 @@ def publish(repo: str, directory: Path, tag: str) -> None:
         if not changed(manifest, latest_manifest(repo, Path(temporary))):
             print("Content already published; skipping.")
             return
-    expected = [
-        "pipelines-linux-amd64",
-        "pipelines-linux-arm64",
-        "pipelines-darwin-amd64",
-        "pipelines-darwin-arm64",
-        "pipelines-windows-amd64.exe",
-    ]
-    for name in expected:
-        if not (directory / name).is_file():
-            raise ValueError(f"Missing release binary: {name}")
-    checksums = "".join(
-        f"{hashlib.sha256((directory / name).read_bytes()).hexdigest()}  {name}\n"
-        for name in [*expected, "dataset-manifest.json"]
-    )
-    (directory / "SHA256SUMS").write_text(checksums, encoding="utf-8", newline="\n")
-    notes = directory / "release-notes.md"
-    notes.write_text(
-        f"Offline search over {manifest['entities']:,} source entities.\n\n"
-        f"Dataset: `{manifest['dataset_id']}`\n\n"
-        "Download the executable for your platform. No installation, API key, or model download is required.\n\n"
-        'Run `pipelines search "your query"`, then `pipelines get SOURCE:ID`.\n'
-        "Run `pipelines --help` for filters, pure vector search, and full HTML export.\n",
-        encoding="utf-8",
-    )
-    asset_names = [*expected, "dataset-manifest.json", "SHA256SUMS"]
+    asset_names = prepare_assets(directory)
+    notes = notes_file or directory / "release-notes.md"
+    if notes_file is not None and not notes_file.is_file():
+        raise ValueError(f"Release notes do not exist: {notes_file}")
+    if notes_file is None:
+        notes.write_text(
+            f"Offline search over {manifest['entities']:,} source entities.\n\n"
+            f"Dataset: `{manifest['dataset_id']}`\n\n"
+            "Download and extract the archive for your platform: it contains one standalone executable. No API key or model download is required.\n\n"
+            'Run `pipelines search "your query"`, then `pipelines get SOURCE:ID`.\n'
+            "Run `pipelines --help` for filters, pure vector search, and full HTML export.\n",
+            encoding="utf-8",
+        )
     assets = [str(directory / name) for name in asset_names]
     existing = subprocess.run(
         ["gh", "release", "view", tag, "--repo", repo, "--json", "isDraft"],
@@ -177,6 +287,9 @@ def publish(repo: str, directory: Path, tag: str) -> None:
             )
         gh("release", "upload", tag, *assets, "--repo", repo, "--clobber")
     else:
+        target = target or os.environ.get("GITHUB_SHA")
+        if not target:
+            raise ValueError("Local publication requires --target COMMIT_SHA")
         gh(
             "release",
             "create",
@@ -185,9 +298,9 @@ def publish(repo: str, directory: Path, tag: str) -> None:
             "--repo",
             repo,
             "--target",
-            os.environ["GITHUB_SHA"],
+            target,
             "--title",
-            f"Reference data {manifest['content_sha256'][:16]}",
+            f"pipelines CLI {manifest['dataset_id'][:16]}",
             "--notes-file",
             str(notes),
             "--draft",
@@ -200,7 +313,17 @@ def publish(repo: str, directory: Path, tag: str) -> None:
         raise ValueError(
             "Draft release assets are incomplete; previous release is unchanged"
         )
-    gh("release", "edit", tag, "--repo", repo, "--draft=false", "--latest")
+    gh(
+        "release",
+        "edit",
+        tag,
+        "--repo",
+        repo,
+        "--draft=false",
+        "--latest",
+        "--notes-file",
+        str(notes),
+    )
 
 
 def main() -> None:
@@ -210,6 +333,8 @@ def main() -> None:
     parser.add_argument("--bundle", type=Path)
     parser.add_argument("--tag")
     parser.add_argument("--directory", type=Path, default=Path("build/release"))
+    parser.add_argument("--target", help="Commit SHA for a manually built release")
+    parser.add_argument("--notes-file", type=Path, help="Prepared release notes")
     args = parser.parse_args()
     if not re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", args.repo):
         parser.error("Invalid repository")
@@ -220,7 +345,13 @@ def main() -> None:
     elif args.command == "gate":
         print(json.dumps(gate(args.repo, args.tag or "", args.directory)))
     else:
-        publish(args.repo, args.directory, args.tag or "")
+        publish(
+            args.repo,
+            args.directory,
+            args.tag or "",
+            target=args.target,
+            notes_file=args.notes_file,
+        )
 
 
 if __name__ == "__main__":

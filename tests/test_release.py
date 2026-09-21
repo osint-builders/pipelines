@@ -53,8 +53,9 @@ def test_unchanged_content_cannot_upload_an_input(
 
 
 @pytest.mark.parametrize("complete", [True, False])
+@pytest.mark.parametrize("local", [True, False])
 def test_publication_waits_for_complete_draft_assets(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, complete: bool
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, complete: bool, local: bool
 ) -> None:
     manifest: dict = {
         "content_sha256": "a" * 64,
@@ -76,7 +77,14 @@ def test_publication_waits_for_complete_draft_assets(
     def fake_gh(*args: str) -> str:
         calls.append(args)
         if args[0] == "api":
-            uploaded = [*names, "dataset-manifest.json", "SHA256SUMS"]
+            uploaded = [
+                *(
+                    release.archive_name(system, name)
+                    for system, _, name in release.BINARY_TARGETS
+                ),
+                "dataset-manifest.json",
+                "SHA256SUMS",
+            ]
             if not complete:
                 uploaded.pop()
             return json.dumps(
@@ -90,7 +98,13 @@ def test_publication_waits_for_complete_draft_assets(
             )
         return ""
 
-    monkeypatch.setenv("GITHUB_SHA", "c" * 40)
+    if local:
+        monkeypatch.delenv("GITHUB_SHA", raising=False)
+        notes = tmp_path / "manual-notes.md"
+        notes.write_text("Manually built; native macOS acceptance pending.")
+    else:
+        monkeypatch.setenv("GITHUB_SHA", "c" * 40)
+        notes = None
     monkeypatch.setattr(release, "latest_manifest", lambda repo, path: None)
     monkeypatch.setattr(release, "gh", fake_gh)
     monkeypatch.setattr(
@@ -99,12 +113,55 @@ def test_publication_waits_for_complete_draft_assets(
         lambda *a, **k: subprocess.CompletedProcess(a, 1, "", "HTTP 404"),
     )
     if complete:
-        release.publish("owner/repo", tmp_path, "cli-" + manifest["dataset_id"])
+        release.publish(
+            "owner/repo",
+            tmp_path,
+            "cli-" + manifest["dataset_id"],
+            target="d" * 40 if local else None,
+            notes_file=notes,
+        )
         assert calls[-1][:2] == ("release", "edit")
         assert "--draft=false" in calls[-1]
     else:
         with pytest.raises(ValueError, match="incomplete"):
-            release.publish("owner/repo", tmp_path, "cli-" + manifest["dataset_id"])
+            release.publish(
+                "owner/repo",
+                tmp_path,
+                "cli-" + manifest["dataset_id"],
+                target="d" * 40 if local else None,
+                notes_file=notes,
+            )
         assert not any(call[:2] == ("release", "edit") for call in calls)
     assert calls[0][:2] == ("release", "create")
     assert "--draft" in calls[0] and "--latest" not in calls[0]
+    assert calls[0][calls[0].index("--target") + 1] == ("d" if local else "c") * 40
+    if notes:
+        assert notes.read_text() == "Manually built; native macOS acceptance pending."
+        assert calls[0][calls[0].index("--notes-file") + 1] == str(notes)
+
+
+@pytest.mark.parametrize("system", ["linux", "windows"])
+def test_release_archive_preserves_one_binary_and_rebuilds_stale_content(
+    tmp_path: Path, system: str
+) -> None:
+    name = (
+        "pipelines-windows-amd64.exe"
+        if system == "windows"
+        else "pipelines-linux-amd64"
+    )
+    binary = tmp_path / name
+    binary.write_bytes(b"\x00\xff executable bytes\r\n" * 100)
+    target = (system, "amd64", name)
+    archive = tmp_path / release.compress_binary(tmp_path, target)
+    original = archive.read_bytes()
+    assert release.archive_matches(archive, binary, system)
+    release.compress_binary(tmp_path, target)
+    assert archive.read_bytes() == original
+    binary.write_bytes(b"changed executable")
+    assert not release.archive_matches(archive, binary, system)
+    release.compress_binary(tmp_path, target)
+    assert release.archive_matches(archive, binary, system)
+    assert archive.read_bytes() != original
+    archive.write_bytes(b"corrupt")
+    release.compress_binary(tmp_path, target)
+    assert release.archive_matches(archive, binary, system)
