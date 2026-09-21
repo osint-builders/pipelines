@@ -362,7 +362,7 @@ class MilitaryPeriscope:
         assert content is not None
         markdown = markdownify(str(content), heading_style="ATX").strip()
         links = sorted({str(a["href"]) for a in content.select("a[href]")})
-        # Preserve image credits in evidence, but don't embed asset filenames.
+        # Exclude image filenames from embedding text.
         focused = document(fragment, canonical, page_title)
         for figure in focused.select("figure"):
             figure.decompose()

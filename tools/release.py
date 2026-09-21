@@ -111,7 +111,7 @@ def compress_binary(directory: Path, target: tuple[str, str, str]) -> str:
 
 
 def prepare_assets(directory: Path) -> list[str]:
-    # Two compressors bound memory usage with the maximum LZMA dictionary.
+    # Two compressors bound memory allocation with the maximum LZMA dictionary.
     with ThreadPoolExecutor(max_workers=2) as pool:
         names = list(
             pool.map(lambda target: compress_binary(directory, target), BINARY_TARGETS)

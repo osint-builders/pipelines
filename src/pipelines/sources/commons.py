@@ -44,7 +44,7 @@ def english(node: Tag) -> str:
 
 
 def introduction(content: Tag) -> list[str]:
-    """Legacy pages use prose and lists before their licensing templates."""
+    """Read prose and lists from legacy summary sections."""
     result = []
     for node in content.children:
         if not isinstance(node, Tag):

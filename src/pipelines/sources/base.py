@@ -33,5 +33,5 @@ class PreparedSource(Protocol):
 @runtime_checkable
 class AuthenticatedSource(Protocol):
     def request_headers(self, url: str) -> dict[str, str]:
-        """Ephemeral credentials for an explicitly scoped crawl request only."""
+        """Return HTTP headers for a source URL."""
         ...

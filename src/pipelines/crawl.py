@@ -137,7 +137,7 @@ class ArchiveSpider(Spider):
 
 def crawl(source: Source, archive: Archive) -> None:
     if isinstance(source, AuthenticatedSource):
-        # Fail before starting a crawl if its local credentials are missing.
+        # Validate request headers before starting the crawl.
         for seed in source.seeds:
             source.request_headers(seed)
     discovery_urls = (

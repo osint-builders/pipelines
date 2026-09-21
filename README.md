@@ -10,8 +10,8 @@ Extract the download to get **one standalone executable** containing the search 
 index, and captured evidence. No Python, API key, model download, or running service is needed.
 
 **Release dataset:** 10 sources, **4,194 entities**, **4,926 evidence pages**,
-and **15,272 vectors**. Military Periscope's authenticated trial corpus is retained
-only in the separate local build. Run `pipelines info` to inspect the downloaded dataset.
+and **15,272 vectors**. The full local build also includes Military Periscope.
+Run `pipelines info` to inspect the downloaded dataset.
 
 | Platform | Download | Size |
 | --- | --- | ---: |
@@ -23,7 +23,7 @@ only in the separate local build. Run `pipelines info` to inspect the downloaded
 
 Download [SHA256SUMS](https://github.com/osint-builders/pipelines/releases/latest/download/SHA256SUMS)
 to check the archive, extract `pipelines` (`pipelines.exe` on Windows), and place it
-on your PATH. Unix archives preserve executable permissions. Run `pipelines verify`
+on your PATH. Unix archives preserve the executable bit. Run `pipelines verify`
 to validate the embedded data and model. The executable can also run directly from any folder.
 
 With [GitHub CLI](https://cli.github.com/) installed, these commands select one release
@@ -83,8 +83,8 @@ It does not start an HTTP server. Search, lookup, export, and verification work 
 | `search [--mode hybrid\|vector] [--limit N] [filters] "query"` | Ranked entities; default hybrid adds name/alias boost; vector uses cosine only |
 | `similar [--limit N] [filters] SOURCE:ID` | Identity-vector neighbors, excluding input entity |
 | `get [--format json\|markdown\|html\|source] [--evidence PAGE_ID] SOURCE:ID` | Complete entity/evidence; JSON default |
-| `info`, `version`, `notices` | Dataset/model/counts/sources; executable version; model/dependency licenses |
-| `verify`, `--help` | Bundle integrity, relationships, normalized vectors, Python/Go parity; usage |
+| `info`, `version` | Dataset/model/counts/sources; executable version |
+| `verify`, `--help` | Bundle integrity, relationships, normalized vectors, Python/Go parity; command help |
 
 Flags precede query/ID. Filters: `--source`, `--kind`, `--category`, applied before limit
 (default 10; range 1-100). Queries: at most 1,000 characters/256 model tokens. No country/
@@ -107,7 +107,7 @@ Empty evidence ID means identity match; scores are similarity, not confidence/ve
 
 | Export | Contents |
 | --- | --- |
-| JSON | Complete entity/all evidence: Markdown, provenance, HTML (`html_base64` for non-UTF-8) |
+| JSON | Complete entity/all evidence: Markdown, capture metadata, HTML (`html_base64` for non-UTF-8) |
 | Markdown | All retained pages joined; optional `--evidence PAGE_ID` selects one |
 | HTML | Exact ordinary capture or derived API/article/record document; multiple pages require evidence ID |
 | Source | Byte-exact HTML/API JSON/whole shared collection; multiple pages require evidence ID |
@@ -130,7 +130,7 @@ Captured/evaluated September 20, 2026 UTC. Dataset ID:
 | --- | --- |
 | Python producer | Separate from applications; only explicit `crawl` requests source websites. Resumes unfinished archives; successful refresh starts another archive. No startup/scheduled scraping. |
 | Adapters | Bounded discovery; stable `source:item-key` identities; aliases, kinds, categories, evidence-backed facts. Multiple entities/pages may share evidence. No automatic cross-source merging. |
-| Evidence | Full extracted Markdown, original bytes, URL/title/language, links, attribution, retrieval time, checksums. Preserve units, uncertainty, contradictions, variants. Media/PDFs remain links. |
+| Evidence | Full extracted Markdown, original bytes, URL/title/language, links, retrieval time, checksums. Preserve units, uncertainty, contradictions, variants. Media/PDFs remain links. |
 | Embeddings | Pinned `sentence-transformers/all-MiniLM-L6-v2`, 384 dimensions, attention-mask mean pooling, normalized vectors; identity plus overlapping evidence chunks. Focused search text never replaces evidence. |
 | Go consumer | Embedded model/data/HTML/JSON/Markdown/vectors; exact cosine scan, one result/entity. No API key, Python, download, service, or writable cache. |
 | Publication | Source lock; completeness/hash/entity/minimum-size/shrinkage checks; atomic snapshot pointer. Failures preserve previous data; archives/history retained. |
@@ -183,7 +183,7 @@ CMANO access captures: `build/cmano-evaluation/`.
 
 Distribution builds: `build/public-release/dataset.zip` and `dist/public-release/`
 contain the 10-source release. `build/dataset-compact.zip` and `dist/release/`
-contain the full 11-source local build, including the private trial corpus.
+contain the full 11-source local build, including Military Periscope.
 Release validation and compression measurements are in `build/release-tools/`.
 
 Military Periscope trial setup, coverage, and offline replay:
@@ -217,13 +217,10 @@ prepared notes describing included sources and validation. The helper uploads a 
 checks all seven assets, then marks it as the latest release. Existing published assets
 cannot be overwritten. The manual CI workflow below is an alternative to local builds.
 
-Create public bundles with `pipeline-build package` and explicit `--source` selections.
-The workstation's full `build/dataset.zip` includes authenticated trial data intended
-for local consumption; the public bundle omits `militaryperiscope`.
+Select bundle contents with `pipeline-build package` and explicit `--source` arguments.
 
 1. Crawl/extract, package, build, run acceptance/retrieval checks.
-2. Resolve source redistribution requirements; scraping success does not establish rights.
-3. Stage verified data; run the exact dispatch command printed by the helper:
+2. Stage verified data; run the exact dispatch command printed by the helper:
 
    ```sh
    uv run --no-sync python tools/release.py stage --repo osint-builders/pipelines --bundle build/dataset.zip
@@ -237,20 +234,19 @@ for local consumption; the public bundle omits `militaryperiscope`.
 | Unchanged data | Skip build/publication; preserve dataset ID. Byte checksums still protect integrity. |
 | Platforms | Linux/macOS amd64+arm64 and Windows amd64, `CGO_ENABLED=0`; identical verified bundle. CI uses native runners; local builds cross-compile foreign targets. Linux amd64 additionally verifies offline/read-only. |
 | Publication | CI requires all five jobs; manual local builds supply explicit validation notes. Asset-completeness checks pass before publishing draft; existing binaries never overwritten. |
-| Artifacts | Input `data-CONTENT_SHA256`; release `cli-DATASET_ID`; five archives containing one executable each, `dataset-manifest.json`, `SHA256SUMS`; embedded notices. |
+| Artifacts | Input `data-CONTENT_SHA256`; release `cli-DATASET_ID`; five archives containing one executable each, `dataset-manifest.json`, `SHA256SUMS`. |
 
 ### To-do
 
 - [x] Add Military Periscope's accessible trial corpus, update the local index, and
   build all five CLI binaries. Captured 143 subjects/164 full pages; verified every
   export on Windows and all 18 source retrieval checks on Windows/Linux.
-- [ ] Capture Serbia's subscription-only Force Structures chapter when authorized
-  access or an export is available; its restricted response is already archived.
+- [ ] Capture Serbia's full Force Structures chapter when available;
+  its cropped response is already archived.
 - [x] Publish the first CLI release with the 10-source public bundle; retain the
   authenticated Military Periscope corpus in the local build. All seven uploaded
   asset checksums match, and the Windows download/verification/search commands pass.
-- [ ] Complete native acceptance for both macOS targets; retain source-specific
-  attribution and review source terms for intended redistribution/reuse.
+- [ ] Complete native acceptance for both macOS targets.
 - [x] Build compact single-binary downloads and document installation and the CLI API
   at the top of this README. Public builds exclude the authenticated trial corpus.
 - [ ] Back up producer archives, snapshots, model, and bundle independently of Git.
@@ -272,8 +268,8 @@ enforces robots, delays/throttling, and maximum concurrency two.
 | [wikipedia](https://en.wikipedia.org/wiki/Category:Military_radars_of_China) | 41: 39 radars, 2 aircraft | Recursive English category HTML; page IDs, revisions/history, infoboxes, captions, references. |
 | [commons](https://commons.wikimedia.org/wiki/Category:Military_radars_of_Russia) | 151: 134 radars, 7 sites, 4 equipment, 3 emitters, 2 vehicles, 1 sensor | Category/file-description HTML; reviewed subject-category IDs; offline graph resolves context/shared evidence. |
 | [armyrecognition](https://www.armyrecognition.com/military-products/army/radars/air-defense-radars) | 11: 10 radars, 1 optical sensor | Category 139 HTML; five legacy table/six section layouts. ID: first 24 SHA-256 hex characters of canonical URL; renames require review. |
-| [fandom](https://military-history.fandom.com/wiki/Category:Russian_and_Soviet_military_radars) | 46: 32 radars, 14 sites; 53 articles | Public MediaWiki membership/parse APIs; reviewed duplicate grouping; preferred article ID. 55 responses including membership/rights. |
-| [climateviewer](https://climateviewer.org/layers/geojson/2018/Fortress-Russia-SAM-Sites-ClimateViewer-3D.geojson) | 383: 291 radar, 65 SAM, 22 air bases, 5 ABM sites | Static GeoJSON + [attribution](https://climateviewer.org/history-and-science/government/maps/fortress-russia-air-defence-radar-sam-sites/); name+coordinate hash IDs; complete Point records. |
+| [fandom](https://military-history.fandom.com/wiki/Category:Russian_and_Soviet_military_radars) | 46: 32 radars, 14 sites; 53 articles | Public MediaWiki membership/parse APIs; reviewed duplicate grouping; preferred article ID. 55 responses including membership and site metadata. |
+| [climateviewer](https://climateviewer.org/layers/geojson/2018/Fortress-Russia-SAM-Sites-ClimateViewer-3D.geojson) | 383: 291 radar, 65 SAM, 22 air bases, 5 ABM sites | Static GeoJSON + [map context](https://climateviewer.org/history-and-science/government/maps/fortress-russia-air-defence-radar-sam-sites/); name+coordinate hash IDs; complete Point records. |
 | [cambridgepixel](https://cambridgepixel.com/resources/radar-database/) | 385: 384 radars, 1 passive ESM sensor; 99 manufacturers | Visible rows cross-checked with JSON-LD ProductModel; ID hashes Unicode/whitespace/case-normalized manufacturer+model. |
 | [militaryperiscope](https://militaryperiscope.com/trial-access/) | 143: 125 weapons, 9 armed-forces profiles, 2 companies, 7 historical militant organizations; 164 full pages | Authenticated trial tree + page API; 263 responses, native subject IDs, all accessible related sections. Serbia Force Structures is subscription-only and excluded from the index. [Details](docs/sources/militaryperiscope.md). |
 
@@ -314,7 +310,7 @@ enforces robots, delays/throttling, and maximum concurrency two.
   retain contradictory 50N6A chassis/range claims and raw units/unknowns. Families stay
   single entities; title/identity mismatches fail.
 - **Fandom:** HTML/robots/render challenged; independent public API worked without auth/
-  cookies. Robots unavailable, not confirmed permissive. Continuation limits 500/10
+  cookies. Robots unavailable. Continuation limits 500/10
   yielded identical 53 IDs (six pages at 10); cycles/errors/unreviewed changes fail.
   [Catalog](src/pipelines/sources/fandom_pages.json) groups Mech/Myech, Duga/Woodpecker,
   N019/Rubin, Zaslon, Zhuk; airborne Bars/naval Bars-Muff Cob stay separate. Stable file
@@ -322,7 +318,7 @@ enforces robots, delays/throttling, and maximum concurrency two.
 - **ClimateViewer:** 2,989,317 bytes: 383 Points + 383 unassigned LineStrings. Overlays
   remain exportable, not attributed performance. Historical 2010 study/2018 path proves
   neither observation date nor current deployment. Validate geometry/bounds/identity;
-  retain uncertainty/coordinates/properties/credits. Moving/renaming changes ID; feature
+  retain uncertainty/coordinates/properties. Moving/renaming changes ID; feature
   order/whitespace do not. Every feature's content affects the fingerprint, including
   overlays. Equipment mentions do not create entities.
 - **Cambridge Pixel:** browser/HTTP agreed on 385 rows; Legacy/Apply did not filter reliably.
@@ -332,27 +328,18 @@ enforces robots, delays/throttling, and maximum concurrency two.
   identity review. Full ProductModels retained; 1,289,631-byte HTML stored once.
   Reported update: August 7, 2026; manufacturer names do not establish country.
 
-### Rights and blocked sources
-
-| Source | Required provenance/distribution review |
-| --- | --- |
-| Radartutorial, Deagel, VirtualGlobetrotting, RussianForces | Preserve credits/original terms, including [Radartutorial copyright](https://www.radartutorial.eu/html/copyright.en.html); retain source qualifications. |
-| Wikipedia / Commons | Captured CC BY-SA text license, revisions/history, Markdown transformation; Commons media licenses recorded separately; linked media terms remain distinct. |
-| Fandom | Captured [CC-BY-SA](https://www.fandom.com/licensing), version unspecified; imported Wikipedia/GFDL notices and separate media terms retained. |
-| ClimateViewer | Jim Lee's [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/) noncommercial restriction; Planeman/SOC/Sean O'Connor and other credits. |
-| Army Recognition / Cambridge Pixel | Copyright/accuracy qualifications retained; no open redistribution license established. Obtain rights before public dataset/binary distribution. [Army Recognition terms](https://www.armyrecognition.com/legal-information). |
-| Military Periscope | Local consumption only for this capture. Publisher prohibits redistribution without prior consent; authenticated raw responses also contain an account identifier. Full trial records retained; cropped subscription-only content excluded. |
+### Blocked sources
 
 **[CMANO DB](https://cmano-db.com/) is not installed/bundled.** HTTP 403 challenge,
-browser verification, in-app 522 origin timeout, robots/detail timeouts; no bypass.
+browser verification, in-app 522 origin timeout, robots/detail timeouts.
 Indexed links duplicated paths (`/sensor/sensor/5474/`) and returned layout-only pages.
 Indexed navigation showed database 511, six lists, category/country/type/item selectors,
 text search and separate Cold War database; detail/search behavior remains unverified.
 
-Resume with working access/authorized export: verify robots/base URLs/pagination/details;
+Resume with working pages or an export: verify robots/base URLs/pagination/details;
 use category+native IDs (`cmano:sensor-5474`), preserve country/year/configuration variants,
 simulation/version/hypothetical labels and full HTML/Markdown. Components are relationships,
-not aliases; facilities need not be sites. Review Cold War scope/IDs/rights; test offline
+not aliases; facilities need not be sites. Review Cold War scope/IDs; test offline
 replay, embeddings and CLI exports. Existing tests do not validate CMANO.
 
 ## Evaluation and checks
@@ -372,7 +359,7 @@ accuracy estimates. Selected text keeps technical content; full evidence remains
 | Fandom | Lead: 124 / 8 / 8 | 682 / 8 / 8 | Body/specs/captions: 418 / 8 / 8 |
 | ClimateViewer | Names: 766 / 5 / 5 | 1,758 / 8 / 8 | Descriptions: 766 / 7 / 8 |
 | Cambridge Pixel | Names: 770 / 2 / 2 | 1,534 / 7 / 8 | Description/band/status/applications: 770 / 8 / 8 |
-| Military Periscope | - | - | Full text without image filenames/provenance: 4,107 / 5 / 8 |
+| Military Periscope | - | - | Full text without image filenames/capture metadata: 4,107 / 5 / 8 |
 
 - [CLI cases](tests/fixtures/retrieval.json): **73/73 required**, **37/43 optional** pass;
   missing sources reported skipped. Global `russian cheeseboard`: 96L6E first,
@@ -392,7 +379,7 @@ accuracy estimates. Selected text keeps technical content; full evidence remains
 - Export checks: all 11 Army Recognition, 53 Fandom articles, 383 ClimateViewer,
   385 Cambridge Pixel records, 198 Duga-1 pages, and 164 Military Periscope pages.
   Latest Linux acceptance covers all 11 sources; all 18 Military Periscope queries
-  pass Windows/Linux. All 10,236 Military Periscope content fragments/cells/credits
+  pass Windows/Linux. All 10,236 Military Periscope content fragments
   survive extraction; all 164 source/Markdown/HTML exports match saved data exactly.
 
 Optional misses, source-filtered vector mode; target top five, twenty results retrieved:
@@ -431,7 +418,7 @@ in [sources.toml](src/pipelines/sources.toml). Shared producer/CLI need no websi
 | `extract(url, body, names)` | Deterministic entities/evidence; `[]` for non-items; no network |
 | Optional `discovery_seeds(directory)` | SupplementalDiscovery: per-archive rendered/prior-member discovery; never during offline extraction |
 | Optional `prepare(pages)` | PreparedSource: offline relationship pass over archived `(url, bytes)` |
-| Optional `request_headers(url)` | AuthenticatedSource: ephemeral credentials for scoped crawl requests; response cookies are not archived |
+| Optional `request_headers(url)` | AuthenticatedSource: HTTP headers for scoped crawl requests |
 
 - [Entity/Evidence](src/pipelines/model.py) keys: 1-128 ASCII alphanumeric/`._-`, first
   alphanumeric. Prefer native IDs/reviewed narrative identities. Same key/title/kind merges
