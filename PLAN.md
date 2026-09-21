@@ -3,7 +3,7 @@
 Help researchers and educators find static entities quickly using names, descriptions,
 specifications, and images, with every result linked to captured evidence.
 
-**Progress:** 6/10 milestones verified. **Active:** M7 in progress.
+**Progress:** 6/10 milestones verified. **Active:** M7 ready for verification.
 
 **Branch:** `feature/multimodal-entity-search`.
 
@@ -25,7 +25,7 @@ commands and the source table.
 | M4 — Portable image encoder | M1, M3 | Verified by user; `e02bbeb`, 391 tests and CI passed; all five native targets pass 23 parity probes with network restrictions verified |
 | M5 — Image and combined queries | M2, M3, M4 | Verified by user; `9bb1574`, 426 tests and CI pass; full pilot CLI, offline acceptance, held-out rankings, and Windows resource checks complete |
 | M6 — OCR and visual descriptions | M3, M5 | Verified by user; `3bb8c29`, 542 tests and CI pass; 1,694 observations, cache reuse, held-out ranking and offline CLI checks complete; opt-in text resource gaps tracked in M10 |
-| M7 — Better text and combined ranking | M1, M5, M6 | In progress; lexical ranking, source-name protection, and development-only fusion selection |
+| M7 — Better text and combined ranking | M1, M5, M6 | Ready for verification; `0d20f4a`, CI and offline acceptance pass; 116 baseline ranks preserved, new text 18/18 within five; latency and calibration gaps tracked in M10 |
 | M8 — Entity relationships and precise filters | M1, M7 | Planned |
 | M9 — Media coverage across all sources | M3, M5, M6 | Planned |
 | M10 — Quality gates and compact releases | M4–M9 | Planned |
@@ -535,13 +535,47 @@ image queries also remain uncalibrated. These results do not pass the release-si
 quality/calibration gates. Reports are in `build/m7/ranking-evaluation.json`,
 `image-evaluation.json`, and `observations-evaluation.json`.
 
-Final resource validation is in progress. Caption evidence resolves only for returned
+Caption evidence resolves only for returned
 results; `verify` still checks every caption association and source URL. An exhaustive
 comparison against the frozen implementation found identical lexical indexes and
 byte-identical output for all 1,698 full/benchmark caption matches. The CLI prepares
 the text index before allocating its query model and closes the model after encoding.
-Ranking parameters, model weights, and dataset members remain frozen. Final executable
-parity, native acceptance, latency, memory, and distribution measurements follow.
+Ranking parameters, model weights, and dataset members remain frozen. All 12 complete
+query responses are byte-identical before and after this memory optimization, including
+captions, observation text, and combined queries. Frozen evaluation reports retain their
+original executable hashes; `build/m7/final-parity.json` links them to the final builds.
+
+Implementation `0d20f4a` passes all six [CI jobs](https://github.com/osint-builders/pipelines/actions/runs/35653054532).
+The final Windows and Linux full builds pass all ten embedded probes and command
+acceptance, including exports from every source, source-caption provenance, observation
+queries, and media export. Linux ran without networking, with a read-only filesystem
+and no added capabilities. Reports: `build/m7/windows-acceptance.json`,
+`linux-acceptance.json`, `caption-equivalence.json`, and `final-parity.json`.
+
+Full dataset: `1246b384423a929363d68c67f62d3aff222eb58f2ad74d83edb3911cd4a3eaa6`.
+Restricted benchmark: `34565499e8f3201d254d2731d44bfb68b634f806815195c9ae33da45c4f71a39`.
+Windows reference measurements use one first observed process and 20 subsequent fresh
+processes per mode, with no concurrent build/test/analysis jobs from this task and
+without clearing the filesystem cache:
+
+| Query mode | First / repeated p95 | Peak working set |
+| --- | --- | --- |
+| Default text | 2.641 / 2.662 s | 936.55 MiB |
+| Text with observations | 3.532 / 3.556 s | 1,070.64 MiB |
+| Image + text with observations | 4.762 / 4.814 s | 1,011.20 MiB |
+
+Default text passes the 3 s absolute target and uses 18.4% more peak memory than M1,
+within the 20% allowance. Its p95 is 34.2% slower than M1, exceeding the relative
+latency allowance. Observation text exceeds both the absolute/relative latency and
+relative memory budgets. Combined queries pass their measured resource limits, and
+all modes remain below 2 GiB. These gaps and other native measurements remain M10.
+
+The standalone Windows executable is 241.10 MiB; its single-binary ZIP is 231.01 MiB,
+within the 320/256 MiB distribution limits. Review artifacts: `build/m7/pipelines.exe`,
+`pipelines-windows-amd64.zip`, `pipelines-linux`, and `full-dataset.zip`. Final hashes,
+measurements, and gate outcomes are in `distribution-size.json`, `performance.json`,
+and `resource-gates.json` in that directory. No release was published. M7 is ready
+for user verification; M8 has not started.
 
 ## M8 — Entity relationships and precise filters
 
@@ -584,8 +618,9 @@ rebuilt from local captures. Each source must account for outstanding failures.
 
 - [ ] Run the frozen evaluation suite for text, image, combined, OCR, filters, and entity relationships; report results by task and source.
 - [ ] Verify top-result accuracy, recall within the first five results, confusable variants, and no-match behavior meet M1's targets.
+- [ ] Calibrate no-match decisions on larger development sets: M7 text negatives return candidates for 4/4 global and 3/4 filtered queries; image/generated modes currently abstain even for positive queries.
 - [ ] Measure cold/warm latency, peak memory, and compressed executable size on all supported targets.
-- [ ] Bring opt-in observation text within the text budgets: M6 measured 3.014 s p95 against 3 s, and 1,018.89 MiB peak memory against M1's 20% allowance of 949.30 MiB.
+- [ ] Bring text within the frozen budgets: M7 default p95 is 2.662 s against M1's relative limit of 2.380 s; observation text is 3.556 s against 3 s absolute and uses 1,070.64 MiB against the 949.30 MiB relative allowance.
 - [ ] Build and test one standalone executable per platform with required models, indices, evidence, and selected previews embedded.
 - [ ] Validate deterministic dataset identities, cached rebuilds, checksums, source exports, and operation without network access.
 - [ ] Extend release change detection and tag identity to include image artifacts; the existing gate compares text content only.
