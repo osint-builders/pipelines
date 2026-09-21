@@ -3,7 +3,7 @@
 Help researchers and educators find static entities quickly using names, descriptions,
 specifications, and images, with every result linked to captured evidence.
 
-**Progress:** 5/10 milestones verified. **Active:** M6, OCR and visual descriptions.
+**Progress:** 5/10 milestones verified. **Active:** M6 ready for verification.
 
 **Branch:** `feature/multimodal-entity-search`.
 
@@ -24,7 +24,7 @@ commands and the source table.
 | M3 — Two-source media pilot | M2 | Verified by user; `ba855a3`, 2,799 saved files, 294 tests and CI passed; two diagram cases remain unscored |
 | M4 — Portable image encoder | M1, M3 | Verified by user; `e02bbeb`, 391 tests and CI passed; all five native targets pass 23 parity probes with network restrictions verified |
 | M5 — Image and combined queries | M2, M3, M4 | Verified by user; `9bb1574`, 426 tests and CI pass; full pilot CLI, offline acceptance, held-out rankings, and Windows resource checks complete |
-| M6 — OCR and visual descriptions | M3, M5 | In progress: cached local analysis and opt-in CLI implemented; full pilot processing and retrieval checks underway |
+| M6 — OCR and visual descriptions | M3, M5 | Ready for verification; `3bb8c29`, 542 tests and CI pass; 1,694 observations, cache reuse, held-out ranking and offline CLI checks complete; opt-in text resource gaps tracked in M10 |
 | M7 — Better text and combined ranking | M1, M5, M6 | Planned |
 | M8 — Entity relationships and precise filters | M1, M7 | Planned |
 | M9 — Media coverage across all sources | M3, M5, M6 | Planned |
@@ -378,7 +378,7 @@ verified M5 and authorized M6.
 - [x] Generate concise visual descriptions during dataset construction, with the model and processing recipe recorded.
 - [x] Store generated observations separately from source statements and structured specifications.
 - [x] Index OCR and descriptions as evidence-linked text, with their origin visible in search results.
-- [ ] Reuse unchanged analysis and verify that OCR/descriptions improve held-out retrieval without increasing false identification.
+- [x] Reuse unchanged analysis and verify that OCR/descriptions improve held-out retrieval without increasing false identification.
 
 Complete when visual details become searchable through text and every derived statement
 can be traced to an image. Heavy analysis models run during construction, not CLI queries.
@@ -396,11 +396,75 @@ unsupported details remain. OCR can return publisher credits or background text 
 confuses some Latin/Cyrillic markings. These strings do not become source facts or aliases.
 
 The restricted nine-image gallery produced 18 observations with no failures or network
-attempts. Full analysis of the 1,055 indexed pilot views is running using two local GPUs.
+attempts. Its format-4 CLI passed four source-text, three image, and three observation
+embedding probes. All 9,458 previous bundle members retain identical hashes; the six
+new members add 44.0 KiB compressed. Full analysis of the 1,055 indexed pilot views is
+running using two local GPUs.
+
 The 23 new manual query cases were frozen before retrieval results; their author had seen
 engine pilot summaries, so this is a provisional comparison rather than a blinded study.
-Reports are under `build/m6/`; held-out retrieval, real binary acceptance, and final
-coverage remain in progress. M7 has not started.
+Fixture hashes, photo groups, derivatives, and gallery isolation passed an independent
+audit. Seven development queries cover four photo groups; ten held-out positive queries
+cover seven groups. Two development and four evaluation negatives are easy controls.
+
+| Query split and scope | Source top 1 / within five | With observations top 1 / within five |
+| --- | --- | --- |
+| Development, global | 0/7 / 0/7 | 1/7 / 2/7 |
+| Development, source filtered | 1/7 / 1/7 | 3/7 / 3/7 |
+| Evaluation, global | 2/10 / 3/10 | 7/10 / 7/10 |
+| Evaluation, source filtered | 2/10 / 5/10 | 7/10 / 9/10 |
+
+Five of seven held-out visual-description queries improve to first place; the three
+OCR queries show no net gain. No held-out positive rank worsened. All generated queries
+remain `no_supported_match`, including positive queries: zero accepted identifications
+or false acceptances is an abstention policy, not measured identity calibration.
+The global 7/10 ranked result has a wide 95% Wilson interval, 39.7–89.2%.
+All 116 original text ranks are unchanged, including 73/73 required cases first.
+
+Implementation `3bb8c29` passes Python/Go checks and both GitHub workflows
+(`35638557693`, `35638557759`); image-encoder parity passes on all five native targets.
+Reports are under `build/m6/`: `fixture-audit.json`, `development.json`, `selection.json`,
+`evaluation.json`, `text-comparison.json`, and `member-equivalence.json`.
+Full coverage: 1,055 descriptions and 639 nonempty OCR observations across 280 entities;
+416 OCR analyses return no text. Commons supplies 633 descriptions/228 OCR observations,
+Military Periscope 422/411. All 2,110 image/analysis outcomes are accounted for without
+failures. The two GPU workers completed in 28.1 and 29.3 minutes. A full rerun with
+inference disabled reused every result in 15.5 seconds with zero network attempts.
+These full-gallery counts establish coverage, not held-out retrieval quality.
+
+The full format-4 dataset is
+`a32527cad620258365dc2479b68c8c9e55dd3cbb61deb69035c567fe598a6b29`:
+1,694 observations, 1,727 generated text chunks, and all 4,337 source entities retained.
+All 10,504 previous source/image/model members have identical hashes. Observation
+sidecars add 2.93 MiB compressed. The Windows executable is 240.94 MiB and its
+single-binary ZIP is 230.87 MiB, within the frozen distribution budgets.
+
+Windows and Linux full-bundle acceptance passed, including exact generated-content
+inspection, source exports, opt-in text/combined queries, and an independent source-vector
+ranking check. Linux ran with networking disabled, a read-only filesystem, and no added
+capabilities. All four source-text, three image, and three observation embedding probes pass.
+
+Windows reference measurements, first observed process plus 20 fresh processes per mode,
+without concurrent build, test, or analysis jobs from this task:
+
+| Query mode | First / repeated p95 | Peak working set |
+| --- | --- | --- |
+| Default text | 2.111 / 2.140 s | 879.99 MiB |
+| Text with observations | 3.012 / 3.014 s | 1,018.89 MiB |
+| Image + text with observations | 4.230 / 4.321 s | 1,038.99 MiB |
+
+Default text is 7.9% slower and uses 11.2% more peak memory than M1, within its 20%
+regression allowance. Relative to M5, those changes are 1.9% and 0.7%. All measured modes
+fit the 2 GiB absolute memory budget. Opt-in text exceeds the 3 s p95 target by 0.014 s
+and uses 28.8% more peak memory than M1, exceeding the 20% text-memory allowance.
+Those opt-in resource gaps remain release work in M10; no release gate is claimed passed.
+Other native platforms still need full-binary resource measurements in M10.
+
+Local review artifacts: `build/m6/pipelines.exe`, `pipelines-windows-amd64.zip`,
+`pipelines-linux`, and `full-dataset.zip`. Evidence in the same directory:
+`coverage.json`, `full-analysis-report.json`, `full-package.json`,
+`windows-acceptance.json`, `linux-acceptance.json`, `distribution-size.json`,
+`performance.json`, and `resource-gates.json`. M7 awaits user verification of M6.
 
 ## M7 — Better text and combined ranking
 
@@ -455,6 +519,7 @@ rebuilt from local captures. Each source must account for outstanding failures.
 - [ ] Run the frozen evaluation suite for text, image, combined, OCR, filters, and entity relationships; report results by task and source.
 - [ ] Verify top-result accuracy, recall within the first five results, confusable variants, and no-match behavior meet M1's targets.
 - [ ] Measure cold/warm latency, peak memory, and compressed executable size on all supported targets.
+- [ ] Bring opt-in observation text within the text budgets: M6 measured 3.014 s p95 against 3 s, and 1,018.89 MiB peak memory against M1's 20% allowance of 949.30 MiB.
 - [ ] Build and test one standalone executable per platform with required models, indices, evidence, and selected previews embedded.
 - [ ] Validate deterministic dataset identities, cached rebuilds, checksums, source exports, and operation without network access.
 - [ ] Extend release change detection and tag identity to include image artifacts; the existing gate compares text content only.
