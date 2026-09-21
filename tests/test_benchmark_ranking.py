@@ -8,7 +8,6 @@ import pytest
 from benchmark_ranking import (
     benchmark,
     freeze_selection,
-    sha256,
     summarize,
     validate_fixture,
     validate_response,
