@@ -3,7 +3,7 @@
 Help researchers and educators find static entities quickly using names, descriptions,
 specifications, and images, with every result linked to captured evidence.
 
-**Progress:** 4/10 milestones verified. **Active:** M5, image and combined queries.
+**Progress:** 4/10 milestones verified. **Active:** M5, ready for user verification.
 
 **Branch:** `feature/multimodal-entity-search`.
 
@@ -23,7 +23,7 @@ commands and the source table.
 | M2 — Shared media evidence and archive | M1 | Verified by user; `55d4046`, 250 tests and GitHub CI passed; offline compatibility confirmed |
 | M3 — Two-source media pilot | M2 | Verified by user; `ba855a3`, 2,799 saved files, 294 tests and CI passed; two diagram cases remain unscored |
 | M4 — Portable image encoder | M1, M3 | Verified by user; `e02bbeb`, 391 tests and CI passed; all five native targets pass 23 parity probes with network restrictions verified |
-| M5 — Image and combined queries | M2, M3, M4 | In progress: bundle construction, retrieval, and CLI integration |
+| M5 — Image and combined queries | M2, M3, M4 | Ready for verification; `9bb1574`, 426 tests and CI pass; full pilot CLI, offline acceptance, held-out rankings, and Windows resource checks complete |
 | M6 — OCR and visual descriptions | M3, M5 | Planned |
 | M7 — Better text and combined ranking | M1, M5, M6 | Planned |
 | M8 — Entity relationships and precise filters | M1, M7 | Planned |
@@ -299,14 +299,14 @@ authorizes M5.
 Complete when a local photograph retrieves the expected pilot entities offline and the
 researcher can inspect the exact supporting image. Existing text commands must still pass.
 
-Implemented query interface (local bundle acceptance in progress):
+Implemented query interface:
 
 ```sh
 pipelines search --image photograph.jpg
 pipelines search --image photograph.jpg "truck-mounted"
 pipelines search --image photograph.jpg --kind radar --limit 5
 pipelines media SOURCE:ID
-pipelines media --id SOURCE:MEDIA_ID --output preview.jpg SOURCE:ID
+pipelines media --id SOURCE:media:HASH --output preview.jpg SOURCE:ID
 ```
 
 Implementation checks: 426 Python tests, Go tests/vet, lint, types, and Python package
@@ -321,10 +321,56 @@ needed to establish an acceptance threshold. Keep ranked retrieval metrics separ
 from accepted matches; threshold calibration and broader quality gates remain M7/M10.
 The restricted nine-image bundle preserves all 9,440 text members byte-for-byte.
 Windows and Linux `verify` pass four text and three image probes; Linux ran with
-networking disabled. The development images rank their expected entity first in 6/6
-cases globally and with source filters. Full archive packaging, held-out evaluation,
-offline command acceptance, and CI are still in progress. M6 remains gated on user
-verification.
+networking disabled. Linux command acceptance also passes source exports from all
+11 sources, image and combined queries, exact preview export, and overwrite rejection.
+All 116 text cases retain their M1 ranks: 73/73 required cases, 101/116 first,
+110/116 within five, and no skipped sources. Standard CI passes at `9bb1574`.
+
+The development images rank their expected entity first in 6/6 cases. The executable,
+gallery, model, and fixed fusion choice were frozen before held-out evaluation:
+8/9 positive image cases rank first (also 8/9 within five; seven photo groups), and
+2/2 combined cases rank first, both globally and with source filters. The stowed Lanza
+truck ranks ninth globally from its image alone and first with its supplied text.
+All responses remain uncalibrated suggestions, including the single sky negative;
+accepted-positive accuracy is therefore zero. The two diagram cases remain unscored.
+This small gallery does not establish full-archive or release quality.
+
+Reports: `build/m5/development-cli.json`, `search-selection.json`, `evaluation-cli.json`,
+`text-regression.json`, `text-member-comparison.json`, and `offline-linux.json`.
+
+Full pilot bundle `ec7093d263154d3b725cf6fd7bfe585f46193ba77b9a8751138fc8ca41488d07`
+contains 1,055 unique indexed views across 280 entities (Commons: 633 views / 148
+entities; Military Periscope: 422 / 132). It accounts for all 2,799 saved files:
+1,055 indexed, 1,149 alternate resolutions, and 595 excluded by the view cap. No
+entity exceeds eight indexed views. Previews total 29.59 MiB; original files remain
+in the local archive. The full gallery includes evaluation photos, so only the
+restricted gallery above supports held-out measurements.
+
+The full Windows and Linux builds pass command acceptance and all seven embedded
+probes; Linux runs with networking disabled. A cached rebuild reports `changed:false`
+and the same dataset identity (101 s versus 625 s initially). Local Windows artifacts:
+`build/m5/pipelines.exe` (237.93 MiB) and `build/m5/pipelines-windows-amd64.zip`
+(227.91 MiB), within the 320/256 MiB limits. Archive audit, repeat-build, export,
+and size reports are saved under `build/m5/`.
+
+CI: [standard checks](https://github.com/osint-builders/pipelines/actions/runs/35632791612)
+and [all five native encoder checks](https://github.com/osint-builders/pipelines/actions/runs/35632791585)
+pass at `9bb1574`.
+
+Full pilot measurements on the M1 Windows hardware, with one first observed process
+and 20 subsequent fresh processes per mode (filesystem caches were not cleared):
+
+| Query | First process | Repeat p95 | Peak working set |
+| --- | --- | --- | --- |
+| Text | 2.094 s | 2.101 s | 873.8 MiB |
+| Image | 2.216 s | 2.246 s | 764.2 MiB |
+| Image and text | 4.090 s | 4.070 s | 990.4 MiB |
+
+All local resource limits pass. The repeated text probe is 5.9% slower than M1,
+and its peak memory is 10.5% above M1's measured maximum, within the 20% limits.
+These are local probe measurements; full native resource gates remain M10.
+Details: `build/m5/performance.json`. The local CLI is ready for inspection; no
+release was published. M6 has not started and awaits user verification of M5.
 
 ## M6 — OCR and visual descriptions
 
