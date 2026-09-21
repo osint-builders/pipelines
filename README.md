@@ -13,13 +13,13 @@ index, and captured evidence. No Python, API key, model download, or running ser
 and **15,272 vectors**. Military Periscope's authenticated trial corpus is retained
 only in the separate local build. Run `pipelines info` to inspect the downloaded dataset.
 
-| Platform | Download |
-| --- | --- |
-| Windows x86-64 | [pipelines-windows-amd64.zip](https://github.com/osint-builders/pipelines/releases/latest/download/pipelines-windows-amd64.zip) |
-| Linux x86-64 | [pipelines-linux-amd64.tar.xz](https://github.com/osint-builders/pipelines/releases/latest/download/pipelines-linux-amd64.tar.xz) |
-| Linux ARM64 | [pipelines-linux-arm64.tar.xz](https://github.com/osint-builders/pipelines/releases/latest/download/pipelines-linux-arm64.tar.xz) |
-| macOS Intel | [pipelines-darwin-amd64.tar.xz](https://github.com/osint-builders/pipelines/releases/latest/download/pipelines-darwin-amd64.tar.xz) |
-| macOS Apple Silicon | [pipelines-darwin-arm64.tar.xz](https://github.com/osint-builders/pipelines/releases/latest/download/pipelines-darwin-arm64.tar.xz) |
+| Platform | Download | Size |
+| --- | --- | ---: |
+| Windows x86-64 | [pipelines-windows-amd64.zip](https://github.com/osint-builders/pipelines/releases/latest/download/pipelines-windows-amd64.zip) | 171.2 MB |
+| Linux x86-64 | [pipelines-linux-amd64.tar.xz](https://github.com/osint-builders/pipelines/releases/latest/download/pipelines-linux-amd64.tar.xz) | 161.8 MB |
+| Linux ARM64 | [pipelines-linux-arm64.tar.xz](https://github.com/osint-builders/pipelines/releases/latest/download/pipelines-linux-arm64.tar.xz) | 161.3 MB |
+| macOS Intel | [pipelines-darwin-amd64.tar.xz](https://github.com/osint-builders/pipelines/releases/latest/download/pipelines-darwin-amd64.tar.xz) | 161.9 MB |
+| macOS Apple Silicon | [pipelines-darwin-arm64.tar.xz](https://github.com/osint-builders/pipelines/releases/latest/download/pipelines-darwin-arm64.tar.xz) | 162.7 MB |
 
 Download [SHA256SUMS](https://github.com/osint-builders/pipelines/releases/latest/download/SHA256SUMS)
 to check the archive, extract `pipelines` (`pipelines.exe` on Windows), and place it
@@ -246,8 +246,9 @@ for local consumption; the public bundle omits `militaryperiscope`.
   export on Windows and all 18 source retrieval checks on Windows/Linux.
 - [ ] Capture Serbia's subscription-only Force Structures chapter when authorized
   access or an export is available; its restricted response is already archived.
-- [ ] Publish the first CLI release with the 10-source public bundle; retain the
-  authenticated Military Periscope corpus in the local build.
+- [x] Publish the first CLI release with the 10-source public bundle; retain the
+  authenticated Military Periscope corpus in the local build. All seven uploaded
+  asset checksums match, and the Windows download/verification/search commands pass.
 - [ ] Complete native acceptance for both macOS targets; retain source-specific
   attribution and review source terms for intended redistribution/reuse.
 - [x] Build compact single-binary downloads and document installation and the CLI API
@@ -376,6 +377,9 @@ accuracy estimates. Selected text keeps technical content; full evidence remains
 - [CLI cases](tests/fixtures/retrieval.json): **73/73 required**, **37/43 optional** pass;
   missing sources reported skipped. Global `russian cheeseboard`: 96L6E first,
   hybrid/vector. Type 1478/Repeynik: vector ranks 11/7, hybrid first.
+- Public release: **63/63 required**, **29/35 optional** pass; the 18 trial-corpus
+  cases are skipped. Windows/Linux acceptance and offline/read-only Linux verification
+  pass, including emulated ARM64. Uploaded assets match local SHA-256 checksums.
 - Tradeoffs: Apple Orchard full/focused rank 3/20; NORAD 68826 rank 7/13; Commons broad
   stealth query rank 45; Deagel sound/infrared outside top 20. Khotilovo second without name.
 - Improvements: Santa Teresa RSS rank 72 -> 1; Cyprus full 24 -> 3; Chekhov 5 -> 1;
