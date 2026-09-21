@@ -99,17 +99,31 @@ func TestSourceCaptionsHaveTheirOwnEvidenceAndDoNotLoadImages(t *testing.T) {
 	if err != nil || results[0].ID != secondID {
 		t.Fatal(results, err)
 	}
+	if len(d.evidenceURLs) != 0 {
+		t.Fatal("loaded caption provenance before selecting results")
+	}
 	matches, err := d.TextMatches(results[0])
 	if err != nil || matches[1].Reason != "source_caption" || matches[1].EvidenceID != evidence || matches[1].MediaID == "" || d.images != nil {
 		t.Fatal(matches, err)
 	}
 	f.members["search/captions.json"] = []byte(`[{"entity":1,"evidence_id":"unrelated","text":"caption","media_id":"sample:media:aaaaaaaaaaaaaaaaaaaaaaaa"}]`)
 	d = f.open(t)
-	if _, err = d.Search(vector, "caption", true, Filter{}, 1, ""); err == nil {
+	results, err = d.Search(vector, "caption", true, Filter{}, 1, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = d.TextMatches(results[0]); err == nil {
 		t.Fatal("unrelated caption accepted")
 	}
 	if _, err = d.Search(vector, "caption", false, Filter{}, 1, ""); err != nil {
 		t.Fatal("vector search accessed unused captions", err)
+	}
+	var chunks []Chunk
+	_ = json.Unmarshal(f.members["chunks.json"], &chunks)
+	chunks[2].EvidenceID = ""
+	f.members["chunks.json"], _ = json.Marshal(chunks)
+	if err := f.open(t).Verify(); err == nil || !strings.Contains(err.Error(), "caption references unrelated evidence") {
+		t.Fatal("verification failed to inspect every caption", err)
 	}
 }
 
@@ -144,5 +158,41 @@ func TestObservationLexicalProvenanceAndCombinedTwoStageFusion(t *testing.T) {
 	plain, err := d.Search(vector, "Маркировка", true, Filter{}, 2, "")
 	if err != nil || plain[0].ID != firstID || plain[0].Ranking.LexicalRank != 0 {
 		t.Fatal("generated text leaked into default", plain, err)
+	}
+}
+
+func TestVerifyChecksCaptionEvidenceURLsWithoutEagerSearchReads(t *testing.T) {
+	for _, url := range []string{"https://valid.test/page", "ftp://invalid.test/page", "https://user@invalid.test/page"} {
+		t.Run(url, func(t *testing.T) {
+			f := newImageFixture(t)
+			withRanking(f)
+			f.manifest.FormatVersion = 2
+			f.manifest.Image = nil
+			for name := range f.members {
+				if strings.HasPrefix(name, "image/") {
+					delete(f.members, name)
+				}
+			}
+			name := "entities/" + strings.ReplaceAll(firstID, ":", "/") + ".json"
+			var record map[string]any
+			_ = json.Unmarshal(f.members[name], &record)
+			page := record["evidence"].([]any)[0].(map[string]any)
+			oldID := page["id"].(string)
+			newID := digestString([]byte(url))[:24]
+			page["id"], page["url"] = newID, url
+			f.members["html/sample/"+newID+".html"] = f.members["html/sample/"+oldID+".html"]
+			delete(f.members, "html/sample/"+oldID+".html")
+			f.members[name], _ = json.Marshal(record)
+			var chunks []Chunk
+			_ = json.Unmarshal(f.members["chunks.json"], &chunks)
+			chunks[2].EvidenceID = ""
+			f.members["chunks.json"], _ = json.Marshal(chunks)
+			f.manifest.Search.Captions = 1
+			f.members["search/captions.json"], _ = json.Marshal([]sourceCaption{{Entity: 0, EvidenceID: newID, Text: "caption", MediaID: "sample:media:" + strings.Repeat("a", 24)}})
+			err := f.open(t).Verify()
+			if (err == nil) != (url == "https://valid.test/page") {
+				t.Fatal(url, err)
+			}
+		})
 	}
 }

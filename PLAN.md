@@ -471,13 +471,13 @@ Local review artifacts: `build/m6/pipelines.exe`, `pipelines-windows-amd64.zip`,
 - [x] Add full-text lexical ranking alongside semantic search, preserving exact designation and alias matches.
 - [x] Index original names, abbreviations, reviewed alternate names, captions, and OCR without converting incidental mentions into aliases.
 - [x] Select rank fusion on development cases, freeze it before evaluation, and keep text, image, and combined query behavior explicit.
-- [ ] Test partial names, spelling variations, specification phrases, and queries with no supported match.
+- [x] Test partial names, spelling variations, specification phrases, and queries with no supported match.
 - [x] Expose useful match reasons and treat similarity scores as ranking signals rather than identity probabilities.
 
 Complete when the frozen text baseline has no unacceptable regression and the combined
 retrieval targets pass. Keep exact vector search until measurements justify another index.
 
-Implementation in progress: BM25 over existing source chunks and complete source names,
+Implemented BM25 over existing source chunks and complete source names,
 plus 1,689 associated source captions. Generated observations remain opt-in. Unicode
 normalization and conservative name-only spelling tolerance do not create aliases or
 equate numeric variants. Hybrid text combines lexical and semantic entity ranks;
@@ -502,7 +502,7 @@ expected entity first for both M6 and M7, globally and with source filters. All 
 image-only results also stayed first. Opt-in observation development top-five results
 improved from 2/7 to 3/7 globally and 3/7 to 4/7 filtered; no previous top-five success
 was lost. Choices and executable hashes are frozen in `build/m7/ranking-selection.json`,
-`image-selection.json`, and `observations-selection.json`; held-out runs are underway.
+`image-selection.json`, and `observations-selection.json`; held-out runs are complete.
 
 Each hybrid result exposes its text ranking, raw semantic/BM25 contributions, matched
 terms, and source or generated provenance. `name_match` means a complete normalized
@@ -512,6 +512,36 @@ Generated and image queries retain their existing uncalibrated abstention behavi
 Overlapping words can still produce candidates for absent entities: the four global
 development negatives all did so, and two of four did so with source filters. Broader
 abstention calibration remains an explicit M10 requirement.
+
+Held-out ranking results with the frozen choice:
+
+| Query set | M6 first / within five | M7 first / within five |
+| --- | --- | --- |
+| New text, global | 15/18 / 16/18 | 16/18 / 18/18 |
+| New text, source filtered | 15/18 / 16/18 | 16/18 / 18/18 |
+| Observation text, global | 7/10 / 7/10 | 7/10 / 8/10 |
+| Observation text, source filtered | 7/10 / 9/10 | 9/10 / 10/10 |
+| Image/text, global and filtered | 2/2 / 2/2 | 2/2 / 2/2 |
+
+No new text rank worsened in either scope; three improved. The existing image-only
+evaluation ranks are unchanged (8/9 first and within five). These are small pilot
+results: text top-five 18/18 has a 95% Wilson interval of 82.4–100%, and image/text
+2/2 has an interval of 34.2–100%. The observation/image fixtures were evaluated in
+earlier milestones and serve as regressions, not newly blinded evidence.
+
+Text negatives produced candidates for 4/4 global and 3/4 filtered queries, versus
+4/4 in both scopes before. Generated queries accepted 0/10 positives and 0/4 negatives;
+image queries also remain uncalibrated. These results do not pass the release-sized
+quality/calibration gates. Reports are in `build/m7/ranking-evaluation.json`,
+`image-evaluation.json`, and `observations-evaluation.json`.
+
+Final resource validation is in progress. Caption evidence resolves only for returned
+results; `verify` still checks every caption association and source URL. An exhaustive
+comparison against the frozen implementation found identical lexical indexes and
+byte-identical output for all 1,698 full/benchmark caption matches. The CLI prepares
+the text index before allocating its query model and closes the model after encoding.
+Ranking parameters, model weights, and dataset members remain frozen. Final executable
+parity, native acceptance, latency, memory, and distribution measurements follow.
 
 ## M8 — Entity relationships and precise filters
 

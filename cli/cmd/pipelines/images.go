@@ -32,6 +32,11 @@ func searchImage(ctx context.Context, d *dataset.Dataset, filename, query string
 	if err != nil {
 		return err
 	}
+	if query != "" {
+		if err := d.PrepareTextSearch(observations); err != nil {
+			return err
+		}
+	}
 	encoder, err := loadImageEncoder(ctx, d)
 	if err != nil {
 		return err

@@ -44,6 +44,15 @@ type textIndex struct {
 	index     *lexicalIndex
 }
 
+// PrepareTextSearch builds the shared text index before allocating a query model.
+func (d *Dataset) PrepareTextSearch(observations bool) error {
+	if d.Manifest.Search == nil {
+		return nil
+	}
+	_, err := d.loadTextIndex(observations)
+	return err
+}
+
 func (d *Dataset) validateSearchPolicy() error {
 	p := d.Manifest.Search
 	if p == nil {
@@ -141,14 +150,10 @@ func (d *Dataset) loadTextIndex(observations bool) (*textIndex, error) {
 			return nil, errors.New("duplicate or unordered source caption")
 		}
 		previous, previousEntity = identity, caption.Entity
-		pages, err := d.imageEvidence(caption.Entity)
-		if err != nil {
-			return nil, err
+		if !safeKey(caption.EvidenceID) {
+			return nil, errors.New("invalid caption evidence ID")
 		}
-		if pages[caption.EvidenceID] == "" {
-			return nil, errors.New("caption references unrelated evidence")
-		}
-		add(lexicalDocument{Entity: caption.Entity, Text: caption.Text, EvidenceID: caption.EvidenceID, Field: "caption"}, Match{Channel: "text", EvidenceID: caption.EvidenceID, MediaID: caption.MediaID, URL: pages[caption.EvidenceID], Reason: "source_caption"})
+		add(lexicalDocument{Entity: caption.Entity, Text: caption.Text, EvidenceID: caption.EvidenceID, Field: "caption"}, Match{Channel: "text", EvidenceID: caption.EvidenceID, MediaID: caption.MediaID, Reason: "source_caption"})
 	}
 	if observations {
 		if err := d.LoadObservations(); err != nil {

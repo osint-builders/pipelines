@@ -242,14 +242,22 @@ func runWithFiles(ctx context.Context, args []string, out io.Writer, files fs.FS
 		}
 		return output.Encode(report)
 	}
+	if mode == "hybrid" {
+		if err := d.PrepareTextSearch(useObservations); err != nil {
+			return err
+		}
+	}
 	encoder, err := embedding.New(ctx, d.Files)
 	if err != nil {
 		return err
 	}
-	defer encoder.Close()
 	vector, err := encoder.Encode(ctx, value)
+	closeErr := encoder.Close()
 	if err != nil {
 		return err
+	}
+	if closeErr != nil {
+		return closeErr
 	}
 	if useObservations {
 		results, err := d.SearchObservations(vector, value, mode == "hybrid", filter, limit)

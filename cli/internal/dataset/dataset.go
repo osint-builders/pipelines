@@ -194,12 +194,15 @@ func (d *Dataset) Verify() error {
 		if err != nil {
 			return err
 		}
-		var record struct{ Evidence []struct{ ID string } }
+		var record struct{ Evidence []struct{ ID, URL string } }
 		if err := json.Unmarshal(raw, &record); err != nil {
 			return err
 		}
 		pages[i] = map[string]bool{}
 		for _, page := range record.Evidence {
+			if !validImageURL(page.URL) {
+				return errors.New("invalid source evidence URL")
+			}
 			pages[i][page.ID] = true
 			allPages[entity.Source+":"+page.ID] = true
 		}
@@ -223,8 +226,14 @@ func (d *Dataset) Verify() error {
 		}
 	}
 	if d.Manifest.Search != nil {
-		if _, err := d.loadTextIndex(false); err != nil {
+		index, err := d.loadTextIndex(false)
+		if err != nil {
 			return err
+		}
+		for _, doc := range index.documents {
+			if doc.Field == "caption" && !pages[doc.Entity][doc.EvidenceID] {
+				return errors.New("caption references unrelated evidence")
+			}
 		}
 	}
 	if d.HasObservations() {
