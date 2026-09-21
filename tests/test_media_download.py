@@ -10,6 +10,7 @@ from io import BytesIO
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
+from urllib.request import BaseHandler
 
 import pytest
 from PIL import Image
@@ -701,7 +702,7 @@ def test_parallel_requests_and_redirects_share_one_pacing_interval(
 
     build_opener = media_download.urllib.request.build_opener
 
-    def observed_opener(*handlers: object) -> Any:
+    def observed_opener(*handlers: BaseHandler | Callable[[], BaseHandler]) -> Any:
         opener = build_opener(*handlers)
         open_request = opener.open
 
