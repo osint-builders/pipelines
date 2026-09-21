@@ -68,4 +68,4 @@ Use `pipelines info` to see which sources are included in your binary.
 | [fandom](https://military-history.fandom.com/wiki/Category:Russian_and_Soviet_military_radars) | Military Wiki category membership and articles |
 | [climateviewer](https://climateviewer.org/layers/geojson/2018/Fortress-Russia-SAM-Sites-ClimateViewer-3D.geojson) | Site records from the Fortress Russia GeoJSON |
 | [cambridgepixel](https://cambridgepixel.com/resources/radar-database/) | Radar database records |
-| [militaryperiscope](docs/sources/militaryperiscope.md) | Weapons, armed forces, defense companies, and militant organizations |
+| [militaryperiscope](https://militaryperiscope.com/) | Weapons, armed forces, defense companies, and militant organizations |
