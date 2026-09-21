@@ -3,7 +3,7 @@
 Help researchers and educators find static entities quickly using names, descriptions,
 specifications, and images, with every result linked to captured evidence.
 
-**Progress:** 7/10 milestones verified. **Active:** M8 in progress.
+**Progress:** 7/10 milestones verified. **Active:** M8 ready for verification.
 
 **Branch:** `feature/multimodal-entity-search`.
 
@@ -26,7 +26,7 @@ commands and the source table.
 | M5 — Image and combined queries | M2, M3, M4 | Verified by user; `9bb1574`, 426 tests and CI pass; full pilot CLI, offline acceptance, held-out rankings, and Windows resource checks complete |
 | M6 — OCR and visual descriptions | M3, M5 | Verified by user; `3bb8c29`, 542 tests and CI pass; 1,694 observations, cache reuse, held-out ranking and offline CLI checks complete; opt-in text resource gaps tracked in M10 |
 | M7 — Better text and combined ranking | M1, M5, M6 | Verified by user; `0d20f4a`, CI and offline acceptance pass; 116 baseline ranks preserved, new text 18/18 within five; latency and calibration gaps tracked in M10 |
-| M8 — Entity relationships and precise filters | M1, M7 | In progress; source-evidence inventory and shared relationship/filter contract |
+| M8 — Entity relationships and precise filters | M1, M7 | Ready for verification; `beafc67b`, CI and offline acceptance pass; 63 evidence checks, 116 unchanged baseline ranks; resource gaps tracked in M10 |
 | M9 — Media coverage across all sources | M3, M5, M6 | Planned |
 | M10 — Quality gates and compact releases | M4–M9 | Planned |
 
@@ -579,12 +579,12 @@ continuation verified M7 and authorized M8.
 
 ## M8 — Entity relationships and precise filters
 
-- [ ] Link equivalent records across sources while preserving every source-qualified ID and its evidence.
-- [ ] Represent family, variant, component, and related-system relationships distinctly from equivalence.
-- [ ] Add evidence-backed manufacturer, country, date, and specification fields, preserving original values, units, qualifiers, and unknowns.
-- [ ] Add deterministic filters and numeric comparisons over normalized fields; distinguish publication/capture dates from dates describing the entity.
-- [ ] Provide machine-readable relationship and comparison output suitable for research scripts and teaching material.
-- [ ] Validate ambiguous names and visually similar variants so incorrect merges do not become permanent identities.
+- [x] Link equivalent records across sources while preserving every source-qualified ID and its evidence.
+- [x] Represent family, variant, component, and related-system relationships distinctly from equivalence.
+- [x] Add evidence-backed manufacturer, country, date, and specification fields, preserving original values, units, qualifiers, and unknowns.
+- [x] Add deterministic filters and numeric comparisons over normalized fields; distinguish publication/capture dates from dates describing the entity.
+- [x] Provide machine-readable relationship and comparison output suitable for research scripts and teaching material.
+- [x] Validate ambiguous names and visually similar variants so incorrect merges do not become permanent identities.
 
 Complete when researchers can follow a subject across sources, distinguish variants,
 and reproduce filtered results without losing the original records.
@@ -597,7 +597,7 @@ two family memberships, one qualified prospective variant, two components, and t
 related systems. Every relationship has exact retained quotes from both endpoints;
 none merges IDs, propagates facts, or creates transitive equivalence.
 
-New commands under validation:
+New JSON commands:
 
 ```sh
 pipelines facts SOURCE:ID
@@ -617,10 +617,59 @@ Manufacturer/contractor and origin/designer/operator/site countries remain disti
 Source-reported IOC may be planned; its development status remains a separate claim.
 Capture and publication/update dates never become equipment events.
 
-Synthetic producer/consumer/command tests and full-bundle schema checks are complete.
-Native acceptance, source-fixture evaluation, unchanged ranking checks, reproducible
-packaging, and final resource measurements are in progress. The root README remains
-scheduled for M10.
+The 29-field catalog preserves 24,416 claims: 19,101 known, 886 unknown, 4,426 unparsed,
+and three approximate. These statuses describe parsing, not independent verification
+of a source's claim. Source mappings cover 18,723 original facts across nine sources;
+Commons and ClimateViewer retain their original records and capture-date claims.
+Relationships cover 13 selected reviewed pairs, not exhaustive corpus-wide linking.
+Missing fields remain explicit unknowns in comparisons; original `get` output is intact.
+
+Implementation `beafc67b` passes all six [CI jobs](https://github.com/osint-builders/pipelines/actions/runs/35656910425)
+and [encoder checks on all five native targets](https://github.com/osint-builders/pipelines/actions/runs/35656910463).
+Windows Python tests: 777 passed, one skipped; Linux: 776 passed, two skipped.
+The 63-command source evaluation verifies 15 fact cases, 15 filter cases, all 13 links
+from both endpoints, 36 exact archived quotes, eight ambiguous negatives, and 196
+explicit unknown comparison cells. Repeated responses, stable IDs, raw facts, and
+evidence locators match. All 116 baseline ranks and first-result IDs remain unchanged,
+including 73/73 required results first. Twelve complete default query responses match
+M7 apart from the dataset ID, including image, combined, and observation modes.
+
+The public packager reproduces the complete bundle byte-for-byte (`changed: false`);
+all 10,511 original M7 members remain unchanged. Windows and Linux full-bundle
+acceptance and all ten embedded probes pass. Linux ran without networking, with a
+read-only filesystem and no added capabilities. Query-free research commands need
+no model inference. Existing bundles without the research extension remain supported.
+
+Full dataset: `a31e79c211177bf1f04a6d45114104e6bbb84d0982cc90816a83dec1b84c9389`.
+Restricted benchmark: `44f5dc64a18ccdb2479db08811f7394fea70ec1db9671adef42ba67e1233e0fe`.
+The Windows executable SHA-256 is
+`d92dbbd8f46cbb3cb9df6749739c30e568f80fe2681819730397e27af664a2ce`.
+Windows reference measurements use one first observed process and 20 subsequent fresh
+processes per command, without concurrent build/test/analysis jobs from this task.
+The filesystem cache was not cleared; these are complete process launches, not a
+resident service or reboot-cold measurement.
+
+| Command | First / repeated p95 | Peak working set |
+| --- | --- | --- |
+| Default text, same M1/M7 query | 2.618 / 2.683 s | 943.58 MiB |
+| List with `manufacturer=Thales` | 1.118 / 1.150 s | 707.46 MiB |
+| Text with `manufacturer=Thales` | 3.410 / 3.406 s | 1,073.47 MiB |
+
+Default text changes by less than 1% from M7 in latency and memory. Its memory is
+19.3% above M1, within the 20% allowance; p95 remains 35.3% above M1 and fails the
+relative latency budget. Filtered text exceeds the 3 s absolute p95 limit. Its query
+differs from the M1 probe, so no relative latency/memory comparison is claimed.
+All measured commands fit the 2 GiB absolute memory limit. List has no frozen
+mode-specific latency target. These gaps join the existing M7 release work in M10.
+
+The standalone Windows executable is 242.92 MiB; its single-binary ZIP is 232.65 MiB,
+within the 320/256 MiB limits. Review artifacts are in ignored `build/m8/`:
+`pipelines.exe`, `pipelines-windows-amd64.zip`, `pipelines-linux`, and `full-dataset.zip`.
+Validation reports in that directory: `evaluation.json`, `default-parity.json`,
+`text-regression-comparison.json`, `public-package.json`, `windows-acceptance.json`,
+`linux-acceptance.json`, `ci.json`, `claim-coverage-final.json`, `performance.json`,
+`distribution-size.json`, and `resource-gates.json`. No release was published.
+The root README remains scheduled for M10. Await user verification before M9.
 
 ## M9 — Media coverage across all sources
 
@@ -653,7 +702,7 @@ rebuilt from local captures. Each source must account for outstanding failures.
 - [ ] Verify top-result accuracy, recall within the first five results, confusable variants, and no-match behavior meet M1's targets.
 - [ ] Calibrate no-match decisions on larger development sets: M7 text negatives return candidates for 4/4 global and 3/4 filtered queries; image/generated modes currently abstain even for positive queries.
 - [ ] Measure cold/warm latency, peak memory, and compressed executable size on all supported targets.
-- [ ] Bring text within the frozen budgets: M7 default p95 is 2.662 s against M1's relative limit of 2.380 s; observation text is 3.556 s against 3 s absolute and uses 1,070.64 MiB against the 949.30 MiB relative allowance.
+- [ ] Bring text within the frozen budgets: M8 default p95 is 2.683 s against M1's relative limit of 2.380 s; M8 filtered text is 3.406 s against 3 s absolute; M7 observation text is 3.556 s and uses 1,070.64 MiB against the 949.30 MiB relative allowance.
 - [ ] Build and test one standalone executable per platform with required models, indices, evidence, and selected previews embedded.
 - [ ] Validate deterministic dataset identities, cached rebuilds, checksums, source exports, and operation without network access.
 - [ ] Extend release change detection and tag identity to include image artifacts; the existing gate compares text content only.
