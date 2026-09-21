@@ -3,7 +3,7 @@
 Help researchers and educators find static entities quickly using names, descriptions,
 specifications, and images, with every result linked to captured evidence.
 
-**Progress:** 2/10 milestones verified. **Active:** M3, implementation and live pilot.
+**Progress:** 2/10 milestones verified. **Active:** M3, ready for user verification.
 
 **Branch:** `feature/multimodal-entity-search`.
 
@@ -21,7 +21,7 @@ commands and the source table.
 | --- | --- | --- |
 | M1 — Baseline and acceptance targets | Existing CLI | Verified by user; `5102380`, baseline and seed checks passed; four visual cases tracked for M3 |
 | M2 — Shared media evidence and archive | M1 | Verified by user; `55d4046`, 250 tests and GitHub CI passed; offline compatibility confirmed |
-| M3 — Two-source media pilot | M2 | In progress: `00e7fd9`; 294 tests; MP complete, Commons capture running, 21 images reviewed |
+| M3 — Two-source media pilot | M2 | Ready for verification; `4f60ccd`, `build/m3/coverage.json`; 2,799 saved files, 294 tests and CI passed |
 | M4 — Portable image encoder | M1, M3 | Planned |
 | M5 — Image and combined queries | M2, M3, M4 | Planned |
 | M6 — OCR and visual descriptions | M3, M5 | Planned |
@@ -75,13 +75,13 @@ Repeat from the repository root with the full local CLI:
 uv run --no-sync python tools/benchmark_cli.py dist/release/pipelines-windows-amd64.exe --releases dist/release --repeats 5 --output build/m1/baseline.json
 ```
 
-Seed fixture: [multimodal.json](tests/fixtures/multimodal.json), with 29 cases and
-20 captured assets (17 originals, three crops; 2.61 MiB). Ten text cases and 15 visual
-cases have ready inputs. Four visual cases remain unscored: the captured Bofors diagram
-needs an independent gallery view; two Commons variant cases need images; a Commons
-diagram needs both. Six Commons originals returned HTTP 429; further requests stopped.
-M3 must resolve these gaps and expand the seed before model evaluation. The seed does
-not establish image-search quality or satisfy the larger release sample minimums.
+At M1 verification, [multimodal.json](tests/fixtures/multimodal.json) contained 29 cases
+and 20 captured assets (17 originals, three crops; 2.61 MiB). Ten text and 15 visual
+cases had ready inputs. Four visual cases were unscored: Bofors needed an independent
+gallery view; two Commons variant cases needed images; a Commons diagram needed both.
+Six Commons originals returned HTTP 429 and further requests stopped. M3 restoration
+and expansion results are below. The seed does not establish image-search quality or
+satisfy the larger release sample minimums.
 
 Validated photo-group separation, crop bounds, all 20 cached hashes, and all 27 media
 evidence references against the full CLI. Originals and crops stay under ignored
@@ -149,49 +149,65 @@ Reports: `build/m2/archive-smoke.json`, `build/m2/compatibility.json`,
 ## M3 — Two-source media pilot
 
 - [x] Capture Military Periscope images from structured content blocks, preserving captions and section/subject associations.
-- [ ] Capture Wikimedia Commons media from file records, resolving original files and available previews.
-- [ ] Exclude navigation graphics and unrelated illustrations; represent ambiguous or multiple depicted entities explicitly.
-- [ ] Publish media manifests and coverage reports for both sources through the shared pipeline.
+- [x] Capture Wikimedia Commons media from file records, resolving original files and available previews.
+- [x] Exclude navigation graphics and unrelated illustrations; represent ambiguous or multiple depicted entities explicitly.
+- [x] Publish media manifests and coverage reports for both sources through the shared pipeline.
 - [x] Select representative pilot images for retrieval evaluation and inspect their entity associations.
 
 Complete when both sources use the same media workflow and every discovered candidate
 has a recorded outcome. Failed downloads remain visible and resumable.
 
-Working scope: implement both adapters against the existing archived pages, retain
-original/preview relationships and page-level subject context, then capture through
-the shared downloader. Publish per-entity coverage and inspect representative saved
-images. Keep text exports unchanged and preserve the M1 query/gallery separation.
-M4 remains gated on user verification of this milestone.
+Both adapters use the shared media interface, downloader, archive, coverage report,
+and offline publication. Source-specific discovery stays in each source's folder.
+Occurrences retain captions, sections, evidence/entity pairs, original/preview links,
+and ambiguous associations. Saved URLs are distinct from underlying original groups.
+Bounded workers share request pacing and stop on throttling; verified images survive
+interruptions. Commons uses four workers with request starts spaced one second apart.
 
-Shared support now retains discovery occurrences, captions, sections, preview parents,
-and ambiguous associations. Eligible occurrences take precedence over unrelated uses
-of the same URL. Coverage distinguishes captured URLs from original-image groups;
-source request pacing is shared. Initial inspection found 455 structured Military
-Periscope originals, one additional inline image, and 1,374 Commons file pages.
-Text snapshot hashes are recorded in `build/m3/text-before.json`.
+Pilot results from the existing archived pages:
 
-Military Periscope capture is complete: 427 saved, no failures, 29 unassociated
-collection images, and two excluded navigation logos; 132/143 entities have images.
-Offline publication and audit passed with the exact text export hash unchanged.
-Commons capture resumed successfully after a throttle at 612 saved. Its manifest includes original
-files, one selected raster preview per file, redundant-preview exclusions, and explicit
-unsupported/oversized outcomes. Shared capture now uses bounded workers, one rate
-limit across requests and redirects, and immediate stopping on throttling. Commons
-resumes after Retry-After with four workers and request starts spaced one second
-apart. No saved images need downloading again. All 294 tests, Ruff, mypy, and the
-Python package build pass; the final live coverage audit remains in progress.
-Both offline publications preserve their previous text export hashes. Commons has
-passed 1,000 saved images. Linux, Go, and Docker CI passed. The Windows pacing test
-now checks deterministic client admissions instead of server arrival timing; its
-targeted check passed ten repeated Windows runs. The full CI rerun is pending.
+| Source | Discovered URLs | Saved originals / previews | Failed | Excluded | Unassociated | Entities with media |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Military Periscope | 458 | 427 / 0 | 0 | 2 | 29 | 132/143 |
+| Commons | 9,209 | 1,153 / 1,219 | 44 | 6,495 | 298 | 148/151 |
 
-The reviewed inventory is [media_pilot.json](tests/fixtures/media_pilot.json): 12
-Military Periscope and nine Commons images. Associations remain source context;
-review notes identify class illustrations, concept renderings, site photographs,
-multiple subjects, and conflicting labels. Existing M1 photograph splits are retained.
-The Bofors record still has only its original diagram, so its independent-gallery gap
-remains open. Other pending seed pairs will be checked as Commons capture completes.
-Detailed visual reviews and the Military Periscope audit are under `build/m3/`.
+No candidates remain pending. All 280 entities with candidates have saved media;
+14 entities have no candidates. The archive contains 2,799 verified image files
+(2.94 GiB), covering 1,650 original groups. Commons exclusions include redundant
+previews and unsupported or oversized originals. Its 44 failed originals comprise
+42 unsupported formats and two invalid images; every one has a saved preview.
+Failures remain retryable and keep the Commons media audit's `complete`/`ok` false.
+Military Periscope's audit passes. Every discovered candidate has a recorded outcome.
+
+Both final snapshots were published with network access disabled. Text export hashes
+are unchanged. Media integrity and entity/evidence references pass validation;
+capture outcomes and per-entity coverage are in `build/m3/coverage.json`.
+Source audits are `build/m3/militaryperiscope-audit.json` and
+`build/m3/commons-audit.json`. Local originals remain in
+`C:/Users/erikz/.hai/reference-data/media/objects`; generated data stays outside Git.
+
+The reviewed inventory is [media_pilot.json](tests/fixtures/media_pilot.json):
+12 Military Periscope and nine Commons images. Source-context review records class
+illustrations, renderings, site views, multiple subjects, and conflicting labels.
+It does not establish exact-variant ground truth. The restored Commons seed pairs
+retain their frozen M1 photograph groups and splits; shared exhibition backgrounds
+and partial equipment views are recorded as evaluation limitations. Cross-source
+photo-group exclusion remains required before scoring a full-corpus image index.
+The seed now has 27 captured, inspected assets and 30 cases, with 28 ready inputs.
+Both 1L122 variant cases are ready and a 96L6E unseen-view case is added. Two diagram
+cases remain unscored: Bofors has no independent gallery image in this capture;
+Dunay's comparable satellite scene may belong to the drawing's source-photo family,
+while reviewed ground views lack comparable radar geometry. Existing M1 query IDs,
+splits, photograph groups, captured hashes, and numerical targets are unchanged.
+All 27 media evidence associations were checked against local snapshots.
+Reports: `build/m3/seed-validation.json`, `build/m3/seed-pairs-review.json`, and
+`build/m3/dunay-pair-review.json`.
+
+Validation: 294 Python tests, Ruff lint/format, full-project mypy, and package build
+pass. GitHub CI passed at `4f60ccd`, covering Python on Windows/Linux, Go on three
+platforms, and the offline Docker smoke check. All three final seed/pilot fixture
+checks pass, including the 27 locally cached image hashes.
+M4 waits for user verification of M3.
 
 ## M4 — Portable image encoder
 
@@ -273,8 +289,8 @@ rebuilt from local captures. Each source must account for outstanding failures.
 
 | Source | Status | Completion evidence |
 | --- | --- | --- |
-| militaryperiscope | Pilot pending | — |
-| commons | Pilot pending | — |
+| militaryperiscope | Media pilot captured; M9 processing pending | M3: 427 originals; 132 entities with media |
+| commons | Media pilot captured; M9 processing pending | M3: 2,372 originals/previews; 148 entities with media; 44 failed originals have previews |
 | radartutorial | Pending | — |
 | deagel | Pending | — |
 | virtualglobetrotting | Pending | — |

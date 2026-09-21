@@ -1,16 +1,16 @@
 {
   "schema_version": 1,
-  "status": "seed_pending_user_verification",
-  "scope": "M1 readiness fixture. No visual encoder or image-query quality is measured. This small sample cannot satisfy the release gates.",
+  "status": "seed_inputs_reviewed_m3",
+  "scope": "M1 seed restored and expanded during M3. Original splits and acceptance targets are unchanged. No visual encoder or image-query quality is measured; this sample cannot satisfy the release gates.",
   "snapshots": {
-    "militaryperiscope": "20260920T170104Z-0ae89487",
-    "commons": "20260920T035126Z-0b1135ca",
+    "militaryperiscope": "20260921T150619Z-2e665ec1",
+    "commons": "20260921T154713Z-cbe866b2",
     "radartutorial": "20260920T010304Z-272e47ad",
     "cambridgepixel": "20260920T060525Z-8ae83066",
     "deagel": "20260920T020600Z-64cbdffa"
   },
   "restore": {
-    "originals": "GET each captured original's exact URL into local_path; require HTTP 200 image content and matching SHA256 before use. No credentials were required for this seed. Do not substitute changed bytes after an upstream update.",
+    "originals": "Prefer verified originals from the local media archive via archive_media_id when present. Otherwise GET capture_url (or url) into local_path; require HTTP 200 image content and matching SHA256. Do not substitute changed bytes after an upstream update.",
     "derivatives": "Restore parent first, then crop_box_xyxy without scaling. Original captures are JPEG; derivatives are PNG. The recorded SHA256 values pin the local copies.",
     "derivative_encoder": "Windows .NET System.Drawing.Bitmap.Clone(Rectangle(left, top, right-left, bottom-top), parent.PixelFormat), saved with System.Drawing.Imaging.ImageFormat.Png.",
     "secrets": "No authentication material is stored in this fixture. Read source-scoped runtime credentials only if a future original request requires them."
@@ -21,19 +21,19 @@
     "exclusions": "Exclude every development/evaluation photo group and all cross-source copies, resized copies, crops and other derivatives from the image index, even after full media capture. Missing near-duplicate checks block a held-out quality claim.",
     "development": "May tune retrieval and thresholds; never move its photos to evaluation.",
     "evaluation": "Reserved for evaluation after choices are frozen. Multiple cases from one photograph are one independent sample, not extra observations.",
-    "pending_media": "Pending media and cases are excluded from scored metrics and claimed coverage. Commons group independence remains provisional until pixels can be inspected.",
+    "pending_media": "Pending cases are excluded from scored metrics. All seed images are captured and inspected; Bofors and Dunay diagram cases still lack suitable independent gallery references.",
     "cropping": "crop_box_xyxy uses original decoded pixel coordinates and exclusive right/bottom bounds; derivatives inherit the parent's split and photo group."
   },
   "review": {
-    "agent": "All 20 captured fixture images were visually inspected. Captions and entity associations were checked against archived evidence. No domain expert or user verification has occurred.",
+    "agent": "All 27 fixture images were visually inspected, including seven Commons originals restored during M3. Captions and entity associations were checked against archived evidence. No domain expert or user verification of these labels has occurred.",
     "human_status": "pending",
     "limitations": [
       "Source labels identify record-level families; exact vehicle/aircraft variants are not independently established.",
       "Some images retain readable model labels and depict multiple examples of the same family. Cropped controls remove publisher model-name overlays, not all natural markings.",
       "Cross-source visual deduplication has not run; the eventual evaluation index must enforce photo-group exclusion before any unseen-view claim.",
-      "Six Commons originals returned HTTP 429; no retry or alternate-origin attempt was made. Diagram download was deferred after those responses.",
-      "A real captured diagram is query-ready but cannot be scored until M3 supplies an independent gallery image. No matching-entity negatives are easy controls only; realistic unrelated equipment remains needed.",
-      "The Al Zarrar/Type 96 contrast is a related tank-class distractor, not a demonstrated sibling-variant distinction. True 1L122 variant image cases remain pending."
+      "The 1L122E and 1L122-2E pairs use distinct exposures but share an exhibition context across development and evaluation. They do not establish independent capture-session coverage, and both variants can appear in one frame.",
+      "Bofors and Dunay diagram queries are captured but unscored until suitable independent gallery references exist. The Dunay drawing may derive from the KH-7 reconnaissance family; keep the full scene and its crops out of that case gallery until resolved.",
+      "No-match images are easy controls only; realistic unrelated equipment remains needed. The Al Zarrar/Type 96 contrast is a related tank-class distractor, not a demonstrated sibling-variant distinction."
     ]
   },
   "media": [
@@ -490,10 +490,17 @@
       "title": "Almaz-Antey 1L122-2E at MAKS-2009.jpg",
       "photo_group": "commons-9e5b95b511993464c594f495",
       "split": "gallery",
-      "status": "http_429",
-      "review_status": "pending_visual_review",
-      "label_basis": "Archived file evidence associates image with this entity; exact visual content and cross-photo independence still need inspection.",
-      "kind": "photograph"
+      "status": "captured",
+      "review_status": "agent_inspected",
+      "label_basis": "Both archived captions identify 1L122-2E and both frames show the tracked platform carrying the rectangular array. Visible vehicle placards support this source label.",
+      "kind": "photograph",
+      "sha256": "e12fb588369c877ab6e776194f40a6fd51c6bbdea360de86940a7b44562e982d",
+      "bytes": 2019608,
+      "width": 2816,
+      "height": 2112,
+      "local_path": "build/m1/media/commons-9e5b95b511993464c594f495.jpg",
+      "archive_media_id": "commons:media:c767539030f5a2d50a93b323",
+      "capture_url": "https://upload.wikimedia.org/wikipedia/commons/a/aa/Almaz-Antey_1L122-2E_at_MAKS-2009.jpg?utm_source=commons.wikimedia.org&utm_campaign=index&utm_content=original"
     },
     {
       "id": "commons-460c826d0ae0d9c0e38a07bc",
@@ -506,10 +513,17 @@
       "title": "MAKS-2009-213.jpg",
       "photo_group": "commons-460c826d0ae0d9c0e38a07bc",
       "split": "evaluation",
-      "status": "http_429",
-      "review_status": "pending_visual_review",
-      "label_basis": "Archived file evidence associates image with this entity; exact visual content and cross-photo independence still need inspection.",
-      "kind": "photograph"
+      "status": "captured",
+      "review_status": "agent_inspected",
+      "label_basis": "Both archived captions identify 1L122-2E and both frames show the tracked platform carrying the rectangular array. Visible vehicle placards support this source label.",
+      "kind": "photograph",
+      "sha256": "95629e855906c150ca9730b69814405d5b3871f8c6386413fffb3977cd9c870e",
+      "bytes": 1700996,
+      "width": 2250,
+      "height": 1500,
+      "local_path": "build/m1/media/commons-460c826d0ae0d9c0e38a07bc.jpg",
+      "archive_media_id": "commons:media:c6f14cc32abf3ef78b6b841f",
+      "capture_url": "https://upload.wikimedia.org/wikipedia/commons/b/b4/MAKS-2009-213.jpg?utm_source=commons.wikimedia.org&utm_campaign=index&utm_content=original"
     },
     {
       "id": "commons-e185589e0b985cd5c71eeed3",
@@ -522,10 +536,17 @@
       "title": "MAKS-2009-210.jpg",
       "photo_group": "commons-e185589e0b985cd5c71eeed3",
       "split": "gallery",
-      "status": "http_429",
-      "review_status": "pending_visual_review",
-      "label_basis": "Archived file evidence associates image with this entity; exact visual content and cross-photo independence still need inspection.",
-      "kind": "photograph"
+      "status": "captured",
+      "review_status": "agent_inspected",
+      "label_basis": "Both archived captions explicitly identify portable radar 1L122E and both images show that foreground tripod assembly. Its portable mounting distinguishes it from the tracked 1L122-2E confusable target in the existing source categories.",
+      "kind": "photograph",
+      "sha256": "f5a6c76b100a9c027717a4f6c1d440c99122e34883b091d3e52814cfa8704973",
+      "bytes": 2024422,
+      "width": 2250,
+      "height": 1500,
+      "local_path": "build/m1/media/commons-e185589e0b985cd5c71eeed3.jpg",
+      "archive_media_id": "commons:media:aad1736ab57fd299d5815c89",
+      "capture_url": "https://upload.wikimedia.org/wikipedia/commons/9/93/MAKS-2009-210.jpg?utm_source=commons.wikimedia.org&utm_campaign=index&utm_content=original"
     },
     {
       "id": "commons-77e98441df9f37ab8a02c2fb",
@@ -538,10 +559,17 @@
       "title": "MAKS-2009-211.jpg",
       "photo_group": "commons-77e98441df9f37ab8a02c2fb",
       "split": "development",
-      "status": "http_429",
-      "review_status": "pending_visual_review",
-      "label_basis": "Archived file evidence associates image with this entity; exact visual content and cross-photo independence still need inspection.",
-      "kind": "photograph"
+      "status": "captured",
+      "review_status": "agent_inspected",
+      "label_basis": "Both archived captions explicitly identify portable radar 1L122E and both images show that foreground tripod assembly. Its portable mounting distinguishes it from the tracked 1L122-2E confusable target in the existing source categories.",
+      "kind": "photograph",
+      "sha256": "9f875455e8417d595748079920191faeb52ff696434a250dbf0b7ecaf90ecdab",
+      "bytes": 2567191,
+      "width": 2250,
+      "height": 1500,
+      "local_path": "build/m1/media/commons-77e98441df9f37ab8a02c2fb.jpg",
+      "archive_media_id": "commons:media:0bc85ce675c62698557770d3",
+      "capture_url": "https://upload.wikimedia.org/wikipedia/commons/7/78/MAKS-2009-211.jpg?utm_source=commons.wikimedia.org&utm_campaign=index&utm_content=original"
     },
     {
       "id": "commons-e5861bb23b36732c197cf0ab",
@@ -554,10 +582,17 @@
       "title": "96L6E at the MAKS-2011 (01).jpg",
       "photo_group": "commons-e5861bb23b36732c197cf0ab",
       "split": "gallery",
-      "status": "http_429",
-      "review_status": "pending_visual_review",
-      "label_basis": "Archived file evidence associates image with this entity; exact visual content and cross-photo independence still need inspection.",
-      "kind": "photograph"
+      "status": "captured",
+      "review_status": "agent_inspected",
+      "label_basis": "Both archived captions identify 96L6E; visible array support, raised sensor assembly and wheeled platform are consistent with that label. The evidence labels type rather than the same physical vehicle.",
+      "kind": "photograph",
+      "sha256": "ec139a93f6900e762f82b8dcca0a6693593a5bd4f824e6ca60e524b7b35a9922",
+      "bytes": 1136176,
+      "width": 3970,
+      "height": 2670,
+      "local_path": "build/m1/media/commons-e5861bb23b36732c197cf0ab.jpg",
+      "archive_media_id": "commons:media:03251793a5f6ac1b9abdfa17",
+      "capture_url": "https://upload.wikimedia.org/wikipedia/commons/3/34/96L6E_at_the_MAKS-2011_%2801%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=index&utm_content=original"
     },
     {
       "id": "commons-c6da92f5b27a91502667344e",
@@ -570,10 +605,17 @@
       "title": "Всевысотный обнаружитель 96Л6Е - Парка Патриот 01.jpg",
       "photo_group": "commons-c6da92f5b27a91502667344e",
       "split": "evaluation",
-      "status": "http_429",
-      "review_status": "pending_visual_review",
-      "label_basis": "Archived file evidence associates image with this entity; exact visual content and cross-photo independence still need inspection.",
-      "kind": "photograph"
+      "status": "captured",
+      "review_status": "agent_inspected",
+      "label_basis": "Both archived captions identify 96L6E; visible array support, raised sensor assembly and wheeled platform are consistent with that label. The evidence labels type rather than the same physical vehicle.",
+      "kind": "photograph",
+      "sha256": "949369a71f782922da4bd3f1c719c2a72c9e0f85602e750b0123945b5ba80f69",
+      "bytes": 2241069,
+      "width": 2250,
+      "height": 1500,
+      "local_path": "build/m1/media/commons-c6da92f5b27a91502667344e.jpg",
+      "archive_media_id": "commons:media:ac02515f6bdfd56fe588ba8a",
+      "capture_url": "https://upload.wikimedia.org/wikipedia/commons/9/99/%D0%92%D1%81%D0%B5%D0%B2%D1%8B%D1%81%D0%BE%D1%82%D0%BD%D1%8B%D0%B9_%D0%BE%D0%B1%D0%BD%D0%B0%D1%80%D1%83%D0%B6%D0%B8%D1%82%D0%B5%D0%BB%D1%8C_96%D0%9B6%D0%95_-_%D0%9F%D0%B0%D1%80%D0%BA%D0%B0_%D0%9F%D0%B0%D1%82%D1%80%D0%B8%D0%BE%D1%82_01.jpg?utm_source=commons.wikimedia.org&utm_campaign=index&utm_content=original"
     },
     {
       "id": "commons-e708785bdbe07bee182dea25",
@@ -586,10 +628,17 @@
       "title": "Dunay-3 radar US drawing.JPEG",
       "photo_group": "commons-e708785bdbe07bee182dea25",
       "split": "evaluation",
-      "status": "not_requested_after_origin_429",
-      "review_status": "pending_visual_review",
-      "label_basis": "Archived file evidence associates image with this entity; exact visual content and cross-photo independence still need inspection.",
-      "kind": "diagram"
+      "status": "captured",
+      "review_status": "agent_inspected",
+      "label_basis": "Archived caption identifies US military drawing DD-ST-86-06623 of Dunay-3. Agent inspected its oblique aerial view of two installations; the source imagery used by the illustrator is unknown.",
+      "kind": "diagram",
+      "sha256": "4a96fd1d1214a3ea54b48416ad07e18fbfa4492fb73d9ee467e17ad37b53fcb6",
+      "bytes": 4183388,
+      "width": 2440,
+      "height": 1780,
+      "local_path": "build/m1/media/commons-e708785bdbe07bee182dea25.jpg",
+      "archive_media_id": "commons:media:f70ab6da7266249a5c1494ca",
+      "capture_url": "https://upload.wikimedia.org/wikipedia/commons/1/16/Dunay-3_radar_US_drawing.JPEG?utm_source=commons.wikimedia.org&utm_campaign=index&utm_content=original"
     }
   ],
   "cases": [
@@ -1017,13 +1066,13 @@
       "expected_ids": [
         "militaryperiscope:319903"
       ],
-      "label_basis": "Agent inspected the captured, source-labeled diagram. Query asset is ready; scoring waits for an independent gallery image during M3. The composite itself must never enter the benchmark gallery."
+      "label_basis": "Agent inspected the captured, source-labeled diagram. M3 found no independent gallery image in this record; scoring remains pending. The composite itself and its crops must never enter the benchmark gallery."
     },
     {
       "id": "image-commons-460c826d0ae0d9c0e38a07bc",
       "task": "confusable_variant",
       "split": "evaluation",
-      "status": "pending_media_and_review",
+      "status": "ready",
       "query": {
         "image_id": "commons-460c826d0ae0d9c0e38a07bc",
         "source": "commons"
@@ -1031,19 +1080,26 @@
       "expected_ids": [
         "commons:54320747"
       ],
-      "label_basis": "Archived file evidence associates image with this entity; exact visual content and cross-photo independence still need inspection.",
+      "label_basis": "Both archived captions identify 1L122-2E and both frames show the tracked platform carrying the rectangular array. Visible vehicle placards support this source label.",
       "confusable_ids": [
         "commons:54320786"
       ],
       "reference_media_ids": [
         "commons-9e5b95b511993464c594f495"
+      ],
+      "independence_basis": "The images show different sides and perspectives of the vehicle, different visible faces of the tilted panel, different background arrangements and different visitors. Neither frame is a crop, resize or alternate encoding of the other.",
+      "limitations": [
+        "The gallery contains many prominent people and the neighboring portable 1L122E tripod array, so a whole-frame embedding may focus on the confusable target or exhibition context.",
+        "The query includes neighboring radar exhibits; whole-frame matching must retain that ambiguity instead of treating every visible radar as the labeled entity.",
+        "Both images depict the same exhibition; independent exposures do not provide independent capture-session coverage.",
+        "The 1L122E development pair shares this exhibition context with the 1L122-2E evaluation pair. They are distinct underlying photos, but session/context correlation remains."
       ]
     },
     {
       "id": "image-commons-77e98441df9f37ab8a02c2fb",
       "task": "confusable_variant",
       "split": "development",
-      "status": "pending_media_and_review",
+      "status": "ready",
       "query": {
         "image_id": "commons-77e98441df9f37ab8a02c2fb",
         "source": "commons"
@@ -1051,19 +1107,25 @@
       "expected_ids": [
         "commons:54320786"
       ],
-      "label_basis": "Archived file evidence associates image with this entity; exact visual content and cross-photo independence still need inspection.",
+      "label_basis": "Both archived captions explicitly identify portable radar 1L122E and both images show that foreground tripod assembly. Its portable mounting distinguishes it from the tracked 1L122-2E confusable target in the existing source categories.",
       "confusable_ids": [
         "commons:54320747"
       ],
       "reference_media_ids": [
         "commons-e185589e0b985cd5c71eeed3"
+      ],
+      "independence_basis": "Different viewpoint shows the opposite face of the foreground tripod assembly. Background arrangement, people and relative object perspectives differ; the images are not a crop, resize or alternate encoding of one photograph.",
+      "limitations": [
+        "Photographs come from the same exhibition and photographer, so they are independent exposures but not independent capture sessions.",
+        "Large background radar vehicles may confuse whole-frame retrieval; the foreground tripod is the intended label.",
+        "This review does not certify a serial-number identity or any equipment specification."
       ]
     },
     {
       "id": "image-commons-diagram",
       "task": "diagram",
       "split": "evaluation",
-      "status": "pending_media_and_reference",
+      "status": "pending_independent_gallery",
       "query": {
         "image_id": "commons-e708785bdbe07bee182dea25",
         "source": "commons"
@@ -1071,7 +1133,33 @@
       "expected_ids": [
         "commons:18438063"
       ],
-      "label_basis": "Archived title names a US drawing of Dunay-3. Download, independent reference-gallery image selection, and visual inspection remain pending."
+      "label_basis": "Archived caption identifies US military drawing DD-ST-86-06623 of Dunay-3. Agent inspected its oblique aerial view of two installations; the source imagery used by the illustrator is unknown.",
+      "limitations": [
+        "The captured Dunay drawing is reviewed and usable as the existing diagram query, but this bounded review did not establish an independent, visually comparable gallery reference. Keep the seed pending_independent_gallery. The KH-7 scene is relevant but its independence from the drawing source is unknown; the reviewed independent ground photographs show an interior or bare ruined facade.",
+        "Exclude the KH-7 full scene and its transmitter/receiver crops from this case gallery while their independence from the drawing is unknown."
+      ]
+    },
+    {
+      "id": "image-commons-c6da92f5b27a91502667344e",
+      "task": "unseen_view",
+      "split": "evaluation",
+      "query": {
+        "image_id": "commons-c6da92f5b27a91502667344e",
+        "source": "commons"
+      },
+      "expected_ids": [
+        "commons:49483718"
+      ],
+      "reference_media_ids": [
+        "commons-e5861bb23b36732c197cf0ab"
+      ],
+      "status": "ready",
+      "label_basis": "Both archived captions identify 96L6E; visible array support, raised sensor assembly and wheeled platform are consistent with that label. The evidence labels type rather than the same physical vehicle.",
+      "independence_basis": "Substantially different camera elevation, surroundings, framing and background exhibits prove separate exposures. It is not a derivative crop of the gallery photograph.",
+      "limitations": [
+        "Query is a partial equipment view with the antenna clipped at the top.",
+        "Identity remains tied to the archived source label; no independent equipment-specification claim is made."
+      ]
     }
   ]
 }
