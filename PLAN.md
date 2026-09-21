@@ -3,7 +3,7 @@
 Help researchers and educators find static entities quickly using names, descriptions,
 specifications, and images, with every result linked to captured evidence.
 
-**Progress:** 8/10 milestones verified. **Active:** M9 in progress.
+**Progress:** 8/10 milestones verified. **Active:** M9 ready for verification.
 
 **Branch:** `feature/multimodal-entity-search`.
 
@@ -27,7 +27,7 @@ commands and the source table.
 | M6 — OCR and visual descriptions | M3, M5 | Verified by user; `3bb8c29`, 542 tests and CI pass; 1,694 observations, cache reuse, held-out ranking and offline CLI checks complete; opt-in text resource gaps tracked in M10 |
 | M7 — Better text and combined ranking | M1, M5, M6 | Verified by user; `0d20f4a`, CI and offline acceptance pass; 116 baseline ranks preserved, new text 18/18 within five; latency and calibration gaps tracked in M10 |
 | M8 — Entity relationships and precise filters | M1, M7 | Verified by user; `beafc67b`, CI and offline acceptance pass; 63 evidence checks, 116 unchanged baseline ranks; resource gaps tracked in M10 |
-| M9 — Media coverage across all sources | M3, M5, M6 | In progress; nine remaining media adapters, shared coverage audit, and local capture/processing rollout |
+| M9 — Media coverage across all sources | M3, M5, M6 | Ready for verification; `62d438c`, 822 tests and CI pass; all 11 sources audited, 9,696 saved media records, deterministic offline rebuild and Windows/Linux CLI acceptance |
 | M10 — Quality gates and compact releases | M4–M9 | Planned |
 
 Advance in milestone order and stop for user verification between milestones.
@@ -674,11 +674,11 @@ authorized M9.
 
 ## M9 — Media coverage across all sources
 
-- [ ] Complete the rollout table below using the shared interfaces; keep adapters limited to website-specific behavior.
-- [ ] Audit original image resolution, captions, entity associations, duplicates, and failed captures for each source.
-- [ ] Build image vectors and derived text for applicable media and publish per-source coverage metrics.
-- [ ] Verify unchanged media reuse cached analysis and vector output on repeat builds.
-- [ ] Require an explicit outcome for sources or records with no applicable images; avoid substituting logos or unrelated pictures.
+- [x] Complete the rollout table below using the shared interfaces; keep adapters limited to website-specific behavior.
+- [x] Audit original image resolution, captions, entity associations, duplicates, and failed captures for each source.
+- [x] Build image vectors and derived text for applicable media and publish per-source coverage metrics.
+- [x] Verify unchanged media reuse cached analysis and vector output on repeat builds.
+- [x] Require an explicit outcome for sources or records with no applicable images; avoid substituting logos or unrelated pictures.
 
 Complete when every source has an audited media capability and the full dataset can be
 rebuilt from local captures. Each source must account for outstanding failures.
@@ -694,27 +694,84 @@ Source text, reviewed relationships, and the frozen evaluation gallery remain pr
 Implementation `62d438c` passes 822 local Python tests, lint/format/type checks,
 all six [CI jobs](https://github.com/osint-builders/pipelines/actions/runs/35660734830),
 and [image encoder checks on all five native targets](https://github.com/osint-builders/pipelines/actions/runs/35660734788).
-Independent preliminary audit verified all source snapshot identities, 4,324 archived
-responses, and every captured entity/evidence reference. Final capture, gallery,
-observation, cache-reuse, and standalone CLI checks remain in progress. All downloads
-have reached a saved, failed, excluded, or unassociated outcome; no requests remain
-pending. Every source has been rediscovered with complete occurrence contexts.
-The first expanded gallery built offline; the final gallery and CUDA image analysis
-are running with the existing model recipes and 32 MiB embedded-preview budget.
+Final archive audit verifies all 11 unchanged source snapshots, 4,324 archived responses,
+and 9,674 unique image blobs (3,380,509,962 bytes). All 9,696 saved image records are
+represented. Captured media covers 3,103 entities; 915 entities have no applicable images.
+There are no pending downloads. The 68 failed captures remain explicit: 44 Commons
+originals retain saved previews (41 unsupported formats, two invalid files, one HTTP 429),
+20 ClimateViewer links fail (11 network errors, nine HTTP 404), and four RadarTutorial
+links fail (two HTTP 404, two MIME mismatches). Uncertain associations stay marked.
 
-| Source | Status | Completion evidence |
+The offline bundle indexes 1,455 unique image vectors covering 1,101 entities within
+32 MiB of previews. Distribution records 4,206 preview-budget exclusions, 973 view-budget
+exclusions, and 102 unsupported-format exclusions; other resolutions remain linked.
+Local originals and recorded previews are retained independently of the CLI gallery.
+
+Both analyses covered every indexed record: 1,455 descriptions and 328 OCR observations,
+with 1,128 empty OCR outcomes and no analysis failures or skips. A strict cached rerun
+completed without fresh OCR/description inference or network connection attempts.
+All 9,442 protected bundle members match M8 byte-for-byte, including source facts,
+evidence, text models/vectors, and research relationships; the frozen seed is untouched.
+Nine source-filtered CLI image roundtrips return the expected entity first and preserve
+exported preview bytes and evidence links. These are functional checks using gallery
+images, not held-out retrieval-quality measurements. The public cached packager returns
+`changed: false` and the identical ZIP checksum with no captured-image or corpus-text
+inference, encoding only three image and three text probes. Windows and Linux full-bundle
+acceptance passes, including all ten embedded probes; Linux ran without networking,
+with a read-only filesystem and no added capabilities. All 116 baseline ranks and first
+results match M8 and M1: 73/73 required first, 101/116 first, 110/116 within five, and
+MRR 0.9018162871611147, with no skips.
+
+| Source | Saved records | Entities with media | Indexed records | Descriptions / OCR |
+| --- | ---: | ---: | ---: | ---: |
+| armyrecognition | 241 | 11/11 | 24 | 24 / 15 |
+| cambridgepixel | 0 | 0/385 | 0 | 0 / 0 |
+| climateviewer | 0 | 0/383 | 0 | 0 / 0 |
+| commons | 2,372 | 148/151 | 170 | 170 / 61 |
+| deagel | 2,615 | 943/1,285 | 590 | 590 / 51 |
+| fandom | 45 | 12/46 | 2 | 2 / 0 |
+| militaryperiscope | 427 | 132/143 | 98 | 98 / 94 |
+| radartutorial | 3,745 | 1,732/1,735 | 543 | 543 / 96 |
+| russianforces | 16 | 7/57 | 2 | 2 / 0 |
+| virtualglobetrotting | 204 | 100/100 | 23 | 23 / 11 |
+| wikipedia | 31 | 18/41 | 4 | 4 / 0 |
+
+Image bytes shared across sources count once in the global vector/observation totals.
+Detailed resolution, caption, duplicate, association, and failure metrics are retained
+per source and entity in ignored `build/m9/coverage*.json`.
+
+Windows measurements use one first observed process and 20 subsequent fresh processes
+per command, after all other task workloads finished. Filesystem caches were not cleared.
+All repeated responses are identical.
+
+| Command | First / repeated p95 | Peak working set |
 | --- | --- | --- |
-| militaryperiscope | Capture verified; processing pending | 427 originals; 132/143 entities with media; 11 without applicable images |
-| commons | Capture audited; processing pending | 2,372 originals/previews; 148/151 entities with media; 44 failed originals retain previews (41 unsupported, two invalid, one HTTP 429) |
-| radartutorial | Captured; processing pending | 3,745 saved files covering 1,732/1,735 entities; two HTTP 404 and two MIME mismatches retained |
-| deagel | Captured; processing pending | 2,615 recorded previews covering 943/1,285 entities; no failures; unresolved family images excluded |
-| virtualglobetrotting | Captured; processing pending | 204 recorded previews covering 100/100 entities |
-| russianforces | Captured; processing pending | 16 original/preview files covering 7/57 entities; filename associations marked uncertain |
-| wikipedia | Captured; processing pending | 31 files covering 18/41 entities; recorded thumbnails retained when originals absent |
-| armyrecognition | Captured; processing pending | 241 files covering 11/11 entities; advertisements and related cards excluded |
-| fandom | Captured; processing pending | 45 files covering 12/46 entities; 59 broken-media placeholders contain no usable URL |
-| climateviewer | Capture unavailable; audit retained | 20 historical equipment-illustration URLs failed: 11 network, nine HTTP 404; no site photos substituted |
-| cambridgepixel | No applicable images | 385/385 records; archived imagery consists of category icons and logos |
+| Default text | 2.692 / 2.708 s | 960.86 MiB |
+| Image | 2.698 / 2.683 s | 826.49 MiB |
+| Image + text | 4.997 / 5.088 s | 1,063.39 MiB |
+| Text with observations | 3.902 / 3.938 s | 1,144.79 MiB |
+| Text with manufacturer filter | 3.480 / 3.424 s | 1,080.79 MiB |
+
+Image and combined modes pass their absolute limits. Every mode fits the 2 GiB memory
+limit and its first-process latency limit. Default text passes 3 s absolute p95 but
+exceeds M1's 2.380 s relative target and 949.30 MiB relative memory allowance. Its p95
+and memory rise 0.9% and 1.8% from M8. Observation-assisted and filtered text exceed
+the 3 s absolute p95 limit; observation-assisted text also exceeds both M1 relative
+limits. These remain explicit M10 work; release quality/resource gates are not complete.
+
+Review artifacts in ignored `build/m9/`: `pipelines.exe` (247.36 MiB),
+`pipelines-windows-amd64.zip` (237.07 MiB), `pipelines-linux`, and `full-dataset.zip`.
+The executable and single-binary ZIP fit the 320/256 MiB budgets.
+
+Dataset: `e261f04023a83372ef054f17ccd262de292272cdc5c8bec96f20c8b5c86a4416`.
+Bundle SHA-256: `86f8d5a1942d08f516db6b8e7ebf3e2a139247acb6ac55afe3067e959d0b124e`.
+Windows executable SHA-256:
+`775ae6e7ce009cc00eb287f5f9845b8e59ee3acf3c6cd506f5f7f91f9e2b2c81`.
+Reports: `coverage*.json`, `member-preservation.json`, `public-package.json`,
+`gallery-cached-analysis-report.json`, `image-roundtrip.json`,
+`text-regression-comparison.json`, `windows-acceptance.json`, `linux-acceptance.json`,
+`performance.json`, `resource-gates.json`, and `distribution-size.json`.
+M9 is ready for user verification. M10 remains planned; no release was published.
 
 ## M10 — Quality gates and compact releases
 
@@ -722,8 +779,9 @@ are running with the existing model recipes and 32 MiB embedded-preview budget.
 - [ ] Verify top-result accuracy, recall within the first five results, confusable variants, and no-match behavior meet M1's targets.
 - [ ] Calibrate no-match decisions on larger development sets: M7 text negatives return candidates for 4/4 global and 3/4 filtered queries; image/generated modes currently abstain even for positive queries.
 - [ ] Measure cold/warm latency, peak memory, and compressed executable size on all supported targets.
-- [ ] Bring text within the frozen budgets: M8 default p95 is 2.683 s against M1's relative limit of 2.380 s; M8 filtered text is 3.406 s against 3 s absolute; M7 observation text is 3.556 s and uses 1,070.64 MiB against the 949.30 MiB relative allowance.
+- [ ] Bring text within the frozen budgets: M9 default p95 is 2.708 s against M1's relative limit of 2.380 s and uses 960.86 MiB against 949.30 MiB; filtered text is 3.424 s against 3 s absolute; observation text is 3.938 s and uses 1,144.79 MiB.
 - [ ] Build and test one standalone executable per platform with required models, indices, evidence, and selected previews embedded.
+- [ ] Improve gallery coverage within the preview budget: M9 retains 9,696 saved records but embeds 1,455 views covering 1,101 entities; compare preview size and allocation using development data.
 - [ ] Validate deterministic dataset identities, cached rebuilds, checksums, source exports, and operation without network access.
 - [ ] Extend release change detection and tag identity to include image artifacts; the existing gate compares text content only.
 - [ ] Run lint, types, unit/integration tests, Python/Go parity, and native release acceptance checks.
