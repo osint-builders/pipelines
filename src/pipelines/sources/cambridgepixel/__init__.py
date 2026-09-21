@@ -2,13 +2,18 @@ import hashlib
 import json
 import re
 import unicodedata
+from collections.abc import Iterable
 from html import escape
+from typing import TYPE_CHECKING
 from urllib.parse import urlsplit
 
 from bs4 import BeautifulSoup
 
 from pipelines.model import Entity, EntityKind, Evidence, Fact
 from pipelines.sources.html import text
+
+if TYPE_CHECKING:
+    from pipelines.media import MediaCandidate
 
 SEED = "https://cambridgepixel.com/resources/radar-database/"
 HEADERS = ["Manufacturer", "Model", "Band", "Status", "Description", "URL"]
@@ -164,6 +169,16 @@ class CambridgePixel:
     version = "1"
     seeds: tuple[str, ...] = (SEED,)
     minimum_entities = 350
+    media_origins = ("https://cambridgepixel.com",)
+    media_workers = 2
+    media_request_interval = 0.3
+
+    def discover_media(
+        self, url: str, body: bytes, entities: list[dict]
+    ) -> Iterable["MediaCandidate"]:
+        from pipelines.sources.cambridgepixel.media import discover
+
+        return discover(url, body, entities)
 
     def normalize(self, url: str) -> str | None:
         parts = urlsplit(url)

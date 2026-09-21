@@ -4,9 +4,11 @@ import re
 import shutil
 import subprocess
 import tempfile
+from collections.abc import Iterable
 from dataclasses import replace
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import TYPE_CHECKING
 from urllib.parse import quote, unquote, urljoin, urlsplit, urlunsplit
 from urllib.request import Request, urlopen
 from urllib.robotparser import RobotFileParser
@@ -17,6 +19,9 @@ from markdownify import markdownify
 from pipelines.archive import atomic_json
 from pipelines.model import Entity, EntityKind, Evidence, Fact
 from pipelines.sources.html import text
+
+if TYPE_CHECKING:
+    from pipelines.media import MediaCandidate
 
 ORIGIN = "https://www.deagel.com"
 DETAIL = re.compile(r"/Armies/.+/(a\d{6})$")
@@ -93,6 +98,16 @@ class Deagel:
     version = "1"
     seeds: tuple[str, ...] = (ORIGIN + "/Armies",)
     minimum_entities = 1200
+    media_origins = (ORIGIN,)
+    media_workers = 2
+    media_request_interval = 0.3
+
+    def discover_media(
+        self, url: str, body: bytes, entities: list[dict]
+    ) -> Iterable["MediaCandidate"]:
+        from pipelines.sources.deagel.media import discover
+
+        return discover(url, body, entities)
 
     def normalize(self, url: str) -> str | None:
         parts = urlsplit(url)

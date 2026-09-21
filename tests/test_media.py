@@ -45,15 +45,79 @@ def test_occurrences_keep_context_and_eligible_capture_wins(
     assert len(row["occurrences"]) == 2
     assert row["references"][0]["section"] == "Overview"
     assert row["references"][0]["ambiguous"] is True
+    detail = next(item for item in row["occurrences"] if item["role"] == "preview")
+    assert detail["reference_contexts"] == row["references"]
+    assert detail["reference_contexts"][0]["caption"] == "View"
     assert {item["original_url"] for item in row["occurrences"]} == {
         URL,
         "https://images.example/original.png",
     }
 
 
+def test_rediscovery_enriches_legacy_occurrences_in_place(tmp_path: Path) -> None:
+    with MediaStore(tmp_path) as store:
+        store.register("fixture", "run", [candidate()])
+        row = store.records("fixture", "run")[0]
+        del row["occurrences"][0]["reference_contexts"]
+        with store.db:
+            store._put(row)
+        store.register("fixture", "run", [candidate()])
+        updated = store.records("fixture", "run")[0]
+    assert len(updated["occurrences"]) == 1
+    assert updated["occurrences"][0]["reference_contexts"] == updated["references"]
+
+
 def test_preview_requires_its_original(tmp_path: Path) -> None:
     with MediaStore(tmp_path) as store, pytest.raises(ValueError, match="original URL"):
         store.register("fixture", "run", [MediaCandidate(URL, role="preview")])
+
+
+def test_bulk_registration_preserves_occurrences_with_one_write_per_url(
+    tmp_path: Path,
+) -> None:
+    candidates = [
+        MediaCandidate(
+            URL,
+            [] if index else [MediaReference("fixture:radar", "evidence")],
+            "navigation_image" if index else "",
+            page_url=f"https://example.org/page/{index}",
+            caption=f"Caption {index}",
+        )
+        for index in range(500)
+    ]
+    statements: list[str] = []
+    with MediaStore(tmp_path) as store:
+        store.db.set_trace_callback(statements.append)
+        store.register("fixture", "run", candidates)
+        assert (
+            sum(sql.startswith("INSERT OR REPLACE INTO media") for sql in statements)
+            == 1
+        )
+        record = store.records("fixture", "run")[0]
+        assert record["state"] == "pending"
+        assert len(record["occurrences"]) == 500
+        assert len(record["references"]) == 1
+        store.register("fixture", "run", candidates)
+        assert store.records("fixture", "run") == [record]
+
+
+def test_bulk_registration_matches_sequential_state_changes(tmp_path: Path) -> None:
+    reference = MediaReference("fixture:radar", "evidence")
+    candidates = [
+        MediaCandidate(URL, [reference], "navigation"),
+        MediaCandidate(URL, [reference]),
+        MediaCandidate(URL + "?other", exclusion_reason="logo"),
+        MediaCandidate(URL, [reference], "unsupported_image_format"),
+        MediaCandidate(URL, [reference]),
+        MediaCandidate(URL, [reference], page_url="https://example.org/second"),
+    ]
+    with MediaStore(tmp_path / "batch") as batched:
+        batched.register("fixture", "run", candidates)
+        expected = batched.records("fixture", "run")
+    with MediaStore(tmp_path / "sequential") as sequential:
+        for candidate in candidates:
+            sequential.register("fixture", "run", [candidate])
+        assert sequential.records("fixture", "run") == expected
 
 
 def test_rediscovery_updates_exclusion_decision_for_the_same_occurrence(

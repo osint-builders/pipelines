@@ -4,6 +4,8 @@ import socket
 import sys
 from contextlib import closing
 from pathlib import Path
+from types import SimpleNamespace
+from typing import cast
 
 import pytest
 from PIL import Image
@@ -17,6 +19,7 @@ from pipelines.distribution import collect_artifacts
 from pipelines.media import MediaCandidate, MediaReference, MediaStore, media_id
 from pipelines.media_pipeline import media, media_coverage
 from pipelines.snapshot import load_snapshot, status
+from pipelines.sources.base import Source
 
 IMAGE_URL = "https://images.example/radar.png"
 
@@ -52,6 +55,10 @@ def test_coverage_counts_original_groups_and_missing_entities() -> None:
     assert coverage["by_entity"][0]["saved_original_groups"] == 1
     assert coverage["by_entity"][0]["saved"] == 2
     assert coverage["by_entity"][0]["failed"] == 1
+    assert coverage["by_entity"][0]["outcome"] == "incomplete"
+    assert coverage["by_entity"][2]["outcome"] == "no_applicable_images"
+    assert coverage["by_entity"][2]["reason"] == "no_candidates"
+    assert coverage["outcomes"] == {"incomplete": 2, "no_applicable_images": 1}
 
 
 def test_coverage_excludes_unrelated_occurrences_of_a_saved_url() -> None:
@@ -84,10 +91,72 @@ def test_coverage_excludes_unrelated_occurrences_of_a_saved_url() -> None:
     assert coverage["by_entity"][1]["saved"] == 0
     assert coverage["by_entity"][1]["excluded"] == 1
     assert coverage["by_entity"][1]["saved_original_groups"] == 0
+    assert coverage["by_entity"][0]["outcome"] == "saved"
+    assert coverage["by_entity"][1]["outcome"] == "no_applicable_images"
+    assert coverage["by_entity"][1]["reason"] == "no_eligible_candidates"
     report["records"][0]["occurrences"].pop()
     coverage = media_coverage(report, [{"id": "fixture:a"}, {"id": "fixture:b"}])
     assert coverage["by_entity"][1]["saved"] == 0
     assert coverage["by_entity"][1]["excluded"] == 1
+
+
+def test_media_quality_reports_capture_limits_without_counting_excluded_captions() -> (
+    None
+):
+    reference = {"entity_id": "fixture:a"}
+    report = {
+        "records": [
+            {
+                "url": IMAGE_URL,
+                "state": "saved",
+                "references": [reference],
+                "width": 320,
+                "height": 180,
+                "sha256": "a" * 64,
+                "occurrences": [
+                    {
+                        "original_url": IMAGE_URL,
+                        "associated": True,
+                        "exclusion_reason": "",
+                        "role": "preview",
+                        "caption": "",
+                    },
+                    {
+                        "original_url": IMAGE_URL,
+                        "associated": False,
+                        "exclusion_reason": "navigation_image",
+                        "role": "original",
+                        "caption": "Unrelated branding",
+                    },
+                ],
+            },
+            {
+                "url": IMAGE_URL + "?original",
+                "state": "failed",
+                "error": "http_404",
+                "references": [reference],
+            },
+        ],
+        "exact_duplicates": [],
+        "near_duplicates": [{"left": "a" * 64, "right": "b" * 64}],
+    }
+    coverage = media_coverage(report, [{"id": "fixture:a"}])
+    assert coverage["outcomes"] == {"incomplete": 1}
+    quality = coverage["quality"]
+    assert quality["saved_records_by_role"] == {"preview": 1}
+    assert quality["captioned_saved_records"] == 0
+    assert quality["unique_contents"] == 1
+    assert quality["resolution"] == {
+        "measured_records": 1,
+        "min_width": 320,
+        "max_width": 320,
+        "min_height": 180,
+        "max_height": 180,
+        "short_edge_below_224": 1,
+    }
+    assert quality["failed_records_by_reason"] == {"http_404": 1}
+    assert quality["excluded_occurrences_by_reason"] == {"navigation_image": 1}
+    assert quality["near_duplicate_pairs"] == 1
 
 
 class ImageSource(SmallSource):
@@ -142,7 +211,8 @@ def save_image(source: ImageSource, root: Path, archive_id: str = "fixture") -> 
 
 
 def test_unsupported_adapter_creates_no_media_or_snapshot(tmp_path: Path) -> None:
-    assert media(SmallSource(), tmp_path, download=True) == {
+    text_only = cast(Source, SimpleNamespace(id="radartutorial"))
+    assert media(text_only, tmp_path, download=True) == {
         "source": "radartutorial",
         "supported": False,
         "reason": "no_media_adapter",

@@ -4,12 +4,16 @@ import math
 import re
 from collections.abc import Iterable
 from html import escape
+from typing import TYPE_CHECKING
 from urllib.parse import urljoin, urlsplit
 
 from bs4 import BeautifulSoup
 from markdownify import markdownify
 
 from pipelines.model import Entity, EntityKind, Evidence, Fact
+
+if TYPE_CHECKING:
+    from pipelines.media import MediaCandidate
 
 ORIGIN = "https://climateviewer.org"
 DATA = (
@@ -130,6 +134,21 @@ class ClimateViewer:
     version = "1"
     seeds: tuple[str, ...] = (DATA, MAP)
     minimum_entities = 350
+    media_workers = 2
+    media_request_interval = 0.3
+
+    @property
+    def media_origins(self) -> tuple[str, ...]:
+        from pipelines.sources.climateviewer.media import ORIGINS
+
+        return ORIGINS
+
+    def discover_media(
+        self, url: str, body: bytes, entities: list[dict]
+    ) -> Iterable["MediaCandidate"]:
+        from pipelines.sources.climateviewer.media import discover
+
+        return discover(url, body, entities)
 
     def __init__(self) -> None:
         self.attribution = ""

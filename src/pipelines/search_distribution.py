@@ -8,6 +8,7 @@ from pathlib import Path
 
 from pipelines.distribution import SEARCH_VERSION, canonical, plain_text, sha256
 from pipelines.media import media_id
+from pipelines.media_context import eligible_reference
 from pipelines.media_pipeline import read_media
 from pipelines.snapshot import load_snapshot
 
@@ -108,14 +109,8 @@ def build_search_members(
                 for item in occurrences
                 if item.get("associated") and not item.get("exclusion_reason")
             ]
-            active = {
-                (reference["entity_id"], reference["evidence_id"])
-                for item in eligible
-                for reference in item.get("references", record["references"])
-            }
             for reference in record["references"]:
-                pair = (reference["entity_id"], reference["evidence_id"])
-                if (occurrences and pair not in active) or (
+                if not eligible_reference(record, reference) or (
                     not occurrences and record["state"] in {"excluded", "unassociated"}
                 ):
                     continue

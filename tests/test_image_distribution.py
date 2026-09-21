@@ -266,6 +266,106 @@ def test_saved_excluded_context_never_becomes_active_reference(
     validate(setup, members, metadata)
 
 
+def test_excluded_reference_context_does_not_leak_through_an_eligible_owner_pair(
+    setup: tuple[Path, list[dict], Path],
+) -> None:
+    row = add(setup, "mixed-context.png")
+    entity = setup[1][0]
+    excluded = MediaReference(
+        entity["id"],
+        entity["evidence"][0]["id"],
+        "Unrelated drone caption",
+        "Related article",
+        True,
+        "source_filename",
+    )
+    with MediaStore(setup[0]) as store:
+        store.register(
+            entity["source"],
+            "fixture",
+            [
+                MediaCandidate(
+                    row["url"],
+                    [excluded],
+                    "navigation_image",
+                    caption="Publisher navigation label",
+                    section="Navigation",
+                )
+            ],
+        )
+    members, metadata, report = build(setup)
+    indexed = json.loads(members["image/index.json"])[0]
+    assert metadata["vectors"] == 1
+    assert indexed["references"] == [
+        asdict(
+            MediaReference(
+                entity["id"],
+                entity["evidence"][0]["id"],
+                "Side view",
+                "Equipment",
+                True,
+            )
+        )
+    ]
+    assert indexed["caption"] == "Publisher caption"
+    assert report["association_exclusions"][0]["references"] == [asdict(excluded)]
+    validate(setup, members, metadata)
+
+
+def test_rich_reference_identity_keeps_ambiguity_and_legacy_context() -> None:
+    allowed = asdict(MediaReference("example:1", "page", "Antenna", "Lead"))
+    removed = {**allowed, "ambiguous": True, "association": "source_filename"}
+    legacy = {
+        **allowed,
+        "caption": "Supplementary source caption",
+        "section": "Gallery",
+    }
+    pair = {key: allowed[key] for key in ("entity_id", "evidence_id")}
+    record: dict = {
+        "source": "example",
+        "references": [allowed, removed, legacy],
+        "occurrences": [
+            {
+                "associated": True,
+                "exclusion_reason": "",
+                "references": [pair],
+                "reference_contexts": [allowed],
+                "caption": "Publisher label",
+                "section": "Description",
+            },
+            {
+                "associated": True,
+                "exclusion_reason": "navigation_image",
+                "references": [pair],
+                "reference_contexts": [removed],
+                "caption": "Publisher label",
+                "section": "Description",
+            },
+        ],
+    }
+    active, excluded = image_distribution._references(record, {"example:1": {"page"}})
+    assert active == [allowed]
+    assert {canonical(ref) for ref in excluded} == {
+        canonical(removed),
+        canonical(legacy),
+    }
+    record["occurrences"].append(
+        {
+            "associated": True,
+            "exclusion_reason": "",
+            "references": [pair],
+            "caption": "Other publisher caption",
+            "section": "Gallery",
+        }
+    )
+    active, excluded = image_distribution._references(record, {"example:1": {"page"}})
+    assert {canonical(ref) for ref in active} == {canonical(allowed), canonical(legacy)}
+    assert excluded == [removed]
+    record.pop("occurrences")
+    active, excluded = image_distribution._references(record, {"example:1": {"page"}})
+    assert len(active) == 3 and excluded == []
+
+
 def test_capture_failure_and_unsupported_format_remain_explicit(
     setup: tuple[Path, list[dict], Path],
 ) -> None:

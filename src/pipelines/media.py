@@ -4,6 +4,7 @@ import os
 import re
 import sqlite3
 import tempfile
+from collections import Counter, defaultdict
 from collections.abc import Callable, Iterable
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
@@ -290,29 +291,28 @@ class MediaStore:
     ) -> None:
         self._writable()
         _scope(source, archive)
+        grouped: dict[str, list[MediaCandidate]] = defaultdict(list)
+        for candidate in candidates:
+            grouped[media_id(source, candidate.url)].append(candidate)
+
+        def occurrence_key(item: dict) -> str:
+            return _json(
+                {
+                    key: val
+                    for key, val in item.items()
+                    if key
+                    not in {
+                        "references",
+                        "reference_contexts",
+                        "associated",
+                        "exclusion_reason",
+                    }
+                }
+            )
+
         with self.db:
             self.db.execute("BEGIN IMMEDIATE")
-            for candidate in candidates:
-                identity = media_id(source, candidate.url)
-                if candidate.role not in {"original", "preview"}:
-                    raise ValueError("Media role must be original or preview")
-                if candidate.role == "preview" and not candidate.original_url:
-                    raise ValueError("Media previews require an original URL")
-                for url in (candidate.original_url, candidate.page_url):
-                    if url:
-                        _url(url)
-                references = [asdict(reference) for reference in candidate.references]
-                for reference in candidate.references:
-                    prefix, separator, native = reference.entity_id.partition(":")
-                    if (
-                        prefix != source
-                        or not separator
-                        or not valid_key(native)
-                        or not valid_key(reference.evidence_id)
-                    ):
-                        raise ValueError(
-                            "Media references require source-qualified IDs"
-                        )
+            for identity, items in grouped.items():
                 row = self.db.execute(
                     "SELECT data FROM media WHERE source=? AND archive=? AND id=?",
                     (source, archive, identity),
@@ -324,7 +324,7 @@ class MediaStore:
                         "id": identity,
                         "source": source,
                         "archive": archive,
-                        "url": candidate.url,
+                        "url": items[0].url,
                         "references": [],
                         "state": "pending",
                         "captured_at": None,
@@ -351,63 +351,98 @@ class MediaStore:
                     for reference in value["references"]
                 ]
                 combined = {_json(reference): reference for reference in previous}
-                combined.update(
-                    {_json(reference): reference for reference in references}
-                )
-                value["references"] = [combined[key] for key in sorted(combined)]
-                occurrence = {
-                    "page_url": candidate.page_url,
-                    "role": candidate.role,
-                    "original_url": candidate.original_url or candidate.url,
-                    "exclusion_reason": candidate.exclusion_reason,
-                    "associated": bool(references),
-                    "caption": candidate.caption,
-                    "section": candidate.section,
-                    "references": [
-                        {"entity_id": ref.entity_id, "evidence_id": ref.evidence_id}
-                        for ref in candidate.references
-                    ],
-                }
-
-                def occurrence_key(item: dict) -> str:
-                    return _json(
-                        {
-                            key: val
-                            for key, val in item.items()
-                            if key
-                            not in {"references", "associated", "exclusion_reason"}
-                        }
-                    )
-
                 occurrences = {
                     occurrence_key(item): item for item in value.get("occurrences", [])
                 }
-                key = occurrence_key(occurrence)
-                old_refs = occurrences.get(key, {}).get("references", [])
-                pairs = {_json(ref): ref for ref in old_refs + occurrence["references"]}
-                occurrence["references"] = [pairs[key] for key in sorted(pairs)]
-                occurrence["associated"] = bool(occurrence["references"])
-                occurrences[key] = occurrence
-                value["occurrences"] = [occurrences[key] for key in sorted(occurrences)]
-                eligible = any(
+                eligible = sum(
                     item["associated"] and not item["exclusion_reason"]
-                    for item in value["occurrences"]
+                    for item in occurrences.values()
                 )
-                reasons = sorted(
-                    {
-                        item["exclusion_reason"]
-                        for item in value["occurrences"]
-                        if item["exclusion_reason"]
+                reasons = Counter(
+                    item["exclusion_reason"]
+                    for item in occurrences.values()
+                    if item["exclusion_reason"]
+                )
+                for candidate in items:
+                    if candidate.role not in {"original", "preview"}:
+                        raise ValueError("Media role must be original or preview")
+                    if candidate.role == "preview" and not candidate.original_url:
+                        raise ValueError("Media previews require an original URL")
+                    for url in (candidate.original_url, candidate.page_url):
+                        if url:
+                            _url(url)
+                    for reference in candidate.references:
+                        prefix, separator, native = reference.entity_id.partition(":")
+                        if (
+                            prefix != source
+                            or not separator
+                            or not valid_key(native)
+                            or not valid_key(reference.evidence_id)
+                        ):
+                            raise ValueError(
+                                "Media references require source-qualified IDs"
+                            )
+                        row_reference = asdict(reference)
+                        combined[_json(row_reference)] = row_reference
+                    occurrence = {
+                        "page_url": candidate.page_url,
+                        "role": candidate.role,
+                        "original_url": candidate.original_url or candidate.url,
+                        "exclusion_reason": candidate.exclusion_reason,
+                        "associated": bool(candidate.references),
+                        "caption": candidate.caption,
+                        "section": candidate.section,
+                        "references": [
+                            {"entity_id": ref.entity_id, "evidence_id": ref.evidence_id}
+                            for ref in candidate.references
+                        ],
+                        "reference_contexts": [
+                            asdict(ref) for ref in candidate.references
+                        ],
                     }
-                )
-                if value["state"] != "saved":
-                    if eligible:
-                        if value["state"] in {"excluded", "unassociated"}:
-                            value.update(state="pending", error="")
-                    elif reasons:
-                        value.update(state="excluded", error="; ".join(reasons))
-                    elif not value["references"]:
-                        value.update(state="unassociated", error="")
+                    key = occurrence_key(occurrence)
+                    old = occurrences.get(key)
+                    if old:
+                        eligible -= bool(
+                            old["associated"] and not old["exclusion_reason"]
+                        )
+                        if reason := old["exclusion_reason"]:
+                            reasons[reason] -= 1
+                            if not reasons[reason]:
+                                del reasons[reason]
+                    pairs = {
+                        _json(ref): ref
+                        for ref in (old or {}).get("references", [])
+                        + occurrence["references"]
+                    }
+                    occurrence["references"] = [pairs[key] for key in sorted(pairs)]
+                    contexts = {
+                        _json(ref): ref
+                        for ref in (old or {}).get("reference_contexts", [])
+                        + occurrence["reference_contexts"]
+                    }
+                    occurrence["reference_contexts"] = [
+                        contexts[key] for key in sorted(contexts)
+                    ]
+                    occurrence["associated"] = bool(occurrence["references"])
+                    occurrences[key] = occurrence
+                    eligible += bool(
+                        occurrence["associated"] and not occurrence["exclusion_reason"]
+                    )
+                    if reason := occurrence["exclusion_reason"]:
+                        reasons[reason] += 1
+                    if value["state"] != "saved":
+                        if eligible:
+                            if value["state"] in {"excluded", "unassociated"}:
+                                value.update(state="pending", error="")
+                        elif reasons:
+                            value.update(
+                                state="excluded", error="; ".join(sorted(reasons))
+                            )
+                        elif not combined:
+                            value.update(state="unassociated", error="")
+                value["references"] = [combined[key] for key in sorted(combined)]
+                value["occurrences"] = [occurrences[key] for key in sorted(occurrences)]
                 self._put(value)
 
     def records(self, source: str, archive: str) -> list[dict]:

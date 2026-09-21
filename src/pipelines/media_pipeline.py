@@ -1,6 +1,6 @@
 import json
 import re
-from collections import defaultdict
+from collections import Counter, defaultdict
 from contextlib import closing
 from pathlib import Path
 
@@ -107,9 +107,20 @@ def media_coverage(report: dict, entities: list[dict]) -> dict:
                 groups.update(item["original_url"] for item in eligible)
                 if not record.get("occurrences"):
                     groups.add(record["url"])
+        outcome = (
+            "incomplete"
+            if counts["pending"] or counts["failed"]
+            else "saved"
+            if counts["saved"]
+            else "no_applicable_images"
+        )
         rows.append(
             {
                 "entity_id": entity["id"],
+                "outcome": outcome,
+                "reason": ("no_candidates" if not records else "no_eligible_candidates")
+                if outcome == "no_applicable_images"
+                else "",
                 "discovered": len(records),
                 **counts,
                 "saved_original_groups": len(groups),
@@ -126,7 +137,63 @@ def media_coverage(report: dict, entities: list[dict]) -> dict:
             len({ref["entity_id"] for ref in record["references"]}) > 1
             for record in report["records"]
         ),
+        "outcomes": dict(sorted(Counter(row["outcome"] for row in rows).items())),
+        "quality": _media_quality(report),
         "by_entity": rows,
+    }
+
+
+def _media_quality(report: dict) -> dict:
+    saved = [row for row in report["records"] if row["state"] == "saved"]
+    dimensions = [
+        (row["width"], row["height"])
+        for row in saved
+        if isinstance(row.get("width"), int) and isinstance(row.get("height"), int)
+    ]
+    roles: Counter[str] = Counter()
+    captioned = 0
+    for row in saved:
+        eligible = [
+            item
+            for item in row.get("occurrences", [])
+            if item["associated"] and not item["exclusion_reason"]
+        ]
+        roles.update({item.get("role", "original") for item in eligible})
+        captioned += any(item.get("caption", "").strip() for item in eligible)
+    return {
+        "saved_records": len(saved),
+        "captioned_saved_records": captioned,
+        "saved_records_by_role": dict(sorted(roles.items())),
+        "unique_contents": len({row["sha256"] for row in saved if row.get("sha256")}),
+        "exact_duplicate_groups": len(report.get("exact_duplicates", [])),
+        "near_duplicate_pairs": len(report.get("near_duplicates", [])),
+        "resolution": {
+            "measured_records": len(dimensions),
+            "min_width": min((width for width, _ in dimensions), default=None),
+            "max_width": max((width for width, _ in dimensions), default=None),
+            "min_height": min((height for _, height in dimensions), default=None),
+            "max_height": max((height for _, height in dimensions), default=None),
+            "short_edge_below_224": sum(min(size) < 224 for size in dimensions),
+        },
+        "failed_records_by_reason": dict(
+            sorted(
+                Counter(
+                    row.get("error") or "unspecified"
+                    for row in report["records"]
+                    if row["state"] == "failed"
+                ).items()
+            )
+        ),
+        "excluded_occurrences_by_reason": dict(
+            sorted(
+                Counter(
+                    item["exclusion_reason"]
+                    for row in report["records"]
+                    for item in row.get("occurrences", [])
+                    if item["exclusion_reason"]
+                ).items()
+            )
+        ),
     }
 
 

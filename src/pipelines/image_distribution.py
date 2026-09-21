@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING
 from urllib.parse import urlsplit
 
 from pipelines.distribution import canonical, sha256
+from pipelines.media_context import eligible_reference
 
 if TYPE_CHECKING:
     import numpy as np
@@ -99,18 +100,10 @@ def _references(
     occurrences = record.get("occurrences", [])
     if not occurrences:
         return references, []
-    eligible = {
-        (ref["entity_id"], ref["evidence_id"])
-        for item in occurrences
-        if item.get("associated") and not item.get("exclusion_reason")
-        for ref in item.get("references", record["references"])
-    }
     active: list[dict] = []
     excluded: list[dict] = []
     for item in references:
-        (
-            active if (item["entity_id"], item["evidence_id"]) in eligible else excluded
-        ).append(item)
+        (active if eligible_reference(record, item) else excluded).append(item)
     return active, excluded
 
 

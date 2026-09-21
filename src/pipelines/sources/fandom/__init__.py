@@ -4,6 +4,7 @@ from collections.abc import Iterable
 from copy import copy
 from html import escape
 from pathlib import Path
+from typing import TYPE_CHECKING
 from urllib.parse import parse_qsl, quote, urlencode, urljoin, urlsplit
 
 from bs4 import BeautifulSoup, Tag
@@ -11,6 +12,9 @@ from markdownify import markdownify
 
 from pipelines.model import Entity, EntityKind, Evidence, Fact
 from pipelines.sources.html import text
+
+if TYPE_CHECKING:
+    from pipelines.media import MediaCandidate
 
 ORIGIN = "https://military-history.fandom.com"
 CATEGORY = "Category:Russian_and_Soviet_military_radars"
@@ -123,6 +127,20 @@ class Fandom:
     version = "1"
     seeds: tuple[str, ...] = (SEED, RIGHTS)
     minimum_entities = 46
+    media_origins = (
+        "https://upload.wikimedia.org",
+        "https://thumb.wikimedia.org",
+        "https://static.wikia.nocookie.net",
+    )
+    media_request_interval = 1.0
+    media_workers = 4
+
+    def discover_media(
+        self, url: str, body: bytes, entities: list[dict]
+    ) -> list["MediaCandidate"]:
+        from pipelines.sources.fandom.media import discover
+
+        return discover(url, body, entities)
 
     def __init__(self) -> None:
         self.catalog: dict[str, dict] = json.loads(

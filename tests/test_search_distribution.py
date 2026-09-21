@@ -156,6 +156,85 @@ def test_duplicate_resolutions_do_not_repeat_captions_and_exclusions_stay_out(
     )
 
 
+@pytest.mark.parametrize("legacy", [False, True])
+def test_same_owner_pair_does_not_leak_excluded_captions(
+    source_archive: tuple[Path, list[dict]],
+    legacy: bool,
+) -> None:
+    root, entities = source_archive
+    entity = entities[0]
+    identity = register(root, entity, caption="Publisher caption")
+    register(
+        root,
+        entity,
+        caption="Unrelated navigation caption",
+        section="Navigation",
+        references=[
+            MediaReference(
+                entity["id"],
+                entity["evidence"][0]["id"],
+                "Unrelated navigation caption",
+                "Navigation",
+            )
+        ],
+        exclusion_reason="navigation_image",
+    )
+    if legacy:
+        with MediaStore(root) as store:
+            record = store.records(entity["source"], "fixture")[0]
+            for occurrence in record["occurrences"]:
+                occurrence.pop("reference_contexts", None)
+            with store.db:
+                store._put(record)
+    members, _ = build_search_members(
+        root,
+        [entity["source"]],
+        entities,
+        allowed_media_ids={identity},
+    )
+    assert {row["text"] for row in json.loads(members[CAPTIONS_MEMBER])} == {
+        "Publisher caption",
+        "Side view",
+    }
+
+
+def test_rich_occurrence_matches_exact_ref_even_when_publisher_caption_differs(
+    source_archive: tuple[Path, list[dict]],
+) -> None:
+    root, entities = source_archive
+    entity = entities[0]
+    identity = register(
+        root, entity, caption="Publisher caption", section="Description"
+    )
+    register(
+        root,
+        entity,
+        caption="Publisher menu label",
+        section="Navigation",
+        references=[
+            MediaReference(
+                entity["id"],
+                entity["evidence"][0]["id"],
+                "Unrelated drone caption",
+                "A different source section",
+                True,
+                "source_filename",
+            )
+        ],
+        exclusion_reason="navigation_image",
+    )
+    members, _ = build_search_members(
+        root,
+        [entity["source"]],
+        entities,
+        allowed_media_ids={identity},
+    )
+    assert {row["text"] for row in json.loads(members[CAPTIONS_MEMBER])} == {
+        "Publisher caption",
+        "Side view",
+    }
+
+
 def test_reference_cannot_attach_captions_to_another_entity_or_evidence(
     source_archive: tuple[Path, list[dict]],
 ) -> None:

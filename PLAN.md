@@ -3,7 +3,7 @@
 Help researchers and educators find static entities quickly using names, descriptions,
 specifications, and images, with every result linked to captured evidence.
 
-**Progress:** 7/10 milestones verified. **Active:** M8 ready for verification.
+**Progress:** 8/10 milestones verified. **Active:** M9 in progress.
 
 **Branch:** `feature/multimodal-entity-search`.
 
@@ -26,8 +26,8 @@ commands and the source table.
 | M5 — Image and combined queries | M2, M3, M4 | Verified by user; `9bb1574`, 426 tests and CI pass; full pilot CLI, offline acceptance, held-out rankings, and Windows resource checks complete |
 | M6 — OCR and visual descriptions | M3, M5 | Verified by user; `3bb8c29`, 542 tests and CI pass; 1,694 observations, cache reuse, held-out ranking and offline CLI checks complete; opt-in text resource gaps tracked in M10 |
 | M7 — Better text and combined ranking | M1, M5, M6 | Verified by user; `0d20f4a`, CI and offline acceptance pass; 116 baseline ranks preserved, new text 18/18 within five; latency and calibration gaps tracked in M10 |
-| M8 — Entity relationships and precise filters | M1, M7 | Ready for verification; `beafc67b`, CI and offline acceptance pass; 63 evidence checks, 116 unchanged baseline ranks; resource gaps tracked in M10 |
-| M9 — Media coverage across all sources | M3, M5, M6 | Planned |
+| M8 — Entity relationships and precise filters | M1, M7 | Verified by user; `beafc67b`, CI and offline acceptance pass; 63 evidence checks, 116 unchanged baseline ranks; resource gaps tracked in M10 |
+| M9 — Media coverage across all sources | M3, M5, M6 | In progress; nine remaining media adapters, shared coverage audit, and local capture/processing rollout |
 | M10 — Quality gates and compact releases | M4–M9 | Planned |
 
 Advance in milestone order and stop for user verification between milestones.
@@ -669,7 +669,8 @@ Validation reports in that directory: `evaluation.json`, `default-parity.json`,
 `text-regression-comparison.json`, `public-package.json`, `windows-acceptance.json`,
 `linux-acceptance.json`, `ci.json`, `claim-coverage-final.json`, `performance.json`,
 `distribution-size.json`, and `resource-gates.json`. No release was published.
-The root README remains scheduled for M10. Await user verification before M9.
+The root README remains scheduled for M10. The user's continuation verified M8 and
+authorized M9.
 
 ## M9 — Media coverage across all sources
 
@@ -682,19 +683,27 @@ The root README remains scheduled for M10. Await user verification before M9.
 Complete when every source has an audited media capability and the full dataset can be
 rebuilt from local captures. Each source must account for outstanding failures.
 
+Nine additional source-owned adapters now implement the shared media interface. Discovery
+uses saved responses and exact entity/evidence associations; downloads retain original
+or preview roles without guessing larger image URLs. Shared coverage reports distinguish
+saved, incomplete, and no-applicable-image records, with resolution, caption, duplicate,
+and failure counts. Bulk registration writes each URL once while preserving occurrences.
+Rich occurrence references prevent excluded captions from entering image or text indexes.
+Source text, reviewed relationships, and the frozen evaluation gallery remain preserved.
+
 | Source | Status | Completion evidence |
 | --- | --- | --- |
-| militaryperiscope | Media pilot captured; M9 processing pending | M3: 427 originals; 132 entities with media |
-| commons | Media pilot captured; M9 processing pending | M3: 2,372 originals/previews; 148 entities with media; 44 failed originals have previews |
-| radartutorial | Pending | — |
-| deagel | Pending | — |
-| virtualglobetrotting | Pending | — |
-| russianforces | Pending | — |
-| wikipedia | Pending | — |
-| armyrecognition | Pending | — |
-| fandom | Pending | — |
-| climateviewer | Pending | — |
-| cambridgepixel | Pending | — |
+| militaryperiscope | Capture verified; processing pending | 427 originals; 132/143 entities with media; 11 without applicable images |
+| commons | Capture audited; processing pending | 2,372 originals/previews; 148/151 entities with media; 44 failed originals retain previews (41 unsupported, two invalid, one HTTP 429) |
+| radartutorial | Capture running | 3,749 eligible URLs; 1,732/1,735 entities have candidates |
+| deagel | Capture running | 2,615 recorded previews; 943/1,285 entities have candidates; unresolved family images excluded |
+| virtualglobetrotting | Captured; processing pending | 204 recorded previews covering 100/100 entities |
+| russianforces | Captured; processing pending | 16 original/preview files covering 7/57 entities; filename associations marked uncertain |
+| wikipedia | Captured; processing pending | 31 files covering 18/41 entities; recorded thumbnails retained when originals absent |
+| armyrecognition | Captured; processing pending | 241 files covering 11/11 entities; advertisements and related cards excluded |
+| fandom | Captured; processing pending | 45 files covering 12/46 entities; 59 broken-media placeholders contain no usable URL |
+| climateviewer | Capture unavailable; audit retained | 20 historical equipment-illustration URLs failed: 11 network, nine HTTP 404; no site photos substituted |
+| cambridgepixel | No applicable images | 385/385 records; archived imagery consists of category icons and logos |
 
 ## M10 — Quality gates and compact releases
 
