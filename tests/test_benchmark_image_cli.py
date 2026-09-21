@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pytest
 from benchmark_image_cli import (
+    add_text_constraints,
     benchmark,
     gallery_contract,
     summarize,
@@ -226,3 +227,201 @@ def test_evaluation_freezes_executable_before_launch(
             root=tmp_path,
             runner=never_run,
         )
+
+
+def constraint_fixture(tmp_path: Path) -> tuple[Path, Path, Path]:
+    fixture_path, _, fixture, _ = seed(tmp_path)
+    with zipfile.ZipFile(io.BytesIO(archive_for(fixture))) as archive:
+        members = {name: archive.read(name) for name in archive.namelist()}
+    manifest = json.loads(members["manifest.json"])
+    member = "entities/a/target.json"
+    members[member] = json.dumps(
+        {"evidence": [{"id": "page", "markdown": "This is a portable radar."}]}
+    ).encode()
+    manifest["files"] = {member: hashlib.sha256(members[member]).hexdigest()}
+    manifest["content_sha256"] = "source-corpus"
+    members["manifest.json"] = json.dumps(manifest).encode()
+    bundle = tmp_path / "bundle.zip"
+    with zipfile.ZipFile(bundle, "w") as archive:
+        for name, value in members.items():
+            archive.writestr(name, value)
+    constraints = tmp_path / "constraints.json"
+    constraints.write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "status": "development_frozen_before_retrieval",
+                "base_fixture_sha256": hashlib.sha256(
+                    fixture_path.read_bytes()
+                ).hexdigest(),
+                "source_content_sha256": "source-corpus",
+                "limitations": ["Development constraints."],
+                "cases": [
+                    {
+                        "case_id": "query",
+                        "text": "portable radar",
+                        "evidence": {
+                            "entity_id": "a:target",
+                            "evidence_id": "page",
+                            "quote": "portable radar",
+                        },
+                    }
+                ],
+            }
+        )
+    )
+    return fixture_path, bundle, constraints
+
+
+@pytest.mark.parametrize(
+    "failure",
+    [
+        "fixture_hash",
+        "corpus",
+        "evaluation",
+        "pending",
+        "mixed",
+        "empty",
+        "long",
+        "foreign_entity",
+        "quote",
+        "page",
+        "duplicate",
+        "checksum",
+    ],
+)
+def test_constraints_reject_unfrozen_or_unsupported_text(
+    tmp_path: Path, failure: str
+) -> None:
+    fixture_path, bundle, constraints_path = constraint_fixture(tmp_path)
+    fixture = json.loads(fixture_path.read_bytes())
+    constraints = json.loads(constraints_path.read_bytes())
+    row = constraints["cases"][0]
+    if failure == "fixture_hash":
+        constraints["base_fixture_sha256"] = "changed"
+    elif failure == "corpus":
+        constraints["source_content_sha256"] = "changed"
+    elif failure in {"evaluation", "pending", "mixed"}:
+        row["case_id"] = "heldout" if failure == "evaluation" else failure
+    elif failure == "empty":
+        row["text"] = " "
+    elif failure == "long":
+        row["text"] = "x" * 1001
+    elif failure == "foreign_entity":
+        row["evidence"]["entity_id"] = "b:other"
+    elif failure == "quote":
+        row["evidence"]["quote"] = "unsupported specification"
+    elif failure == "page":
+        row["evidence"]["evidence_id"] = "different-page"
+    elif failure == "duplicate":
+        constraints["cases"].append(row)
+    with zipfile.ZipFile(bundle) as archive:
+        manifest = json.loads(archive.read("manifest.json"))
+        if failure == "checksum":
+            manifest["files"]["entities/a/target.json"] = "changed"
+        with pytest.raises(ValueError):
+            add_text_constraints(
+                fixture,
+                fixture_path.read_bytes(),
+                constraints,
+                archive,
+                manifest,
+            )
+
+
+def test_paired_development_constraints_preserve_fixture_and_report_identity(
+    tmp_path: Path,
+) -> None:
+    fixture_path, bundle, constraints_path = constraint_fixture(tmp_path)
+    original = fixture_path.read_bytes()
+    calls = []
+
+    def run(*args: str) -> dict:
+        calls.append(args)
+        if args == ("info",):
+            return {"dataset_id": "test"}
+        image_path = Path(args[args.index("--image") + 1])
+        return {
+            "dataset_id": "test",
+            "query_image_sha256": hashlib.sha256(image_path.read_bytes()).hexdigest(),
+            "query_type": "image_text"
+            if args[-1] in {"target", "portable radar"}
+            else "image",
+            "match_status": "no_supported_match",
+            "calibration_status": "uncalibrated",
+            "results": [],
+        }
+
+    report = benchmark(
+        tmp_path / "binary",
+        bundle,
+        fixture_path,
+        "development",
+        text_constraints=constraints_path,
+        root=tmp_path,
+        runner=run,
+    )
+    assert fixture_path.read_bytes() == original
+    assert report["identity"]["fixture_sha256"] == hashlib.sha256(original).hexdigest()
+    assert (
+        report["identity"]["text_constraints_sha256"]
+        == hashlib.sha256(constraints_path.read_bytes()).hexdigest()
+    )
+    paired = [row for row in report["cases"] if row["id"] == "query-text"]
+    assert len(paired) == 2
+    assert {row["scope"] for row in paired} == {"global", "source_filtered"}
+    assert all(
+        row["mode"] == "image_text"
+        and row["photo_group"] == "query"
+        and row["expected_ids"] == ["a:target"]
+        for row in paired
+    )
+    assert len([command for command in calls if command[-1] == "portable radar"]) == 2
+    assert (
+        len(
+            [
+                row
+                for row in report["cases"]
+                if row["id"] == "query" and row["mode"] == "image"
+            ]
+        )
+        == 2
+    )
+    assert "Development constraints." in report["limitations"]
+    calls.clear()
+    with pytest.raises(ValueError, match="development only"):
+        benchmark(
+            tmp_path / "binary",
+            bundle,
+            fixture_path,
+            "evaluation",
+            text_constraints=constraints_path,
+            root=tmp_path,
+            runner=run,
+        )
+    assert not calls
+
+
+@pytest.mark.parametrize("stored_crlf", [False, True])
+@pytest.mark.parametrize("checkout_crlf", [False, True])
+def test_constraint_base_hash_allows_only_checkout_line_ending_changes(
+    tmp_path: Path, stored_crlf: bool, checkout_crlf: bool
+) -> None:
+    fixture_path, bundle, constraints_path = constraint_fixture(tmp_path)
+    fixture = json.loads(fixture_path.read_bytes())
+    lf = (json.dumps(fixture, indent=2) + "\n").encode()
+    stored = lf.replace(b"\n", b"\r\n") if stored_crlf else lf
+    checkout = lf.replace(b"\n", b"\r\n") if checkout_crlf else lf
+    constraints = json.loads(constraints_path.read_bytes())
+    constraints["base_fixture_sha256"] = hashlib.sha256(stored).hexdigest()
+    with zipfile.ZipFile(bundle) as archive:
+        manifest = json.loads(archive.read("manifest.json"))
+        combined = add_text_constraints(
+            fixture, checkout, constraints, archive, manifest
+        )
+        assert len(combined["cases"]) == len(fixture["cases"]) + 1
+        changed = checkout.replace(b'"query"', b'"altered-query"', 1)
+        with pytest.raises(ValueError, match="frozen development corpus"):
+            add_text_constraints(
+                json.loads(changed), changed, constraints, archive, manifest
+            )

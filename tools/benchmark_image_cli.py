@@ -7,6 +7,7 @@ import subprocess
 import time
 import zipfile
 from collections.abc import Callable
+from copy import deepcopy
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -48,6 +49,83 @@ def gallery_contract(archive: zipfile.ZipFile, fixture: dict) -> tuple[dict, dic
         if any(row["media_id"] not in allowed for row in json.loads(captions)):
             raise ValueError("Benchmark captions must belong to the frozen gallery")
     return manifest, {row["id"]: row for row in records}
+
+
+def add_text_constraints(
+    fixture: dict,
+    fixture_bytes: bytes,
+    constraints: dict,
+    archive: zipfile.ZipFile,
+    manifest: dict,
+) -> dict:
+    lf = fixture_bytes.replace(b"\r\n", b"\n")
+    fixture_hashes = {
+        hashlib.sha256(raw).hexdigest()
+        for raw in (fixture_bytes, lf, lf.replace(b"\n", b"\r\n"))
+    }
+    if (
+        constraints.get("schema_version") != 1
+        or constraints.get("status") != "development_frozen_before_retrieval"
+        or constraints.get("base_fixture_sha256") not in fixture_hashes
+        or constraints.get("source_content_sha256") != manifest.get("content_sha256")
+        or not constraints.get("cases")
+    ):
+        raise ValueError("Text constraints do not match the frozen development corpus")
+    output = deepcopy(fixture)
+    cases = {case["id"]: case for case in fixture["cases"]}
+    added: set[str] = set()
+    for constraint in constraints["cases"]:
+        original = cases.get(constraint["case_id"])
+        text = constraint["text"]
+        if (
+            original is None
+            or original["split"] != "development"
+            or original["status"] != "ready"
+            or not original["query"].get("image_id")
+            or original["query"].get("text")
+            or original["id"] in added
+            or not isinstance(text, str)
+            or not text.strip()
+            or len(text) > 1000
+        ):
+            raise ValueError(
+                "Text constraints require distinct ready development images"
+            )
+        reference = constraint["evidence"]
+        entity_id, quote = reference["entity_id"], reference["quote"]
+        if entity_id not in original["expected_ids"] or not quote:
+            raise ValueError(
+                "Text constraint evidence must support its expected entity"
+            )
+        member = "entities/" + entity_id.replace(":", "/") + ".json"
+        raw = archive.read(member)
+        if hashlib.sha256(raw).hexdigest() != manifest["files"].get(member):
+            raise ValueError("Text constraint evidence checksum mismatch")
+        entity = json.loads(raw)
+        page = next(
+            (
+                page
+                for page in entity["evidence"]
+                if page["id"] == reference["evidence_id"]
+            ),
+            None,
+        )
+        if page is None or (
+            quote not in page["markdown"] and quote not in page.get("search_text", "")
+        ):
+            raise ValueError(
+                "Text constraint quote is absent from its archived evidence"
+            )
+        paired = deepcopy(original)
+        paired["id"] += "-text"
+        if paired["id"] in cases:
+            raise ValueError("Paired text query ID already exists")
+        paired["task"] = "image_text"
+        paired["query"]["text"] = text
+        output["cases"].append(paired)
+        added.add(original["id"])
+    validate_fixture(output)
+    return output
 
 
 def summarize(rows: list[dict]) -> dict:
@@ -101,14 +179,30 @@ def benchmark(
     split: str,
     *,
     selection: Path | None = None,
+    text_constraints: Path | None = None,
     root: Path = ROOT,
     runner: Callable[..., dict] | None = None,
 ) -> dict:
+    if text_constraints is not None and split != "development":
+        raise ValueError("Text constraints apply to development only")
     fixture_bytes = fixture_path.read_bytes()
     fixture = json.loads(fixture_bytes)
     media = validate_fixture(fixture)
+    constraint_bytes = (
+        text_constraints.read_bytes() if text_constraints is not None else None
+    )
     with zipfile.ZipFile(bundle) as archive:
         manifest, records = gallery_contract(archive, fixture)
+        constraints = None
+        if constraint_bytes is not None:
+            constraints = json.loads(constraint_bytes)
+            fixture = add_text_constraints(
+                fixture,
+                fixture_bytes,
+                constraints,
+                archive,
+                manifest,
+            )
     identity = {
         "fixture_sha256": hashlib.sha256(fixture_bytes).hexdigest(),
         "dataset_id": manifest["dataset_id"],
@@ -116,6 +210,10 @@ def benchmark(
         "model_sha256": manifest["image"]["model_sha256"],
         "search": manifest["image"]["search"],
     }
+    if constraint_bytes is not None:
+        identity["text_constraints_sha256"] = hashlib.sha256(
+            constraint_bytes
+        ).hexdigest()
     frozen = None
     binary_hash = (
         hashlib.sha256(binary.read_bytes()).hexdigest() if binary.is_file() else None
@@ -229,6 +327,7 @@ def benchmark(
             "Ranked suggestions and accepted matches are reported separately. Uncalibrated no_supported_match is not a successful positive identification.",
             "Seed counts and correlated photographs cannot establish release acceptance or a false-match rate.",
             "The broad archive build may include these query photographs; only this restricted gallery supports held-out measurements.",
+            *(constraints.get("limitations", []) if constraints else []),
         ],
     }
 
@@ -242,10 +341,20 @@ def main() -> None:
     )
     parser.add_argument("--split", choices=("development", "evaluation"), required=True)
     parser.add_argument("--selection", type=Path)
+    parser.add_argument(
+        "--text-constraints",
+        type=Path,
+        help="Append source-backed paired text queries to development image cases",
+    )
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
     report = benchmark(
-        args.binary, args.bundle, args.fixture, args.split, selection=args.selection
+        args.binary,
+        args.bundle,
+        args.fixture,
+        args.split,
+        selection=args.selection,
+        text_constraints=args.text_constraints,
     )
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")

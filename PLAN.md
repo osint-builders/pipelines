@@ -470,9 +470,9 @@ Local review artifacts: `build/m6/pipelines.exe`, `pipelines-windows-amd64.zip`,
 
 - [x] Add full-text lexical ranking alongside semantic search, preserving exact designation and alias matches.
 - [x] Index original names, abbreviations, reviewed alternate names, captions, and OCR without converting incidental mentions into aliases.
-- [ ] Select rank fusion on development cases, freeze it before evaluation, and keep text, image, and combined query behavior explicit.
+- [x] Select rank fusion on development cases, freeze it before evaluation, and keep text, image, and combined query behavior explicit.
 - [ ] Test partial names, spelling variations, specification phrases, and queries with no supported match.
-- [ ] Expose useful match reasons and treat similarity scores as ranking signals rather than identity probabilities.
+- [x] Expose useful match reasons and treat similarity scores as ranking signals rather than identity probabilities.
 
 Complete when the frozen text baseline has no unacceptable regression and the combined
 retrieval targets pass. Keep exact vector search until measurements justify another index.
@@ -492,10 +492,26 @@ Each split has 18 positive and four negative queries, reported globally and with
 filters. Development-only comparison selected lexical weight 2, semantic weight 1,
 and rank constant 60: global first/within-five improved from 15/18 and 16/18 to
 16/18 and 18/18; filtered results improved from 16/18 and 17/18 to 17/18 and 18/18.
-No positive development rank worsened. Actual CLI regression/evaluation runs are in
-progress; evaluation has not been run. Ranking arithmetic and evidence contracts are
-covered by 655 Python tests plus Go tests/vet. Windows offline acceptance passed;
-the public packager reproduced the complete bundle byte-for-byte in 112.3 seconds.
+No positive development rank worsened. The actual CLI reproduced these results and
+all 116 frozen baseline ranks, including 73/73 required first-place results. Windows
+and network-disabled Linux acceptance passed. The public packager reproduced the
+complete bundle byte-for-byte in 112.3 seconds.
+
+Six paired development photographs with source-backed text constraints ranked an
+expected entity first for both M6 and M7, globally and with source filters. All six
+image-only results also stayed first. Opt-in observation development top-five results
+improved from 2/7 to 3/7 globally and 3/7 to 4/7 filtered; no previous top-five success
+was lost. Choices and executable hashes are frozen in `build/m7/ranking-selection.json`,
+`image-selection.json`, and `observations-selection.json`; held-out runs are underway.
+
+Each hybrid result exposes its text ranking, raw semantic/BM25 contributions, matched
+terms, and source or generated provenance. `name_match` means a complete normalized
+source-name span, not an identity probability. A default hybrid query whose first
+suggestion lacks both lexical and source-name support returns `no_supported_match`.
+Generated and image queries retain their existing uncalibrated abstention behavior.
+Overlapping words can still produce candidates for absent entities: the four global
+development negatives all did so, and two of four did so with source filters. Broader
+abstention calibration remains an explicit M10 requirement.
 
 ## M8 — Entity relationships and precise filters
 
