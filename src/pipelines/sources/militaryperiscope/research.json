@@ -1,0 +1,58 @@
+{
+  "fields": {
+    "First Published At": "publication_date",
+    "Last Published At": "publication_date",
+    "Major Update Date": "updated_date",
+    "Minor Update Date": "updated_date"
+  },
+  "relations": [
+    {
+      "source_id": "cambridgepixel:4e04dadc01e79038dd26b3ba",
+      "target_id": "militaryperiscope:332515",
+      "type": "family_member_of",
+      "basis": "reviewed_source_evidence",
+      "rationale": "The Military Periscope Lanza family article explicitly includes the LTR-25 designation. The model-specific record is a family member and remains distinct from the broader family article.",
+      "evidence": [
+        {
+          "entity_id": "cambridgepixel:4e04dadc01e79038dd26b3ba",
+          "evidence_id": "f1a7a1cf78074a5ac3cfea41",
+          "quote": "Model: Lanza LTR-25"
+        },
+        {
+          "entity_id": "militaryperiscope:332515",
+          "evidence_id": "ff682bc432816b358aa18368",
+          "quote": "Designated LTR-25 in NATO service, the radars would be integrated with NATO's"
+        },
+        {
+          "entity_id": "militaryperiscope:332515",
+          "evidence_id": "ff682bc432816b358aa18368",
+          "quote": "a Spanish three-dimensional air surveillance radar that operates in the L band"
+        }
+      ]
+    },
+    {
+      "source_id": "radartutorial:ce60bbb5e34b5b602d98a3be",
+      "target_id": "militaryperiscope:332515",
+      "type": "family_member_of",
+      "basis": "reviewed_source_evidence",
+      "rationale": "The Military Periscope Lanza family article explicitly includes the LTR-25 designation. The model-specific record is a family member and remains distinct from the broader family article.",
+      "evidence": [
+        {
+          "entity_id": "radartutorial:ce60bbb5e34b5b602d98a3be",
+          "evidence_id": "ce60bbb5e34b5b602d98a3be",
+          "quote": "LTR-25 (**L**ong-range **T**actical **R**adar)"
+        },
+        {
+          "entity_id": "militaryperiscope:332515",
+          "evidence_id": "ff682bc432816b358aa18368",
+          "quote": "Designated LTR-25 in NATO service, the radars would be integrated with NATO's"
+        },
+        {
+          "entity_id": "militaryperiscope:332515",
+          "evidence_id": "ff682bc432816b358aa18368",
+          "quote": "a Spanish three-dimensional air surveillance radar that operates in the L band"
+        }
+      ]
+    }
+  ]
+}

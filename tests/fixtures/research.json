@@ -1,0 +1,828 @@
+{
+  "schema_version": 1,
+  "status": "source_evidence_reviewed_before_cli_execution",
+  "source_content_sha256": "f82d70c7591e9e13c1a04ce11a256831a764e4f15761773e67a4604aab4bc4b6",
+  "source_dataset_id": "1246b384423a929363d68c67f62d3aff222eb58f2ad74d83edb3911cd4a3eaa6",
+  "scope": "Local archive pilot; reviewed source assertions, not independently verified truth. No source entity, vector, or archive is changed.",
+  "limitations": [
+    "Thirteen selected relations cover all five predicates and six cross-source equivalence pairs, not exhaustive source coverage.",
+    "Equivalence is a reversible reviewed link with no transitive merging or property inheritance.",
+    "Evidence pages may discuss multiple variants; source-qualified IDs and exact quote context stay authoritative.",
+    "Source-reported IOC includes plans; development_status is necessary context and known normalized date does not prove an event occurred.",
+    "Country roles stay distinct. Compound country or contractor values remain whole source text, not inferred memberships.",
+    "Instrumented range and source maximum range share the broad range field but original labels remain. Detection range is separate; no weapon/truck range is silently relabeled as detection range.",
+    "Photo capture dates and article publication/update dates never become equipment events."
+  ],
+  "source_coverage": {
+    "armyrecognition": {
+      "entities": 11,
+      "mapped_source_facts": 32,
+      "mapped_entities": 11,
+      "field_counts": {
+        "crew": 6,
+        "designer_country": 8,
+        "detection_range": 3,
+        "ferry_range": 2,
+        "operator_country": 11,
+        "speed": 2
+      },
+      "reviewed_relations": 1
+    },
+    "cambridgepixel": {
+      "entities": 385,
+      "mapped_source_facts": 1155,
+      "mapped_entities": 385,
+      "field_counts": {
+        "development_status": 385,
+        "manufacturer": 385,
+        "updated_date": 385
+      },
+      "reviewed_relations": 5
+    },
+    "climateviewer": {
+      "entities": 383,
+      "mapped_source_facts": 0,
+      "mapped_entities": 0,
+      "field_counts": {},
+      "reviewed_relations": 0
+    },
+    "commons": {
+      "entities": 151,
+      "mapped_source_facts": 0,
+      "mapped_entities": 0,
+      "field_counts": {},
+      "reviewed_relations": 0
+    },
+    "deagel": {
+      "entities": 1285,
+      "mapped_source_facts": 11174,
+      "mapped_entities": 1285,
+      "field_counts": {
+        "contractor": 1083,
+        "crew": 772,
+        "detection_range": 77,
+        "development_status": 1285,
+        "first_flight": 9,
+        "height": 511,
+        "length": 537,
+        "mass": 903,
+        "origin_country": 1285,
+        "power": 637,
+        "quantity": 1285,
+        "range": 514,
+        "service_entry": 1103,
+        "speed": 640,
+        "width": 533
+      },
+      "reviewed_relations": 3
+    },
+    "fandom": {
+      "entities": 46,
+      "mapped_source_facts": 144,
+      "mapped_entities": 34,
+      "field_counts": {
+        "frequency": 23,
+        "height": 5,
+        "manufacturer": 2,
+        "origin_country": 34,
+        "power": 18,
+        "pulse_repetition_frequency": 2,
+        "quantity": 9,
+        "range": 28,
+        "service_entry": 23
+      },
+      "reviewed_relations": 0
+    },
+    "militaryperiscope": {
+      "entities": 143,
+      "mapped_source_facts": 443,
+      "mapped_entities": 143,
+      "field_counts": {
+        "publication_date": 171,
+        "updated_date": 272
+      },
+      "reviewed_relations": 2
+    },
+    "radartutorial": {
+      "entities": 1735,
+      "mapped_source_facts": 5340,
+      "mapped_entities": 1729,
+      "field_counts": {
+        "frequency": 1730,
+        "power": 1422,
+        "pulse_repetition_frequency": 729,
+        "range": 1459
+      },
+      "reviewed_relations": 2
+    },
+    "russianforces": {
+      "entities": 57,
+      "mapped_source_facts": 71,
+      "mapped_entities": 57,
+      "field_counts": {
+        "publication_date": 71
+      },
+      "reviewed_relations": 0
+    },
+    "virtualglobetrotting": {
+      "entities": 100,
+      "mapped_source_facts": 300,
+      "mapped_entities": 100,
+      "field_counts": {
+        "publication_date": 100,
+        "site_country": 100,
+        "updated_date": 100
+      },
+      "reviewed_relations": 0
+    },
+    "wikipedia": {
+      "entities": 41,
+      "mapped_source_facts": 64,
+      "mapped_entities": 13,
+      "field_counts": {
+        "first_flight": 2,
+        "frequency": 10,
+        "manufacturer": 6,
+        "origin_country": 13,
+        "power": 4,
+        "pulse_repetition_frequency": 4,
+        "quantity": 5,
+        "range": 11,
+        "service_entry": 9
+      },
+      "reviewed_relations": 0
+    }
+  },
+  "relations": [
+    {
+      "source_id": "armyrecognition:3bff31b536d17c06a088d107",
+      "target_id": "radartutorial:3c7e9748616bc6d9f9581529",
+      "type": "related_system",
+      "owner": "armyrecognition",
+      "assertion_sha256": "1fab038c5c87d859cfc4872f32d0a7bd537ec6a134c3b98b643dd9086fe9348f"
+    },
+    {
+      "source_id": "cambridgepixel:44bc4a4291510fad8c1e43ba",
+      "target_id": "radartutorial:eb4a8826e7e43ba15d4b7018",
+      "type": "equivalent",
+      "owner": "cambridgepixel",
+      "assertion_sha256": "bf279e4f7be157682a9d1fd5df1a05b9c9ebb90db4d69228b0f4779ea93e59eb"
+    },
+    {
+      "source_id": "cambridgepixel:4e04dadc01e79038dd26b3ba",
+      "target_id": "radartutorial:ce60bbb5e34b5b602d98a3be",
+      "type": "equivalent",
+      "owner": "cambridgepixel",
+      "assertion_sha256": "66bd87c51d9f03bc5e4da4ada6fb7ad02b556aedb21d80e9f9f02e9eb390c021"
+    },
+    {
+      "source_id": "cambridgepixel:a3fb5a40ecd761dd87b2a77e",
+      "target_id": "radartutorial:b95cc994aa115f58abfd9bf7",
+      "type": "equivalent",
+      "owner": "cambridgepixel",
+      "assertion_sha256": "0e5a5b4395b13f5cb62efbf465bf60b779f8d61a997a24b879b867ea1a14848c"
+    },
+    {
+      "source_id": "cambridgepixel:ac2710f11637677f185e2ed7",
+      "target_id": "radartutorial:08d40281697e1f55faac0343",
+      "type": "equivalent",
+      "owner": "cambridgepixel",
+      "assertion_sha256": "6d4aed2f24f9512f5702e4cd2f75e0ac016b8cfea4014d753b4616bd95855be5"
+    },
+    {
+      "source_id": "cambridgepixel:bcc8adfc20e28da9dc5c03a0",
+      "target_id": "radartutorial:408fe2366ec7865b2bcfea82",
+      "type": "equivalent",
+      "owner": "cambridgepixel",
+      "assertion_sha256": "a4b29b4d2694950ecb7926032e5be44c6cc8ad4ccd6277d79fb5b3f71d1fe84b"
+    },
+    {
+      "source_id": "deagel:a000371-002",
+      "target_id": "deagel:a000371-001",
+      "type": "variant_of",
+      "owner": "deagel",
+      "assertion_sha256": "828f240e67b09189aba94cb98c41af0eaa2eb53b96057c50d99e2b232cca2f7d"
+    },
+    {
+      "source_id": "deagel:a003154-001",
+      "target_id": "deagel:a000371-001",
+      "type": "component_of",
+      "owner": "deagel",
+      "assertion_sha256": "c4170b1938d29a383cac8add9040ece788ae43ca6d31e654983e11a623d202dc"
+    },
+    {
+      "source_id": "deagel:a003155-001",
+      "target_id": "deagel:a000371-001",
+      "type": "component_of",
+      "owner": "deagel",
+      "assertion_sha256": "3f9189e2ffe58f4d117e71f0eebe388ca9252a6d9278037a6322adc19e9bdb03"
+    },
+    {
+      "source_id": "cambridgepixel:4e04dadc01e79038dd26b3ba",
+      "target_id": "militaryperiscope:332515",
+      "type": "family_member_of",
+      "owner": "militaryperiscope",
+      "assertion_sha256": "e899dc9a1cf9b4b8a8e8aa61c6b24085fc49ce8c7bf337bf3c4d985d94b507b5"
+    },
+    {
+      "source_id": "radartutorial:ce60bbb5e34b5b602d98a3be",
+      "target_id": "militaryperiscope:332515",
+      "type": "family_member_of",
+      "owner": "militaryperiscope",
+      "assertion_sha256": "d71841e62d7eee45ab458a0b75062cb523e6a825a3b85ad131c5b7f78159564f"
+    },
+    {
+      "source_id": "radartutorial:3c7e9748616bc6d9f9581529",
+      "target_id": "commons:9955018",
+      "type": "equivalent",
+      "owner": "radartutorial",
+      "assertion_sha256": "32643416f3f177d9652928470cd82d602959f2c0fcf0adee70bd5f3373a6a102"
+    },
+    {
+      "source_id": "radartutorial:b95cc994aa115f58abfd9bf7",
+      "target_id": "radartutorial:ca2ba46a11ef486d8ded0801",
+      "type": "related_system",
+      "owner": "radartutorial",
+      "assertion_sha256": "10e832e0429a41f54e93fddaac964186fb2916f6f5d1f3adc745451abe2c964a"
+    }
+  ],
+  "negative_relations": [
+    {
+      "case_id": "distinct-giraffe-models",
+      "source_id": "cambridgepixel:ac2710f11637677f185e2ed7",
+      "target_id": "cambridgepixel:a3fb5a40ecd761dd87b2a77e",
+      "forbidden_type": "equivalent",
+      "rationale": "Same manufacturer/family is insufficient: 1X uses X band and 4A uses S band.",
+      "evidence": [
+        {
+          "entity_id": "cambridgepixel:ac2710f11637677f185e2ed7",
+          "evidence_id": "8cbf1850d2e48ec2957aaa24",
+          "quote": "Manufacturer: Saab\nModel: Giraffe 1X\nBand: X"
+        },
+        {
+          "entity_id": "cambridgepixel:a3fb5a40ecd761dd87b2a77e",
+          "evidence_id": "344f6350495702eb3dba8fb8",
+          "quote": "Manufacturer: Saab\nModel: Giraffe 4A\nBand: S"
+        }
+      ]
+    },
+    {
+      "case_id": "land-versus-naval",
+      "source_id": "cambridgepixel:a3fb5a40ecd761dd87b2a77e",
+      "target_id": "cambridgepixel:35edd887766a3c95fd0a83f2",
+      "forbidden_type": "equivalent",
+      "rationale": "Land Giraffe 4A and Sea Giraffe 4A are separately named source products; shared family/design cannot erase installation variants.",
+      "evidence": [
+        {
+          "entity_id": "cambridgepixel:a3fb5a40ecd761dd87b2a77e",
+          "evidence_id": "344f6350495702eb3dba8fb8",
+          "quote": "Model: Giraffe 4A"
+        },
+        {
+          "entity_id": "cambridgepixel:35edd887766a3c95fd0a83f2",
+          "evidence_id": "4883828daa434cd7342aada6",
+          "quote": "Model: Sea Giraffe 4A"
+        }
+      ]
+    },
+    {
+      "case_id": "family-row-is-not-single-model",
+      "source_id": "cambridgepixel:90a3a14a2932c548d55a85b5",
+      "target_id": "radartutorial:b634322c033efaa68f3709cb",
+      "forbidden_type": "equivalent",
+      "rationale": "The CP row groups GM400/GM400alpha/GM403/GM406; RT page mixes GM400 family and GM403 details and distinguishes GM406. Scope is unsuitable for equivalence.",
+      "evidence": [
+        {
+          "entity_id": "cambridgepixel:90a3a14a2932c548d55a85b5",
+          "evidence_id": "6d993a2e38dabdf94ff5a15c",
+          "quote": "Model: Ground Master GM400 / GM400α / GM403 / GM406"
+        },
+        {
+          "entity_id": "radartutorial:b634322c033efaa68f3709cb",
+          "evidence_id": "b634322c033efaa68f3709cb",
+          "quote": "The GM 406 has a transmitter which is twice as powerful as the GM 403, giving it a 20 percent greater range."
+        }
+      ]
+    },
+    {
+      "case_id": "source-disagreement-on-91n6-variants",
+      "source_id": "deagel:a003154-002",
+      "target_id": "radartutorial:5c21353ebdb3f6b5f654d510",
+      "forbidden_type": "equivalent",
+      "rationale": "Deagel aliases 91N6A/91N6M for S-500; RT describes A for S-400M and M for S-500. Preserve conflicting scope rather than merging the broader page with a variant.",
+      "evidence": [
+        {
+          "entity_id": "deagel:a003154-002",
+          "evidence_id": "c247aedb097e28ea9b7c249d",
+          "quote": "The 91N6A, also known as 91N6M, is a target acquisition and battle management radar developed to support the S-500 air defense system."
+        },
+        {
+          "entity_id": "radartutorial:5c21353ebdb3f6b5f654d510",
+          "evidence_id": "5c21353ebdb3f6b5f654d510",
+          "quote": "* 91N6A - modernized for use in S-400M “Triumf” SAM-systems, developed in the mid-80s;\n* 91N6М - modernized for future use in S-500 “Prometheus” SAM-systems (maximum range: 640 km);"
+        }
+      ]
+    },
+    {
+      "case_id": "shared-evidence-page",
+      "source_id": "deagel:a000458-001",
+      "target_id": "deagel:a000458-002",
+      "forbidden_type": "equivalent",
+      "rationale": "Shared full page/evidence ID includes separate #001 and #002 subjects. Distinct source variant IDs must survive.",
+      "evidence": [
+        {
+          "entity_id": "deagel:a000458-001",
+          "evidence_id": "fe5cdfcaa8c045ef4a436cce",
+          "quote": "The GIRAFFE AMB (Agile Multi-Beam) is a 3D, long range radar system integrated on a single ground vehicle designed for medium and short range air defense applications."
+        },
+        {
+          "entity_id": "deagel:a000458-002",
+          "evidence_id": "fe5cdfcaa8c045ef4a436cce",
+          "quote": "The GIRAFFE S is a derivative of proven GIRAFFE radar system featuring a longer range."
+        }
+      ]
+    },
+    {
+      "case_id": "cross-link-not-identity",
+      "source_id": "commons:64847300",
+      "target_id": "wikipedia:5792165",
+      "forbidden_type": "equivalent",
+      "rationale": "A Type341 image associated with the Commons3R41 category links Wikipedia Type341. The category and linked gun-control radar remain distinct; hyperlinks are insufficient.",
+      "evidence": [
+        {
+          "entity_id": "commons:64847300",
+          "evidence_id": "3844a1c8734c1382c7377d0e",
+          "quote": "Top Dome 3R41 Volna fire control radar"
+        },
+        {
+          "entity_id": "wikipedia:5792165",
+          "evidence_id": "9f25a120b4c9941faae126d1",
+          "quote": "Type 341 is the first generation gun control radar indigenously developed in China"
+        }
+      ]
+    },
+    {
+      "case_id": "identical-site-titles",
+      "source_id": "virtualglobetrotting:210025",
+      "target_id": "virtualglobetrotting:210132",
+      "forbidden_type": "equivalent",
+      "rationale": "Both entries are Radar Site in China but localities and coordinates differ.",
+      "evidence": [
+        {
+          "entity_id": "virtualglobetrotting:210025",
+          "evidence_id": "9625995990c2415e3afbc59d",
+          "quote": "Yunxio"
+        },
+        {
+          "entity_id": "virtualglobetrotting:210132",
+          "evidence_id": "bf8419b2e66e47d1d467c702",
+          "quote": "Longlou"
+        }
+      ]
+    },
+    {
+      "case_id": "component-not-system",
+      "source_id": "deagel:a003154-001",
+      "target_id": "deagel:a000371-001",
+      "forbidden_type": "equivalent",
+      "rationale": "The explicit part-of link does not make the acquisition radar equivalent to its complete air-defence system.",
+      "evidence": [
+        {
+          "entity_id": "deagel:a003154-001",
+          "evidence_id": "c247aedb097e28ea9b7c249d",
+          "quote": "Each S-400 battalion includes at least one 91N6 radar system."
+        },
+        {
+          "entity_id": "deagel:a000371-001",
+          "evidence_id": "5d9dc8dbc704b13e245e90be",
+          "quote": "| [91N6](https://www.deagel.com/Armies/91N6/a003154#001) | 1 |"
+        }
+      ]
+    }
+  ],
+  "field_cases": [
+    {
+      "case_id": "exact-manufacturer",
+      "entity_id": "cambridgepixel:4e04dadc01e79038dd26b3ba",
+      "field": "manufacturer",
+      "locator": {
+        "kind": "fact",
+        "index": 0
+      },
+      "evidence_id": "f1a7a1cf78074a5ac3cfea41",
+      "raw": {
+        "evidence": "https://cambridgepixel.com/resources/radar-database/",
+        "name": "Manufacturer",
+        "qualifier": null,
+        "raw": "Indra",
+        "unit": null,
+        "values": []
+      },
+      "expected": {
+        "status": "known",
+        "value": {
+          "text": "Indra"
+        }
+      }
+    },
+    {
+      "case_id": "catalog-date-not-event",
+      "entity_id": "cambridgepixel:4e04dadc01e79038dd26b3ba",
+      "field": "updated_date",
+      "locator": {
+        "kind": "fact",
+        "index": 5
+      },
+      "evidence_id": "f1a7a1cf78074a5ac3cfea41",
+      "raw": {
+        "evidence": "https://cambridgepixel.com/resources/radar-database/",
+        "name": "Database last updated",
+        "qualifier": null,
+        "raw": "2026-08-07",
+        "unit": null,
+        "values": []
+      },
+      "expected": {
+        "status": "known",
+        "value": {
+          "date": {
+            "min": "2026-08-07",
+            "max": "2026-08-07",
+            "precision": "day"
+          }
+        }
+      }
+    },
+    {
+      "case_id": "contractor-role",
+      "entity_id": "deagel:a000371-001",
+      "field": "contractor",
+      "locator": {
+        "kind": "fact",
+        "index": 4
+      },
+      "evidence_id": "5d9dc8dbc704b13e245e90be",
+      "raw": {
+        "evidence": "https://www.deagel.com/Armies/S-400/a000371#001",
+        "name": "Contractor",
+        "qualifier": null,
+        "raw": "Almaz-Antey Concern",
+        "unit": null,
+        "values": []
+      },
+      "expected": {
+        "status": "known",
+        "value": {
+          "text": "Almaz-Antey Concern"
+        }
+      }
+    },
+    {
+      "case_id": "origin-role",
+      "entity_id": "deagel:a000371-001",
+      "field": "origin_country",
+      "locator": {
+        "kind": "fact",
+        "index": 3
+      },
+      "evidence_id": "5d9dc8dbc704b13e245e90be",
+      "raw": {
+        "evidence": "https://www.deagel.com/Armies/S-400/a000371#001",
+        "name": "Origin",
+        "qualifier": null,
+        "raw": "Russia",
+        "unit": null,
+        "values": []
+      },
+      "expected": {
+        "status": "known",
+        "value": {
+          "text": "Russia"
+        }
+      }
+    },
+    {
+      "case_id": "reported-ioc-day",
+      "entity_id": "deagel:a000371-001",
+      "field": "service_entry",
+      "locator": {
+        "kind": "fact",
+        "index": 5
+      },
+      "evidence_id": "5d9dc8dbc704b13e245e90be",
+      "raw": {
+        "evidence": "https://www.deagel.com/Armies/S-400/a000371#001",
+        "name": "Initial Operational Capability (IOC)",
+        "qualifier": null,
+        "raw": "April 28, 2007",
+        "unit": null,
+        "values": []
+      },
+      "expected": {
+        "status": "known",
+        "value": {
+          "date": {
+            "min": "2007-04-28",
+            "max": "2007-04-28",
+            "precision": "day"
+          }
+        }
+      }
+    },
+    {
+      "case_id": "reported-planned-ioc",
+      "entity_id": "deagel:a000371-002",
+      "field": "service_entry",
+      "locator": {
+        "kind": "fact",
+        "index": 4
+      },
+      "evidence_id": "5d9dc8dbc704b13e245e90be",
+      "raw": {
+        "evidence": "https://www.deagel.com/Armies/S-400/a000371#002",
+        "name": "Initial Operational Capability (IOC)",
+        "qualifier": null,
+        "raw": "2030",
+        "unit": null,
+        "values": []
+      },
+      "expected": {
+        "status": "known",
+        "value": {
+          "date": {
+            "min": "2030-01-01",
+            "max": "2030-12-31",
+            "precision": "year"
+          }
+        },
+        "caveat": "Source-reported IOC includes plans, not evidence the event occurred; pair with development_status."
+      }
+    },
+    {
+      "case_id": "planned-development-status",
+      "entity_id": "deagel:a000371-002",
+      "field": "development_status",
+      "locator": {
+        "kind": "fact",
+        "index": 1
+      },
+      "evidence_id": "5d9dc8dbc704b13e245e90be",
+      "raw": {
+        "evidence": "https://www.deagel.com/Armies/S-400/a000371#002",
+        "name": "Status",
+        "qualifier": null,
+        "raw": "Under Development",
+        "unit": null,
+        "values": []
+      },
+      "expected": {
+        "status": "known",
+        "value": {
+          "text": "Under Development"
+        }
+      }
+    },
+    {
+      "case_id": "unknown-production",
+      "entity_id": "deagel:a000371-002",
+      "field": "quantity",
+      "locator": {
+        "kind": "fact",
+        "index": 5
+      },
+      "evidence_id": "5d9dc8dbc704b13e245e90be",
+      "raw": {
+        "evidence": "https://www.deagel.com/Armies/S-400/a000371#002",
+        "name": "Total Production",
+        "qualifier": null,
+        "raw": "?",
+        "unit": null,
+        "values": []
+      },
+      "expected": {
+        "status": "unknown",
+        "value": null
+      }
+    },
+    {
+      "case_id": "numeric-frequency-interval",
+      "entity_id": "radartutorial:b634322c033efaa68f3709cb",
+      "field": "frequency",
+      "locator": {
+        "kind": "fact",
+        "index": 0
+      },
+      "evidence_id": "b634322c033efaa68f3709cb",
+      "raw": {
+        "evidence": "https://www.radartutorial.eu/19.kartei/02.surv/en/karte016.en.html#ttd01",
+        "name": "frequency",
+        "qualifier": "range",
+        "raw": "2.9 … 3.3 GHz",
+        "unit": "GHz",
+        "values": [
+          2.9,
+          3.3
+        ]
+      },
+      "expected": {
+        "status": "known",
+        "value": {
+          "number": {
+            "min": 2900000000,
+            "max": 3300000000,
+            "min_inclusive": true,
+            "max_inclusive": true,
+            "unit": "Hz"
+          }
+        }
+      }
+    },
+    {
+      "case_id": "numeric-instrumented-range",
+      "entity_id": "radartutorial:b634322c033efaa68f3709cb",
+      "field": "range",
+      "locator": {
+        "kind": "fact",
+        "index": 1
+      },
+      "evidence_id": "b634322c033efaa68f3709cb",
+      "raw": {
+        "evidence": "https://www.radartutorial.eu/19.kartei/02.surv/en/karte016.en.html#ttd09",
+        "name": "instrumented range",
+        "qualifier": "value",
+        "raw": "470 km",
+        "unit": "km",
+        "values": [
+          470.0
+        ]
+      },
+      "expected": {
+        "status": "known",
+        "value": {
+          "number": {
+            "min": 470000,
+            "max": 470000,
+            "min_inclusive": true,
+            "max_inclusive": true,
+            "unit": "m"
+          }
+        }
+      }
+    },
+    {
+      "case_id": "numeric-empty-note-column",
+      "entity_id": "deagel:a000371-001",
+      "field": "detection_range",
+      "locator": {
+        "kind": "fact",
+        "index": 20
+      },
+      "evidence_id": "5d9dc8dbc704b13e245e90be",
+      "raw": {
+        "evidence": "https://www.deagel.com/Armies/S-400/a000371#001",
+        "name": "Specifications: Max Detection Range",
+        "qualifier": null,
+        "raw": "600 kilometer | ",
+        "unit": null,
+        "values": []
+      },
+      "expected": {
+        "status": "known",
+        "value": {
+          "number": {
+            "min": 600000,
+            "max": 600000,
+            "min_inclusive": true,
+            "max_inclusive": true,
+            "unit": "m"
+          }
+        }
+      }
+    },
+    {
+      "case_id": "rounded-dual-units-unsupported",
+      "entity_id": "radartutorial:ce60bbb5e34b5b602d98a3be",
+      "field": "range",
+      "locator": {
+        "kind": "fact",
+        "index": 3
+      },
+      "evidence_id": "ce60bbb5e34b5b602d98a3be",
+      "raw": {
+        "evidence": "https://www.radartutorial.eu/19.kartei/02.surv/en/karte083.en.html#ttd09",
+        "name": "instrumented range",
+        "qualifier": null,
+        "raw": "240 NM (≙ 450 km)",
+        "unit": null,
+        "values": []
+      },
+      "expected": {
+        "status": "unparsed",
+        "value": null
+      }
+    },
+    {
+      "case_id": "compound-variant-ranges-unsupported",
+      "entity_id": "armyrecognition:1a5ae47b92074b0e804c828f",
+      "field": "detection_range",
+      "locator": {
+        "kind": "fact",
+        "index": 3
+      },
+      "evidence_id": "1a5ae47b92074b0e804c828f",
+      "raw": {
+        "evidence": "https://www.armyrecognition.com/military-products/army/radars/air-defense-radars/96n6-92n6e-grave-stone-radar",
+        "name": "Range Radar",
+        "qualifier": "As stated by Army Recognition; unverified source claim",
+        "raw": "- 92N6: Up to 300 km. - 92N6A: Up to 480 km. - 92N6E: Up to 250 km (export version).",
+        "unit": null,
+        "values": []
+      },
+      "expected": {
+        "status": "unparsed",
+        "value": null
+      }
+    },
+    {
+      "case_id": "designer-country-role",
+      "entity_id": "armyrecognition:1a5ae47b92074b0e804c828f",
+      "field": "designer_country",
+      "locator": {
+        "kind": "fact",
+        "index": 2
+      },
+      "evidence_id": "1a5ae47b92074b0e804c828f",
+      "raw": {
+        "evidence": "https://www.armyrecognition.com/military-products/army/radars/air-defense-radars/96n6-92n6e-grave-stone-radar",
+        "name": "Designer Country",
+        "qualifier": "As stated by Army Recognition; unverified source claim",
+        "raw": "Russia",
+        "unit": null,
+        "values": []
+      },
+      "expected": {
+        "status": "known",
+        "value": {
+          "text": "Russia"
+        }
+      }
+    },
+    {
+      "case_id": "site-country-role",
+      "entity_id": "virtualglobetrotting:210025",
+      "field": "site_country",
+      "locator": {
+        "kind": "fact",
+        "index": 1
+      },
+      "evidence_id": "9625995990c2415e3afbc59d",
+      "raw": {
+        "evidence": "https://virtualglobetrotting.com/map/radar-site-136/",
+        "name": "Country",
+        "qualifier": null,
+        "raw": "China (CN)",
+        "unit": null,
+        "values": []
+      },
+      "expected": {
+        "status": "known",
+        "value": {
+          "text": "China (CN)"
+        }
+      }
+    }
+  ],
+  "unmapped_facts": [
+    {
+      "source": "fandom",
+      "labels": [
+        "Owner",
+        "Built by",
+        "Built"
+      ],
+      "reason": "Owner/builder/construction are not manufacturer or service-entry facts."
+    },
+    {
+      "source": "militaryperiscope",
+      "labels": [
+        "Country"
+      ],
+      "reason": "Generic Country spans record kinds; origin/location/designer semantics are not proven."
+    },
+    {
+      "source": "commons",
+      "labels": [
+        "File Date"
+      ],
+      "reason": "Photograph date is not an entity event."
+    },
+    {
+      "source": "radartutorial",
+      "labels": [
+        "accuracy",
+        "antenna rotation"
+      ],
+      "reason": "Compound dimensions/discrete alternatives are outside this field catalog."
+    }
+  ]
+}

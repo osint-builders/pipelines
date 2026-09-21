@@ -31,12 +31,19 @@ Usage:
   pipelines get [--format json|markdown|html|source] [--evidence PAGE_ID] SOURCE:ID
   pipelines media [--id MEDIA_ID] [--output PATH] SOURCE:ID
   pipelines observations [--id OBSERVATION_ID] SOURCE:ID
+  pipelines facts SOURCE:ID
+  pipelines relationships [--type TYPE] SOURCE:ID
+  pipelines compare SOURCE:ID SOURCE:ID [...]
+  pipelines list [--limit 10] [filters]
   pipelines info
   pipelines verify
   pipelines version
   pipelines notices
 
-Filters: --source SOURCE --kind KIND --category CATEGORY
+Filters: --source SOURCE --kind KIND --category CATEGORY --where "FIELD OP VALUE"
+Repeat --where to require every condition; OP is = != < <= > >=.
+Number filters require units except counts. See info for the research field catalog.
+Compare accepts 2 to 20 unique IDs and preserves each source claim.
 Place flags before the query or ID. Every search returns stable, source-qualified IDs.
 JSON is the default output. Source export preserves the archived response bytes.
 Image queries accept local JPEG/PNG files up to 20 MiB and 40 million pixels.
@@ -77,7 +84,7 @@ func runWithFiles(ctx context.Context, args []string, out io.Writer, files fs.FS
 		return nil
 	}
 	command := args[0]
-	if command != "search" && command != "similar" && command != "get" && command != "media" && command != "observations" && command != "info" && command != "verify" {
+	if command != "search" && command != "similar" && command != "get" && command != "media" && command != "observations" && command != "info" && command != "verify" && !isResearchCommand(command) {
 		return fmt.Errorf("unknown command: %s", command)
 	}
 	flags := flag.NewFlagSet(command, flag.ContinueOnError)
@@ -86,13 +93,21 @@ func runWithFiles(ctx context.Context, args []string, out io.Writer, files fs.FS
 	mode, format, evidence := "hybrid", "json", ""
 	imagePath, mediaID, outputPath := "", "", ""
 	observationID := ""
+	relationType := ""
 	useObservations := false
 	filter := dataset.Filter{}
-	if command == "search" || command == "similar" {
+	if command == "search" || command == "similar" || command == "list" {
 		flags.IntVar(&limit, "limit", 10, "maximum results")
 		flags.StringVar(&filter.Source, "source", "", "source filter")
 		flags.StringVar(&filter.Kind, "kind", "", "kind filter")
 		flags.StringVar(&filter.Category, "category", "", "category filter")
+		flags.Func("where", "require a structured field predicate (repeatable)", func(value string) error {
+			if strings.TrimSpace(value) == "" {
+				return errors.New("--where must not be empty")
+			}
+			filter.Where = append(filter.Where, value)
+			return nil
+		})
 	}
 	if command == "search" {
 		flags.StringVar(&mode, "mode", "hybrid", "search mode")
@@ -110,6 +125,9 @@ func runWithFiles(ctx context.Context, args []string, out io.Writer, files fs.FS
 	if command == "observations" {
 		flags.StringVar(&observationID, "id", "", "select a generated observation")
 	}
+	if command == "relationships" {
+		flags.StringVar(&relationType, "type", "", "relationship type")
+	}
 	if err := flags.Parse(args[1:]); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
 			_, err = io.WriteString(out, help)
@@ -119,6 +137,9 @@ func runWithFiles(ctx context.Context, args []string, out io.Writer, files fs.FS
 	}
 	explicit := map[string]bool{}
 	flags.Visit(func(f *flag.Flag) { explicit[f.Name] = true })
+	if err := validateResearchArguments(command, flags.Args(), relationType, explicit["type"]); err != nil {
+		return err
+	}
 	imageQuery := explicit["image"]
 	if imageQuery && (strings.TrimSpace(imagePath) == "" || explicit["mode"]) {
 		return errors.New("--image requires a local file and cannot be combined with --mode")
@@ -130,7 +151,7 @@ func runWithFiles(ctx context.Context, args []string, out io.Writer, files fs.FS
 	if useObservations && imageQuery && flags.NArg() == 0 {
 		return errors.New("--observations requires a text query")
 	}
-	if imageQuery && flags.NArg() > 1 || !imageQuery && (needsArgument && flags.NArg() != 1 || !needsArgument && flags.NArg() != 0) {
+	if !isResearchCommand(command) && (imageQuery && flags.NArg() > 1 || !imageQuery && (needsArgument && flags.NArg() != 1 || !needsArgument && flags.NArg() != 0)) {
 		return errors.New("incorrect arguments; quote the query and place flags before it (see --help)")
 	}
 	if mode != "hybrid" && mode != "vector" {
@@ -157,11 +178,20 @@ func runWithFiles(ctx context.Context, args []string, out io.Writer, files fs.FS
 	if err != nil {
 		return err
 	}
+	if command == "search" || command == "similar" || command == "list" {
+		filter, err = d.PrepareFilter(filter)
+		if err != nil {
+			return err
+		}
+	}
 	if useObservations && !d.HasObservations() {
 		return errors.New("this dataset has no generated observations")
 	}
 	output := json.NewEncoder(out)
 	output.SetIndent("", "  ")
+	if isResearchCommand(command) {
+		return runResearch(d, command, flags.Args(), relationType, filter, limit, output)
+	}
 	switch command {
 	case "info":
 		var imageModel json.RawMessage
@@ -173,7 +203,11 @@ func runWithFiles(ctx context.Context, args []string, out io.Writer, files fs.FS
 			}
 			calibration = "uncalibrated"
 		}
-		return output.Encode(map[string]any{"version": version, "dataset_id": d.Manifest.DatasetID, "content_sha256": d.Manifest.ContentSHA256, "entities": d.Manifest.Entities, "evidence_pages": d.Manifest.EvidencePages, "chunks": d.Manifest.Chunks, "model": d.Manifest.Model, "sources": d.Manifest.Sources, "image_available": d.HasImages(), "image": d.Manifest.Image, "image_model": imageModel, "image_calibration_status": calibration, "observations_available": d.HasObservations(), "observations": d.Manifest.Observations, "search": d.Manifest.Search})
+		response := map[string]any{"version": version, "dataset_id": d.Manifest.DatasetID, "content_sha256": d.Manifest.ContentSHA256, "entities": d.Manifest.Entities, "evidence_pages": d.Manifest.EvidencePages, "chunks": d.Manifest.Chunks, "model": d.Manifest.Model, "sources": d.Manifest.Sources, "image_available": d.HasImages(), "image": d.Manifest.Image, "image_model": imageModel, "image_calibration_status": calibration, "observations_available": d.HasObservations(), "observations": d.Manifest.Observations, "search": d.Manifest.Search}
+		if d.Manifest.Research != nil {
+			response["research_available"], response["research"] = true, d.Manifest.Research
+		}
+		return output.Encode(response)
 	case "get":
 		raw, err := d.Export(value, format, evidence)
 		if err != nil {

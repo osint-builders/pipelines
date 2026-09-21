@@ -1,0 +1,49 @@
+{
+  "fields": {
+    "average power": "power",
+    "frequency": "frequency",
+    "instrumented range": "range",
+    "peak power": "power",
+    "pulse repetition frequency (PRF)": "pulse_repetition_frequency"
+  },
+  "relations": [
+    {
+      "source_id": "radartutorial:3c7e9748616bc6d9f9581529",
+      "target_id": "commons:9955018",
+      "type": "equivalent",
+      "basis": "reviewed_source_evidence",
+      "rationale": "The radar article explicitly identifies its 76N6 Clam Shell acquisition-radar photograph and links the exact retained Commons file; the file description identifies the same model. This reviewed model link does not make shared photographs a generic identity rule.",
+      "evidence": [
+        {
+          "entity_id": "radartutorial:3c7e9748616bc6d9f9581529",
+          "evidence_id": "3c7e9748616bc6d9f9581529",
+          "quote": "Figure 1: 76N6 Clam Shell FMCW acquisition radar (© 2008 [Wikipedia](https://commons.wikimedia.org/wiki/File:76N6_Clam_Shell_FMCW_acquisition_radar.jpg))"
+        },
+        {
+          "entity_id": "commons:9955018",
+          "evidence_id": "d0a0f35177d1f9ac534ffb80",
+          "quote": "**English:**  76N6 Clam Shell FMCW acquisition radar"
+        }
+      ]
+    },
+    {
+      "source_id": "radartutorial:b95cc994aa115f58abfd9bf7",
+      "target_id": "radartutorial:ca2ba46a11ef486d8ded0801",
+      "type": "related_system",
+      "basis": "reviewed_source_evidence",
+      "rationale": "The Giraffe 4A article explicitly says its design combines the Arthur and Giraffe AMB product families with an all-new radar sensor. This supports related systems, not equivalence or a direct variant assertion.",
+      "evidence": [
+        {
+          "entity_id": "radartutorial:b95cc994aa115f58abfd9bf7",
+          "evidence_id": "b95cc994aa115f58abfd9bf7",
+          "quote": "multi-function radar and combines the battle-proven designs from the\n[Arthur](https://www.radartutorial.eu/19.kartei/04.battle/en/karte002.en.html)\nand\n[Giraffe AMB](https://www.radartutorial.eu/19.kartei/04.battle/en/karte004.en.html)\nproduct families with an all-new radar sensor,"
+        },
+        {
+          "entity_id": "radartutorial:ca2ba46a11ef486d8ded0801",
+          "evidence_id": "ca2ba46a11ef486d8ded0801",
+          "quote": "The **Giraffe AMB** (**A**gile **M**ulti **B**eam) is a True Three Dimensional Search Radar"
+        }
+      ]
+    }
+  ]
+}

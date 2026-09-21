@@ -625,6 +625,11 @@ func (d *Dataset) searchImages(imageVector, textVector []float32, query string, 
 	if limit < 1 || limit > 100 {
 		return nil, errors.New("limit must be between 1 and 100")
 	}
+	var err error
+	filter, err = d.PrepareFilter(filter)
+	if err != nil {
+		return nil, err
+	}
 	if err := d.LoadImages(); err != nil {
 		return nil, err
 	}

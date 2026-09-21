@@ -385,6 +385,14 @@ def test_package_default_stays_format2_and_image_changes_only_recipe(
                     },
                 },
                 "model": distribution.LOCK,
+                "research": {
+                    "metadata": first["research"],
+                    "files": {
+                        name: digest
+                        for name, digest in first["files"].items()
+                        if name.startswith("research/")
+                    },
+                },
             }
         )
     )

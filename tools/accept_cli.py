@@ -7,6 +7,7 @@ import math
 import subprocess
 import sys
 import tempfile
+import unicodedata
 import zipfile
 from array import array
 from collections.abc import Callable
@@ -588,6 +589,166 @@ def accept_empty_gallery(
         assert not found and not contains_query_path(response, str(picture))
 
 
+def accept_research(
+    run: Callable[..., bytes], archive: zipfile.ZipFile, manifest: dict, info: dict
+) -> None:
+    if "research" not in manifest:
+        return
+    assert info.get("research_available") is True
+    assert info.get("research") == manifest["research"]
+    index = json.loads(archive.read("index.json"))
+    claims = json.loads(archive.read("research/claims.json"))
+    relations = json.loads(archive.read("research/relations.json"))
+    evidence = bundle_evidence(archive)
+    identifiers = [entity["id"] for entity in index]
+
+    def response(*args: str) -> dict:
+        result = json.loads(run(*args))
+        assert result["dataset_id"] == manifest["dataset_id"]
+        return result
+
+    def resolved_claim(claim: dict) -> dict:
+        entity_id = identifiers[claim["entity"]]
+        return {
+            **claim,
+            "entity_id": entity_id,
+            "evidence_url": evidence[entity_id][claim["evidence_id"]],
+        }
+
+    listed = response("list", "--limit", "1")
+    assert listed["total"] == len(index)
+    assert listed["results"] == sorted(index, key=lambda row: row["id"])[:1]
+    entity = index[0]
+    filters = ["--source", entity["source"], "--kind", entity["kind"]]
+    expected = [
+        row
+        for row in index
+        if row["source"] == entity["source"] and row["kind"] == entity["kind"]
+    ]
+    if entity["categories"]:
+        category = entity["categories"][0]
+        filters += ["--category", category]
+        expected = [row for row in expected if category in row["categories"]]
+    listed = response("list", "--limit", "100", *filters)
+    assert listed["total"] == len(expected)
+    assert listed["results"] == sorted(expected, key=lambda row: row["id"])[:100]
+
+    selected = [identifiers[claims[0]["entity"]]] if claims else identifiers[:1]
+    if relations:
+        relation = relations[0]
+        identifier = identifiers[relation["source"]]
+        linked = response("relationships", "--type", relation["type"], identifier)
+        assert linked["entity_id"] == identifier
+        expected_relations = []
+        for row in relations:
+            if row["type"] != relation["type"] or relation["source"] not in (
+                row["source"],
+                row["target"],
+            ):
+                continue
+            expected_relations.append(
+                {
+                    **row,
+                    "source_id": identifiers[row["source"]],
+                    "target_id": identifiers[row["target"]],
+                    "evidence": [
+                        {
+                            **reference,
+                            "entity_id": identifiers[reference["entity"]],
+                            "evidence_url": evidence[identifiers[reference["entity"]]][
+                                reference["evidence_id"]
+                            ],
+                        }
+                        for reference in row["evidence"]
+                    ],
+                }
+            )
+        assert linked["relationships"] == expected_relations
+        selected.extend(
+            identifiers[row] for row in (relation["source"], relation["target"])
+        )
+    else:
+        assert response("relationships", selected[0])["relationships"] == []
+    selected = list(dict.fromkeys([*selected, *identifiers[:2]]))[:2]
+    for identifier in selected:
+        facts = response("facts", identifier)
+        assert facts["entity_id"] == identifier
+        assert facts["claims"] == [
+            resolved_claim(row)
+            for row in claims
+            if identifiers[row["entity"]] == identifier
+        ]
+    if len(selected) == 2:
+        comparison = response("compare", *selected)
+        assert comparison["entity_ids"] == selected
+        expected_fields = []
+        for field in manifest["research"]["fields"]:
+            entries = []
+            for identifier in selected:
+                values = [
+                    resolved_claim(row)
+                    for row in claims
+                    if identifiers[row["entity"]] == identifier
+                    and row["field"] == field["name"]
+                ]
+                entries.append(
+                    {
+                        "entity_id": identifier,
+                        "status": "claims" if values else "unknown",
+                        "claims": values,
+                    }
+                )
+            expected_fields.append(
+                {
+                    "field": field["name"],
+                    "kind": field["kind"],
+                    "unit": field["unit"],
+                    "entities": entries,
+                }
+            )
+        assert comparison["fields"] == expected_fields
+
+    text_claim = next(
+        (
+            row
+            for row in claims
+            if row["status"] == "known"
+            and isinstance(row.get("value"), dict)
+            and isinstance(row["value"].get("text"), str)
+            and len(row["value"]["text"]) < 128
+        ),
+        None,
+    )
+    if text_claim is not None:
+
+        def normalized(value: str) -> str:
+            return " ".join(unicodedata.normalize("NFKC", value).lower().split())
+
+        field, text = text_claim["field"], text_claim["value"]["text"]
+        eligible = {
+            identifiers[row["entity"]]
+            for row in claims
+            if row["field"] == field
+            and row["status"] == "known"
+            and normalized(row["value"]["text"]) == normalized(text)
+        }
+        predicate = f"{field} = {text}"
+        listed = response("list", "--where", predicate, "--limit", "100")
+        assert listed["total"] == len(eligible)
+        assert [row["id"] for row in listed["results"]] == sorted(eligible)[:100]
+        contradictory = response(
+            "list", "--where", predicate, "--where", f"{field} != {text}"
+        )
+        assert contradictory["total"] == 0 and contradictory["results"] == []
+        for command in (
+            ("search", "--mode", "vector", "--where", predicate, "radar"),
+            ("search", "--where", predicate, "radar"),
+            ("similar", "--where", predicate, identifiers[text_claim["entity"]]),
+        ):
+            found = response(*command)["results"]
+            assert {row["id"] for row in found} <= eligible
+
+
 def accept(binary: Path, bundle: Path) -> None:
     def run(*args: str) -> bytes:
         return subprocess.run(
@@ -598,6 +759,7 @@ def accept(binary: Path, bundle: Path) -> None:
     with zipfile.ZipFile(bundle) as archive:
         manifest = json.loads(archive.read("manifest.json"))
         assert info["dataset_id"] == manifest["dataset_id"]
+        accept_research(run, archive, manifest, info)
         accept_search_policy(run, manifest)
         if manifest.get("observations"):
             assert info.get("observations_available") is True

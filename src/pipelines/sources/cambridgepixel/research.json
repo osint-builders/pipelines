@@ -1,0 +1,144 @@
+{
+  "fields": {
+    "Database last updated": "updated_date",
+    "Manufacturer": "manufacturer",
+    "Status": "development_status"
+  },
+  "relations": [
+    {
+      "source_id": "cambridgepixel:44bc4a4291510fad8c1e43ba",
+      "target_id": "radartutorial:eb4a8826e7e43ba15d4b7018",
+      "type": "equivalent",
+      "basis": "reviewed_source_evidence",
+      "rationale": "Both records identify the Thales Ground Master 200 medium-range 3D air-defence radar, supported by the manufacturer and technical role as well as the exact model.",
+      "evidence": [
+        {
+          "entity_id": "cambridgepixel:44bc4a4291510fad8c1e43ba",
+          "evidence_id": "7c05b08ca1abf39d3cb8c7b5",
+          "quote": "Manufacturer: Thales\nModel: Ground Master GM200\nBand: S"
+        },
+        {
+          "entity_id": "cambridgepixel:44bc4a4291510fad8c1e43ba",
+          "evidence_id": "7c05b08ca1abf39d3cb8c7b5",
+          "quote": "Medium range AESA 3D radar."
+        },
+        {
+          "entity_id": "radartutorial:eb4a8826e7e43ba15d4b7018",
+          "evidence_id": "eb4a8826e7e43ba15d4b7018",
+          "quote": "Ground Master 200 (GM 200) is a\n[multi-mission](https://www.radartutorial.eu/02.basics/en/rp12.en.html) tactical\n[3-D](https://www.radartutorial.eu/02.basics/en/rp50.en.html)\nmedium range Air Defense radar."
+        },
+        {
+          "entity_id": "radartutorial:eb4a8826e7e43ba15d4b7018",
+          "evidence_id": "eb4a8826e7e43ba15d4b7018",
+          "quote": "[![Logo ThalesRaytheonSystems](https://www.radartutorial.eu/logos/thalesraytheon.png)](https://www.radartutorial.eu/logos/hersteller.html#thalesraytheon)"
+        }
+      ]
+    },
+    {
+      "source_id": "cambridgepixel:4e04dadc01e79038dd26b3ba",
+      "target_id": "radartutorial:ce60bbb5e34b5b602d98a3be",
+      "type": "equivalent",
+      "basis": "reviewed_source_evidence",
+      "rationale": "Both records identify the Indra LTR-25 model and its L-band deployable tactical air-surveillance role. The exact model and manufacturer anchors support a reviewed link; performance claims remain separate.",
+      "evidence": [
+        {
+          "entity_id": "cambridgepixel:4e04dadc01e79038dd26b3ba",
+          "evidence_id": "f1a7a1cf78074a5ac3cfea41",
+          "quote": "Manufacturer: Indra\nModel: Lanza LTR-25\nBand: L"
+        },
+        {
+          "entity_id": "cambridgepixel:4e04dadc01e79038dd26b3ba",
+          "evidence_id": "f1a7a1cf78074a5ac3cfea41",
+          "quote": "Deployable L-band 3D long-range tactical air-defence radar (~250 nmi). RAF and Ukraine deliveries."
+        },
+        {
+          "entity_id": "radartutorial:ce60bbb5e34b5b602d98a3be",
+          "evidence_id": "ce60bbb5e34b5b602d98a3be",
+          "quote": "LTR-25 (**L**ong-range **T**actical **R**adar) is operating in the\n[L band](https://www.radartutorial.eu/07.waves/en/wa04.en.html)"
+        },
+        {
+          "entity_id": "radartutorial:ce60bbb5e34b5b602d98a3be",
+          "evidence_id": "ce60bbb5e34b5b602d98a3be",
+          "quote": "[![Logo Indra](https://www.radartutorial.eu/logos/indra-logo-new.png)](https://www.radartutorial.eu/logos/hersteller.html#indra)"
+        }
+      ]
+    },
+    {
+      "source_id": "cambridgepixel:a3fb5a40ecd761dd87b2a77e",
+      "target_id": "radartutorial:b95cc994aa115f58abfd9bf7",
+      "type": "equivalent",
+      "basis": "reviewed_source_evidence",
+      "rationale": "Both records identify Saab Giraffe 4A as an S-band multifunction AESA radar. Their differing range claims are retained and are not reconciled or inherited.",
+      "evidence": [
+        {
+          "entity_id": "cambridgepixel:a3fb5a40ecd761dd87b2a77e",
+          "evidence_id": "344f6350495702eb3dba8fb8",
+          "quote": "Manufacturer: Saab\nModel: Giraffe 4A\nBand: S"
+        },
+        {
+          "entity_id": "cambridgepixel:a3fb5a40ecd761dd87b2a77e",
+          "evidence_id": "344f6350495702eb3dba8fb8",
+          "quote": "AESA GaN multifunction radar: 400 km air surveillance, GBAD engagement-quality data and weapon locating."
+        },
+        {
+          "entity_id": "radartutorial:b95cc994aa115f58abfd9bf7",
+          "evidence_id": "b95cc994aa115f58abfd9bf7",
+          "quote": "Giraffe 4A is a medium- to long-range\n[S band](https://www.radartutorial.eu/07.waves/en/wa04.en.html)\nmulti-function radar"
+        },
+        {
+          "entity_id": "radartutorial:b95cc994aa115f58abfd9bf7",
+          "evidence_id": "b95cc994aa115f58abfd9bf7",
+          "quote": "* Manufacturers [home page](https://saab.com/air/sensor-systems/ground-based-air-defence/giraffe-4a/)"
+        }
+      ]
+    },
+    {
+      "source_id": "cambridgepixel:ac2710f11637677f185e2ed7",
+      "target_id": "radartutorial:08d40281697e1f55faac0343",
+      "type": "equivalent",
+      "basis": "reviewed_source_evidence",
+      "rationale": "Both records identify the Saab Giraffe 1X model, X band and ground air-defence role. Giraffe 4A and naval Sea Giraffe versions retain separate identities.",
+      "evidence": [
+        {
+          "entity_id": "cambridgepixel:ac2710f11637677f185e2ed7",
+          "evidence_id": "8cbf1850d2e48ec2957aaa24",
+          "quote": "Manufacturer: Saab\nModel: Giraffe 1X\nBand: X"
+        },
+        {
+          "entity_id": "radartutorial:08d40281697e1f55faac0343",
+          "evidence_id": "08d40281697e1f55faac0343",
+          "quote": "Giraffe 1X is an\n[X band](https://www.radartutorial.eu/07.waves/en/wa04.en.html)\n3D short-range radar intended primarily for the ground-based air defence (GBAD) role,"
+        },
+        {
+          "entity_id": "radartutorial:08d40281697e1f55faac0343",
+          "evidence_id": "08d40281697e1f55faac0343",
+          "quote": "[![Herstellerverzeichnis](https://www.radartutorial.eu/logos/SaabLogo.png)](https://www.radartutorial.eu/logos/hersteller.html#ericsson \"Herstellerverzeichnis\")"
+        }
+      ]
+    },
+    {
+      "source_id": "cambridgepixel:bcc8adfc20e28da9dc5c03a0",
+      "target_id": "radartutorial:408fe2366ec7865b2bcfea82",
+      "type": "equivalent",
+      "basis": "reviewed_source_evidence",
+      "rationale": "Both source records cover the Saab Sea Giraffe AMB naval C-band search radar. This model-level link does not equate every installation or software variant discussed in its article.",
+      "evidence": [
+        {
+          "entity_id": "cambridgepixel:bcc8adfc20e28da9dc5c03a0",
+          "evidence_id": "8215bfd341cae5e1b451e860",
+          "quote": "Manufacturer: Saab\nModel: Sea Giraffe AMB\nBand: C"
+        },
+        {
+          "entity_id": "radartutorial:408fe2366ec7865b2bcfea82",
+          "evidence_id": "408fe2366ec7865b2bcfea82",
+          "quote": "Sea Giraffe AMB is a\n[C band](https://www.radartutorial.eu/07.waves/en/wa04.en.html)\nnaval 3D, multi-function search radar."
+        },
+        {
+          "entity_id": "radartutorial:408fe2366ec7865b2bcfea82",
+          "evidence_id": "408fe2366ec7865b2bcfea82",
+          "quote": "[![Herstellerverzeichnis](https://www.radartutorial.eu/logos/SaabLogo.png)](https://www.radartutorial.eu/logos/hersteller.html#ericsson \"Herstellerverzeichnis\")"
+        }
+      ]
+    }
+  ]
+}

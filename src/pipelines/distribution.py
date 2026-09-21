@@ -302,6 +302,10 @@ def _package(
     image_selection: Path | None = None,
     observations: Path | None = None,
 ) -> dict:
+    from pipelines.research_distribution import (
+        build_research_members,
+        validate_research_bundle,
+    )
     from pipelines.search_distribution import (
         build_search_members,
         validate_search_bundle,
@@ -351,6 +355,13 @@ def _package(
         "metadata": search_metadata,
         "files": {name: sha256(body) for name, body in sorted(search_members.items())},
     }
+    research_members, research_metadata = build_research_members(entities)
+    recipe_spec["research"] = {
+        "metadata": research_metadata,
+        "files": {
+            name: sha256(body) for name, body in sorted(research_members.items())
+        },
+    }
     if observations is not None:
         from pipelines.observation_distribution import build_observation_members
 
@@ -374,6 +385,7 @@ def _package(
                 if previous.testzip() is not None:
                     raise ValueError("Existing bundle failed integrity check")
                 validate_search_bundle(previous, manifest, entities)
+                validate_research_bundle(previous, manifest, entities)
                 if image_model is not None:
                     from pipelines.image_distribution import validate_image_bundle
 
@@ -453,6 +465,7 @@ def _package(
     members.update(image_members)
     members.update(observation_members)
     members.update(search_members)
+    members.update(research_members)
     manifest = {
         "format_version": format_version,
         "content_sha256": digest,
@@ -463,6 +476,7 @@ def _package(
         "chunks": len(chunks),
         "model": LOCK,
         "search": search_metadata,
+        "research": research_metadata,
         "sources": sorted(set(sources)),
         "files": {name: sha256(body) for name, body in sorted(members.items())},
     }
@@ -476,6 +490,7 @@ def _package(
         write_bundle(pending, members)
         with zipfile.ZipFile(pending) as archive:
             validate_search_bundle(archive, manifest, entities)
+            validate_research_bundle(archive, manifest, entities)
             if image_model is not None:
                 from pipelines.image_distribution import validate_image_bundle
 

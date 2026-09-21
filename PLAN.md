@@ -3,7 +3,7 @@
 Help researchers and educators find static entities quickly using names, descriptions,
 specifications, and images, with every result linked to captured evidence.
 
-**Progress:** 6/10 milestones verified. **Active:** M7 ready for verification.
+**Progress:** 7/10 milestones verified. **Active:** M8 in progress.
 
 **Branch:** `feature/multimodal-entity-search`.
 
@@ -25,8 +25,8 @@ commands and the source table.
 | M4 — Portable image encoder | M1, M3 | Verified by user; `e02bbeb`, 391 tests and CI passed; all five native targets pass 23 parity probes with network restrictions verified |
 | M5 — Image and combined queries | M2, M3, M4 | Verified by user; `9bb1574`, 426 tests and CI pass; full pilot CLI, offline acceptance, held-out rankings, and Windows resource checks complete |
 | M6 — OCR and visual descriptions | M3, M5 | Verified by user; `3bb8c29`, 542 tests and CI pass; 1,694 observations, cache reuse, held-out ranking and offline CLI checks complete; opt-in text resource gaps tracked in M10 |
-| M7 — Better text and combined ranking | M1, M5, M6 | Ready for verification; `0d20f4a`, CI and offline acceptance pass; 116 baseline ranks preserved, new text 18/18 within five; latency and calibration gaps tracked in M10 |
-| M8 — Entity relationships and precise filters | M1, M7 | Planned |
+| M7 — Better text and combined ranking | M1, M5, M6 | Verified by user; `0d20f4a`, CI and offline acceptance pass; 116 baseline ranks preserved, new text 18/18 within five; latency and calibration gaps tracked in M10 |
+| M8 — Entity relationships and precise filters | M1, M7 | In progress; source-evidence inventory and shared relationship/filter contract |
 | M9 — Media coverage across all sources | M3, M5, M6 | Planned |
 | M10 — Quality gates and compact releases | M4–M9 | Planned |
 
@@ -574,8 +574,8 @@ The standalone Windows executable is 241.10 MiB; its single-binary ZIP is 231.01
 within the 320/256 MiB distribution limits. Review artifacts: `build/m7/pipelines.exe`,
 `pipelines-windows-amd64.zip`, `pipelines-linux`, and `full-dataset.zip`. Final hashes,
 measurements, and gate outcomes are in `distribution-size.json`, `performance.json`,
-and `resource-gates.json` in that directory. No release was published. M7 is ready
-for user verification; M8 has not started.
+and `resource-gates.json` in that directory. No release was published. The user's
+continuation verified M7 and authorized M8.
 
 ## M8 — Entity relationships and precise filters
 
@@ -588,6 +588,39 @@ for user verification; M8 has not started.
 
 Complete when researchers can follow a subject across sources, distinguish variants,
 and reproduce filtered results without losing the original records.
+
+Implemented an optional research extension with shared normalization and source-owned
+field mappings/relationship assertions. Original records, vectors, images, captions,
+and generated observations stay byte-identical. The pilot adds 18,723 mapped source
+facts and 5,693 capture-date claims, plus 13 reviewed relationships: six equivalents,
+two family memberships, one qualified prospective variant, two components, and two
+related systems. Every relationship has exact retained quotes from both endpoints;
+none merges IDs, propagates facts, or creates transitive equivalence.
+
+New commands under validation:
+
+```sh
+pipelines facts SOURCE:ID
+pipelines relationships --type equivalent SOURCE:ID
+pipelines compare SOURCE:ID OTHER:ID
+pipelines list --where "manufacturer=Thales"
+pipelines search --where "origin_country=France" --where "mass>=10 t" "vehicle"
+```
+
+Repeated `--where` predicates also apply to similar, image, and observation queries
+before ranking. Text comparisons preserve punctuation; numeric comparisons require
+compatible units and the complete asserted interval. SI symbol case matters (`mW`
+differs from `MW`). Unknown, approximate, and unparsed values do not satisfy strict
+filters, and one claim must satisfy every predicate for a given field. Date precision
+is retained: `>=2000` starts at January 1 and `<=2000` ends at December 31.
+Manufacturer/contractor and origin/designer/operator/site countries remain distinct.
+Source-reported IOC may be planned; its development status remains a separate claim.
+Capture and publication/update dates never become equipment events.
+
+Synthetic producer/consumer/command tests and full-bundle schema checks are complete.
+Native acceptance, source-fixture evaluation, unchanged ranking checks, reproducible
+packaging, and final resource measurements are in progress. The root README remains
+scheduled for M10.
 
 ## M9 — Media coverage across all sources
 

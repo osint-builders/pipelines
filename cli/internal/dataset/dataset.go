@@ -36,6 +36,7 @@ type Manifest struct {
 	Image         *ImageManifest       `json:"image,omitempty"`
 	Observations  *ObservationManifest `json:"observations,omitempty"`
 	Search        *SearchPolicy        `json:"search,omitempty"`
+	Research      *ResearchManifest    `json:"research,omitempty"`
 }
 type Entity struct {
 	ID         string   `json:"id"`
@@ -61,7 +62,11 @@ type Result struct {
 	Ranking    *TextRanking `json:"ranking,omitempty"`
 	matches    []Match
 }
-type Filter struct{ Source, Kind, Category string }
+type Filter struct {
+	Source, Kind, Category string
+	Where                  []string
+	prepared               *researchFilter
+}
 type Dataset struct {
 	sourceResponses map[string][]byte
 	Files           *zip.Reader
@@ -75,6 +80,7 @@ type Dataset struct {
 	evidenceURLs    map[int]map[string]string
 	observations    *observationData
 	lexical         [2]*textIndex
+	research        *researchData
 }
 
 func Open(data []byte) (*Dataset, error) {
@@ -145,6 +151,9 @@ func Open(data []byte) (*Dataset, error) {
 		d.byID[entity.ID] = i
 	}
 	if err := d.validateSearchPolicy(); err != nil {
+		return nil, err
+	}
+	if err := d.validateResearchManifest(manifestFields); err != nil {
 		return nil, err
 	}
 	return d, nil
@@ -237,9 +246,11 @@ func (d *Dataset) Verify() error {
 		}
 	}
 	if d.HasObservations() {
-		return d.LoadObservations()
+		if err := d.LoadObservations(); err != nil {
+			return err
+		}
 	}
-	return nil
+	return d.verifyResearch()
 }
 
 func (d *Dataset) LoadVectors() error {
@@ -340,6 +351,9 @@ func nameMatch(query string, aliases []string) bool {
 }
 
 func (f Filter) matches(e Entity) bool {
+	if f.prepared != nil && !f.prepared.eligible[e.ID] {
+		return false
+	}
 	if f.Source != "" && f.Source != e.Source || f.Kind != "" && f.Kind != e.Kind {
 		return false
 	}
@@ -362,6 +376,11 @@ func (d *Dataset) Search(vector []float32, query string, hybrid bool, filter Fil
 }
 
 func (d *Dataset) search(vector []float32, query string, hybrid bool, filter Filter, limit int, exclude string) ([]Result, error) {
+	var err error
+	filter, err = d.PrepareFilter(filter)
+	if err != nil {
+		return nil, err
+	}
 	if hybrid && d.Manifest.Search != nil {
 		results, err := d.search(vector, query, false, filter, len(d.Entities), exclude)
 		if err != nil {
