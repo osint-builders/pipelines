@@ -3,7 +3,7 @@
 Help researchers and educators find static entities quickly using names, descriptions,
 specifications, and images, with every result linked to captured evidence.
 
-**Progress:** 3/10 milestones verified. **Active:** M4, encoder research and runtime validation.
+**Progress:** 3/10 milestones verified. **Active:** M4, ready for user verification.
 
 **Branch:** `feature/multimodal-entity-search`.
 
@@ -22,7 +22,7 @@ commands and the source table.
 | M1 — Baseline and acceptance targets | Existing CLI | Verified by user; `5102380`, baseline and seed checks passed; four visual cases tracked for M3 |
 | M2 — Shared media evidence and archive | M1 | Verified by user; `55d4046`, 250 tests and GitHub CI passed; offline compatibility confirmed |
 | M3 — Two-source media pilot | M2 | Verified by user; `ba855a3`, 2,799 saved files, 294 tests and CI passed; two diagram cases remain unscored |
-| M4 — Portable image encoder | M1, M3 | In progress: compact S0 selected on development data; local Go proof passed, native platform checks pending |
+| M4 — Portable image encoder | M1, M3 | Ready for verification; `e02bbeb`, 391 tests and CI passed; all five native targets pass 23 parity probes with network restrictions verified |
 | M5 — Image and combined queries | M2, M3, M4 | Planned |
 | M6 — OCR and visual descriptions | M3, M5 | Planned |
 | M7 — Better text and combined ranking | M1, M5, M6 | Planned |
@@ -220,7 +220,7 @@ User verification authorizes M4.
 - [x] Compare full-precision and smaller model/vector representations against M1's quality and resource budgets.
 - [x] Pin model files, hashes, dimensions, preprocessing, and output normalization in the build manifest.
 - [x] Decide whether direct text-to-image search warrants shipping a paired text encoder; image-only encoding supports the initial image-query path.
-- [ ] Pass real-model parity and offline execution checks on all five supported native targets.
+- [x] Pass real-model parity and offline execution checks on all five supported native targets.
 
 Complete when the selected model passes parity and offline execution checks on every
 supported platform and architecture. Report measured size, memory, and latency.
@@ -234,8 +234,10 @@ text encoding remains deferred under the frozen first-release contract.
 One offline interface in Python and Go verifies the model before inference. Both
 use the same EXIF orientation, alpha-on-white, bilinear antialiasing, center crop,
 and float32 normalization recipe. Source images remain unchanged. The image-only
-port matched Apple's full checkpoint on the initial probe. Heavy export tooling
-runs only during construction; the Go runtime has no native-library dependency.
+port matched Apple's full checkpoint on the initial probe. Construction pins
+x86_64 AVX2 arithmetic to reproduce the frozen graph bytes on Windows and Linux.
+Heavy export tooling runs only during construction; the Go runtime has no
+native-library dependency and supports all five query targets.
 
 The selection was frozen on development data before held-out evaluation, using
 `build/m4/selection.json`. S0 float32, S0 half-stored, and the larger MobileCLIP2-B
@@ -265,23 +267,22 @@ vector, preview, and runtime costs must still fit together at M10. A half-stored
 10,000-view gallery requires 9.77 MiB for 512-dimensional vectors before metadata.
 Measurements and artifact hashes are in `build/m4/performance.json`.
 
-Validation in progress: 385 Python tests and Go tests/vet pass in regular
-GitHub CI at `a5d49a7`. Twenty
-procedural image probes cover orientation, color, alpha, resizing/cropping, and
-normalization; three additional tensors isolate graph execution. Windows passes
-23/23 real-model parity probes. All ten real pilot images also pass, with minimum
-Python/Go cosine 0.999468 and maximum normalized difference 0.006125; the gates
-are 0.999 and 0.01. Report: `build/m4/pilot-embedding-parity.json`.
-Linux amd64/arm64 pass all probes with networking disabled. Native checks are
-rerunning with network isolation on all five targets: Linux namespaces, macOS
-sandboxing, and a Windows rule blocking the probe's outbound traffic. Windows and
-macOS require an OS-denied connection before and after inference. The Intel Mac
-verifier now avoids installing an unused Python inference runtime. A second
-Linux export produced different model bytes from the same checkpoint; the pinned
-checksum check rejected them. The exporter now requires and records AVX2 CPU
-arithmetic; a fresh local export matches both original graph hashes exactly.
-The final native run will check this correction. Model selection and checksum
-gates remain unchanged; query execution still supports all five targets.
+Validation: 391 Python tests, Ruff lint/format, full-project mypy, package build,
+Go tests/vet, and the existing offline Docker smoke check pass. All five native
+targets pass 23/23 real-model parity probes: Windows amd64, Linux amd64/arm64,
+and macOS amd64/arm64. Twenty procedural images cover orientation, color, alpha,
+resizing/cropping, and normalization; three tensors isolate graph execution.
+Linux uses isolated network namespaces, macOS uses sandboxing, and Windows blocks
+outbound traffic from the probe executable. Windows and macOS confirm OS-denied
+connections before and after inference; timeouts do not count as proof.
+
+All ten real pilot images also pass on Windows, with minimum Python/Go cosine
+0.999468 and maximum normalized difference 0.006125; the gates are 0.999 and 0.01.
+Reports: `build/m4/pilot-embedding-parity.json`, `build/m4/native-ci-summary.json`,
+and per-target reports under `build/m4/native-ci`. At `e02bbeb`, both
+[regular CI](https://github.com/osint-builders/pipelines/actions/runs/35627989559)
+and [native encoder checks](https://github.com/osint-builders/pipelines/actions/runs/35627989633)
+pass. Model selection, held-out labels, and frozen acceptance targets are unchanged.
 The root README and existing text CLI behavior remain unchanged. M5 waits for
 user verification of M4.
 
