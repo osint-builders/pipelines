@@ -221,3 +221,123 @@ def test_reference_uses_model_recipe_and_exports_three_tensors(
     assert len(tensors) == 3
     assert all((output / row["file"]).stat().st_size == 48 for row in tensors)
     assert all(len(row["expected"]) == 512 for row in report["probes"])
+
+
+def baseline(probe: Path) -> dict:
+    return {
+        "schema_version": 1,
+        "probe_sha256": hashlib.sha256(probe.read_bytes()).hexdigest(),
+        "canary": {
+            "address": "192.0.2.1:443",
+            "reachable": True,
+            "policy_denied": False,
+        },
+    }
+
+
+def test_baseline_requires_reachable_same_binary(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    probe = tmp_path / "probe"
+    probe.write_bytes(b"probe")
+    monkeypatch.setattr(
+        checker.socket,
+        "getaddrinfo",
+        lambda *args, **kwargs: [(0, 0, 0, "", ("192.0.2.1", 443))],
+    )
+    monkeypatch.setattr(checker, "_canary", lambda *args: baseline(probe)["canary"])
+    report = checker.network_baseline(probe, tmp_path / "baseline.json")
+    assert report == baseline(probe)
+    monkeypatch.setattr(
+        checker,
+        "_canary",
+        lambda *args: {"reachable": False, "policy_denied": False, "timeout": True},
+    )
+    with pytest.raises(ValueError, match="unverified"):
+        checker.network_baseline(probe, tmp_path / "baseline.json")
+
+
+@pytest.mark.parametrize(
+    "native,error_number", [("darwin", 1), ("darwin", 13), ("win32", 10013)]
+)
+def test_policy_canary_requires_native_denial(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, native: str, error_number: int
+) -> None:
+    probe = tmp_path / "probe"
+    probe.write_bytes(b"probe")
+    saved = baseline(probe)
+    monkeypatch.setattr(checker.sys, "platform", native)
+    blocked = {"reachable": False, "policy_denied": True, "errno": error_number}
+    monkeypatch.setattr(checker, "_canary", lambda *args: blocked)
+    assert checker._denied_canary(probe, saved) == blocked
+    blocked["errno"] = 10060
+    with pytest.raises(ValueError, match="policy denial"):
+        checker._denied_canary(probe, saved)
+    blocked.update(policy_denied=False, timeout=True)
+    with pytest.raises(ValueError, match="policy denial"):
+        checker._denied_canary(probe, saved)
+    probe.write_bytes(b"replacement")
+    with pytest.raises(ValueError, match="does not match"):
+        checker._denied_canary(probe, saved)
+
+
+def test_windows_requires_effective_rule_for_exact_probe(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    probe = tmp_path / "probe.exe"
+    policy = {
+        "name": "ci-rule",
+        "program": str(probe.resolve()),
+        "enabled": True,
+        "service_running": True,
+        "profiles_enabled": True,
+        "action": "Block",
+        "direction": "Outbound",
+        "profile": "Any",
+        "protocol": "Any",
+        "local_port": ["Any"],
+        "remote_port": ["Any"],
+        "local_address": ["Any"],
+        "remote_address": ["Any"],
+    }
+
+    def run(command: list[str], **kwargs: object) -> subprocess.CompletedProcess:
+        return subprocess.CompletedProcess(command, 0, json.dumps(policy), "")
+
+    monkeypatch.setattr(checker.subprocess, "run", run)
+    assert checker._windows_firewall(probe, "ci-rule") == policy
+    policy["profiles_enabled"] = False
+    with pytest.raises(ValueError, match="Active Windows"):
+        checker._windows_firewall(probe, "ci-rule")
+    policy["profiles_enabled"] = True
+    policy["program"] = str(tmp_path / "other.exe")
+    with pytest.raises(ValueError, match="Active Windows"):
+        checker._windows_firewall(probe, "ci-rule")
+
+
+def test_failed_restriction_is_reported_before_inference(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    path, references = setup_references(tmp_path)
+    probe = tmp_path / "probe"
+    probe.write_bytes(b"probe")
+    saved = tmp_path / "baseline.json"
+    saved.write_text(json.dumps(baseline(probe)))
+    monkeypatch.setattr(checker.sys, "platform", "darwin")
+    monkeypatch.setattr(
+        checker,
+        "_canary",
+        lambda *args: {"reachable": False, "policy_denied": False, "timeout": True},
+    )
+    report = checker.verify(
+        path,
+        references,
+        probe,
+        tmp_path / "report.json",
+        path,
+        "macos-sandbox",
+        saved,
+    )
+    assert not report["passed"]
+    assert report["probes"] == []
+    assert not report["network_isolation"]["enforced"]

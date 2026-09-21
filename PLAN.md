@@ -256,8 +256,8 @@ Windows encoder measurements on the M1 reference machine:
 
 | Representation | Model / zipped model | First process | Repeated process p95 (20 launches) | Peak OS working set |
 | --- | --- | ---: | ---: | ---: |
-| Float32 | 43.4 / 40.3 MiB | 0.812 s | 0.894 s | 213.6 MiB |
-| Float16 storage, float32 execution | 21.8 / 20.2 MiB | 0.708 s | 0.748 s | 181.8 MiB |
+| Float32 | 43.4 / 40.3 MiB | 0.875 s | 0.930 s | 213.3 MiB |
+| Float16 storage, float32 execution | 21.8 / 20.2 MiB | 0.907 s | 0.853 s | 180.3 MiB |
 
 These include image decoding and model loading, but exclude the text bundle and
 entity search. First observed launch is not a cache-cleared cold start. The model,
@@ -265,11 +265,18 @@ vector, preview, and runtime costs must still fit together at M10. A half-stored
 10,000-view gallery requires 9.77 MiB for 512-dimensional vectors before metadata.
 Measurements and artifact hashes are in `build/m4/performance.json`.
 
-Validation in progress: 379 Python tests and Go tests/vet pass locally. Twenty
+Validation in progress: 379 Python tests and Go tests/vet pass locally; regular
+GitHub CI passes at `cef302b`. Twenty
 procedural image probes cover orientation, color, alpha, resizing/cropping, and
 normalization; three additional tensors isolate graph execution. Windows passes
-23/23 real-model parity probes. Native Linux amd64/arm64 and macOS amd64/arm64
-checks, including enforced offline Linux execution, are queued for CI.
+23/23 real-model parity probes. All ten real pilot images also pass, with minimum
+Python/Go cosine 0.999468 and maximum normalized difference 0.006125; the gates
+are 0.999 and 0.01. Report: `build/m4/pilot-embedding-parity.json`.
+Linux amd64/arm64 pass all probes with networking disabled. Native checks are
+rerunning with network isolation on all five targets: Linux namespaces, macOS
+sandboxing, and a Windows rule blocking the probe's outbound traffic. Windows and
+macOS require an OS-denied connection before and after inference. The Intel Mac
+verifier now avoids installing an unused Python inference runtime.
 The root README and existing text CLI behavior remain unchanged. M5 waits for
 user verification of M4.
 

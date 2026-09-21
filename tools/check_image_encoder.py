@@ -8,6 +8,7 @@ import json
 import os
 import platform
 import re
+import socket
 import subprocess
 import sys
 from datetime import UTC, datetime
@@ -158,9 +159,160 @@ def _local_file(directory: Path, name: str, checksum: str) -> Path:
     return path
 
 
-def _isolation(mode: str) -> dict:
+def _canary(probe: Path, address: str) -> dict:
+    completed = subprocess.run(
+        [str(probe.resolve()), "--network-canary", address],
+        check=True,
+        capture_output=True,
+        text=True,
+        timeout=10,
+    )
+    result = json.loads(completed.stdout)
+    if not isinstance(result, dict) or result.get("address") != address:
+        raise ValueError("Invalid network canary response")
+    return result
+
+
+def network_baseline(probe: Path, output: Path) -> dict:
+    addresses = sorted(
+        {
+            item[4][0]
+            for item in socket.getaddrinfo(
+                "api.github.com",
+                443,
+                family=socket.AF_INET,
+                type=socket.SOCK_STREAM,
+            )
+        }
+    )
+    for address in addresses[:3]:
+        result = _canary(probe, f"{address}:443")
+        if result.get("reachable") is True and result.get("policy_denied") is False:
+            baseline = {
+                "schema_version": 1,
+                "probe_sha256": _sha(probe.read_bytes()),
+                "canary": result,
+            }
+            _write(output, baseline)
+            return baseline
+    raise ValueError(
+        "No reachable GitHub TCP canary; offline enforcement is unverified"
+    )
+
+
+def _denied_canary(probe: Path, baseline: dict) -> dict:
+    if (
+        baseline.get("schema_version") != 1
+        or baseline.get("probe_sha256") != _sha(probe.read_bytes())
+        or baseline.get("canary", {}).get("reachable") is not True
+        or baseline["canary"].get("policy_denied") is not False
+    ):
+        raise ValueError("Network baseline does not match this probe executable")
+    result = _canary(probe, baseline["canary"]["address"])
+    expected_errors = {10013} if sys.platform == "win32" else {1, 13}
+    if (
+        result.get("reachable") is not False
+        or result.get("policy_denied") is not True
+        or result.get("errno") not in expected_errors
+    ):
+        raise ValueError(
+            "Canary did not report policy denial; timeout/refusal is insufficient"
+        )
+    return result
+
+
+def _windows_firewall(probe: Path, rule: str) -> dict:
+    if re.fullmatch(r"[A-Za-z0-9_-]{1,128}", rule) is None:
+        raise ValueError("Expected the exact CI firewall rule name")
+    script = """
+$ErrorActionPreference = 'Stop'
+$rules = @(Get-NetFirewallRule -PolicyStore ActiveStore -Name $env:PIPELINES_PARITY_RULE)
+if ($rules.Count -ne 1) { throw 'Expected one active parity firewall rule' }
+$rule = $rules[0]
+$application = $rule | Get-NetFirewallApplicationFilter
+$port = $rule | Get-NetFirewallPortFilter
+$address = $rule | Get-NetFirewallAddressFilter
+$profiles = @(Get-NetFirewallProfile -PolicyStore ActiveStore)
+$enabled = @($profiles | Where-Object { $_.Enabled.ToString() -eq 'True' })
+@{
+  name = $rule.Name; program = $application.Program
+  enabled = ($rule.Enabled.ToString() -eq 'True')
+  action = $rule.Action.ToString(); direction = $rule.Direction.ToString()
+  profile = $rule.Profile.ToString(); protocol = $port.Protocol.ToString()
+  local_port = @($port.LocalPort); remote_port = @($port.RemotePort)
+  local_address = @($address.LocalAddress); remote_address = @($address.RemoteAddress)
+  service_running = ((Get-Service MpsSvc).Status.ToString() -eq 'Running')
+  profiles_enabled = ($profiles.Count -eq 3 -and $enabled.Count -eq 3)
+} | ConvertTo-Json -Compress
+"""
+    environment = os.environ.copy()
+    environment["PIPELINES_PARITY_RULE"] = rule
+    completed = subprocess.run(
+        ["powershell.exe", "-NoProfile", "-NonInteractive", "-Command", script],
+        check=True,
+        capture_output=True,
+        text=True,
+        timeout=30,
+        env=environment,
+    )
+    result = json.loads(completed.stdout)
+    if (
+        result.get("name") != rule
+        or str(result.get("program", "")).casefold() != str(probe.resolve()).casefold()
+        or result.get("enabled") is not True
+        or result.get("service_running") is not True
+        or result.get("profiles_enabled") is not True
+        or result.get("action") != "Block"
+        or result.get("direction") != "Outbound"
+        or result.get("profile") != "Any"
+        or result.get("protocol") not in {"Any", "256"}
+        or any(
+            result.get(key) != ["Any"]
+            for key in (
+                "local_port",
+                "remote_port",
+                "local_address",
+                "remote_address",
+            )
+        )
+    ):
+        raise ValueError(
+            "Active Windows firewall policy does not block this probe's outbound traffic"
+        )
+    return result
+
+
+def _isolation(
+    mode: str,
+    probe: Path | None = None,
+    baseline: dict | None = None,
+    firewall_rule: str = "",
+) -> dict:
     if mode == "none":
         return {"mode": "none", "enforced": False}
+    if mode in {"macos-sandbox", "windows-firewall"}:
+        expected = "darwin" if mode == "macos-sandbox" else "win32"
+        if sys.platform != expected or probe is None or baseline is None:
+            raise ValueError(
+                "Network restriction requires its native platform and a probe baseline"
+            )
+        result = {
+            "mode": mode,
+            "enforced": True,
+            "probe_sha256": baseline.get("probe_sha256"),
+            "baseline": baseline.get("canary"),
+        }
+        if mode == "windows-firewall":
+            result["policy"] = _windows_firewall(probe, firewall_rule)
+            result["scope"] = (
+                "probe outbound traffic; other executables are not restricted"
+            )
+        else:
+            result["scope"] = (
+                "verifier and child processes under sandbox-exec deny network*"
+            )
+        result["before"] = _denied_canary(probe, baseline)
+        return result
     if sys.platform != "linux":
         raise ValueError("Linux network namespace isolation requires Linux")
     current = os.readlink("/proc/self/ns/net")
@@ -196,6 +348,8 @@ def verify(
     output: Path,
     lock: Path = DEFAULT_LOCK,
     network_isolation: str = "none",
+    network_baseline_path: Path | None = None,
+    firewall_rule: str = "",
 ) -> dict:
     manifest = _manifest(manifest_path, lock)
     reference_data = _json(references / "probes.json")
@@ -217,7 +371,23 @@ def verify(
         or len({row["id"] for row in records}) != 23
     ):
         raise ValueError("Expected 20 image probes and three tensor probes")
-    isolation = _isolation(network_isolation)
+    baseline = _json(network_baseline_path) if network_baseline_path else None
+    try:
+        isolation = _isolation(network_isolation, probe, baseline, firewall_rule)
+    except (ValueError, KeyError, OSError, subprocess.SubprocessError) as error:
+        failure = {
+            "schema_version": 1,
+            "model": _contract(manifest),
+            "passed": False,
+            "network_isolation": {
+                "mode": network_isolation,
+                "enforced": False,
+                "error": str(error),
+            },
+            "probes": [],
+        }
+        _write(output, failure)
+        return failure
     reports = []
     for row in records:
         path = _local_file(references, row["file"], row["sha256"])
@@ -303,6 +473,14 @@ def verify(
             if isinstance(error, subprocess.CalledProcessError):
                 report["stderr"] = (error.stderr or "")[-5000:]
         reports.append(report)
+    if baseline is not None and network_isolation in {
+        "macos-sandbox",
+        "windows-firewall",
+    }:
+        try:
+            isolation["after"] = _denied_canary(probe, baseline)
+        except (ValueError, KeyError, OSError, subprocess.SubprocessError) as error:
+            isolation.update(enforced=False, error=str(error))
     result = {
         "schema_version": 1,
         "created_at": datetime.now(UTC).isoformat(),
@@ -310,7 +488,8 @@ def verify(
         "tolerances": TOLERANCES,
         "network_isolation": isolation,
         "host": {"system": platform.system(), "machine": platform.machine()},
-        "passed": all(row["passed"] for row in reports),
+        "passed": all(row["passed"] for row in reports)
+        and (network_isolation == "none" or isolation["enforced"]),
         "probes": reports,
     }
     _write(output, result)
@@ -322,17 +501,27 @@ def main() -> None:
     commands = parser.add_subparsers(dest="command", required=True)
     prepare = commands.add_parser("reference")
     check = commands.add_parser("verify")
+    baseline = commands.add_parser("network-baseline")
+    baseline.add_argument("--probe", type=Path, required=True)
+    baseline.add_argument("--output", type=Path, required=True)
     for command in (prepare, check):
         command.add_argument("--manifest", type=Path, required=True)
         command.add_argument("--lock", type=Path, default=DEFAULT_LOCK)
         command.add_argument("--output", type=Path, required=True)
     check.add_argument("--reference", type=Path, required=True)
     check.add_argument("--probe", type=Path, required=True)
+    check.add_argument("--network-baseline", type=Path)
+    check.add_argument("--firewall-rule", default="")
     check.add_argument(
-        "--network-isolation", choices=("none", "linux-netns"), default="none"
+        "--network-isolation",
+        choices=("none", "linux-netns", "macos-sandbox", "windows-firewall"),
+        default="none",
     )
     args = parser.parse_args()
-    if args.command == "reference":
+    if args.command == "network-baseline":
+        network_baseline(args.probe, args.output)
+        print(json.dumps({"baseline": str(args.output), "reachable": True}))
+    elif args.command == "reference":
         result = reference(args.manifest, args.output, args.lock)
         print(
             json.dumps({"reference": str(args.output), "probes": len(result["probes"])})
@@ -345,6 +534,8 @@ def main() -> None:
             args.output,
             args.lock,
             args.network_isolation,
+            args.network_baseline,
+            args.firewall_rule,
         )
         print(
             json.dumps(

@@ -5,19 +5,124 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"image"
 	"image/color"
 	"image/png"
 	"math"
+	"net"
 	"os"
 	"path/filepath"
+	"syscall"
 	"testing"
+	"time"
 
 	"github.com/gomlx/compute-onnx/support/protos"
 	"github.com/osint-builders/pipelines/cli/internal/imageembedding"
 	"github.com/osint-builders/pipelines/cli/internal/imagepreprocess"
 	"google.golang.org/protobuf/proto"
 )
+
+func TestNetworkCanaryUsesSameBinaryTCPPath(t *testing.T) {
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer listener.Close()
+	accepted := make(chan error, 1)
+	go func() {
+		connection, err := listener.Accept()
+		if err == nil {
+			_ = connection.Close()
+		}
+		accepted <- err
+	}()
+	var output bytes.Buffer
+	if err := run([]string{"--network-canary", listener.Addr().String()}, &output); err != nil {
+		t.Fatal(err)
+	}
+	var result struct {
+		Reachable    bool `json:"reachable"`
+		PolicyDenied bool `json:"policy_denied"`
+		Timeout      bool `json:"timeout"`
+	}
+	if err := json.Unmarshal(output.Bytes(), &result); err != nil {
+		t.Fatal(err)
+	}
+	if !result.Reachable || result.PolicyDenied || result.Timeout {
+		t.Fatalf("unexpected successful canary: %s", output.String())
+	}
+	select {
+	case err := <-accepted:
+		if err != nil {
+			t.Fatal(err)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("canary connection never reached the local listener")
+	}
+}
+
+func TestNetworkCanaryDistinguishesPolicyFromTimeout(t *testing.T) {
+	for _, test := range []struct {
+		name   string
+		err    error
+		policy bool
+		timed  bool
+	}{
+		{"permission", syscall.EPERM, true, false},
+		{"access", syscall.EACCES, true, false},
+		{"windows access", syscall.Errno(10013), true, false},
+		{"timeout", os.ErrDeadlineExceeded, false, true},
+		{"connection refused", syscall.ECONNREFUSED, false, false},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			var output bytes.Buffer
+			err := networkCanary("192.0.2.1:443", &output, func(network, address string, timeout time.Duration) (net.Conn, error) {
+				if network != "tcp" || address != "192.0.2.1:443" || timeout != 5*time.Second {
+					t.Fatalf("unexpected dial: %s %s %s", network, address, timeout)
+				}
+				return nil, &net.OpError{Op: "dial", Net: network, Err: &os.SyscallError{Syscall: "connect", Err: fmt.Errorf("wrapped: %w", test.err)}}
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			var result struct {
+				Reachable    bool   `json:"reachable"`
+				PolicyDenied bool   `json:"policy_denied"`
+				Timeout      bool   `json:"timeout"`
+				Errno        uint64 `json:"errno"`
+			}
+			if err := json.Unmarshal(output.Bytes(), &result); err != nil {
+				t.Fatal(err)
+			}
+			if result.Reachable || result.PolicyDenied != test.policy || result.Timeout != test.timed {
+				t.Fatalf("incorrect canary classification: %s", output.String())
+			}
+			if errno, ok := test.err.(syscall.Errno); ok && result.Errno != uint64(errno) {
+				t.Fatalf("errno not retained: %s", output.String())
+			}
+		})
+	}
+}
+
+func TestNetworkCanaryRejectsInvalidAddressesAndMixedModes(t *testing.T) {
+	for _, address := range []string{"example.com:443", "127.0.0.1:http", "127.0.0.1", "127.0.0.1:0", "[::1]:65536", ""} {
+		var output bytes.Buffer
+		if err := networkCanary(address, &output, func(string, string, time.Duration) (net.Conn, error) {
+			t.Fatal("invalid address reached dial")
+			return nil, nil
+		}); err == nil || output.Len() != 0 {
+			t.Fatalf("invalid address accepted: %q", address)
+		}
+	}
+	for _, extra := range [][]string{{"--image", "query.png"}, {"--repeats", "0"}, {"extra"}} {
+		var output bytes.Buffer
+		args := append([]string{"--network-canary", "127.0.0.1:1"}, extra...)
+		if err := run(args, &output); err == nil || output.Len() != 0 {
+			t.Fatalf("mixed mode accepted: %v", args)
+		}
+	}
+}
 
 func TestImageProbeUsesManifestAndPixels(t *testing.T) {
 	directory := t.TempDir()

@@ -12,12 +12,15 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"net"
+	"net/netip"
 	"os"
 	"path/filepath"
 	"regexp"
 	"runtime"
 	"runtime/debug"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/osint-builders/pipelines/cli/internal/imageembedding"
@@ -35,6 +38,7 @@ func run(args []string, stdout io.Writer) error {
 	processStarted := time.Now()
 	flags := flag.NewFlagSet("imageprobe", flag.ContinueOnError)
 	var spec imageembedding.Spec
+	canaryAddress := flags.String("network-canary", "", "isolated TCP policy check at numeric IP:port; cannot combine with other flags")
 	filename := flags.String("model", "", "local self-contained ONNX model")
 	manifestFile := flags.String("manifest", "", "model manifest; resolves the sibling model and preprocessing recipe")
 	tensorFile := flags.String("tensor", "", "little-endian float32 RGB CHW tensor")
@@ -48,6 +52,18 @@ func run(args []string, stdout io.Writer) error {
 	flags.IntVar(&spec.Dimensions, "dimensions", 512, "embedding dimensions")
 	if err := flags.Parse(args); err != nil {
 		return err
+	}
+	if *canaryAddress != "" {
+		conflict := flags.NArg() != 0
+		flags.Visit(func(f *flag.Flag) {
+			if f.Name != "network-canary" {
+				conflict = true
+			}
+		})
+		if conflict {
+			return errors.New("network canary cannot be combined with other flags or arguments")
+		}
+		return networkCanary(*canaryAddress, stdout, net.DialTimeout)
 	}
 	if flags.NArg() != 0 || (*tensorFile == "") == (*imageFile == "") || *repeats < 0 || *repeats > 100 {
 		return errors.New("provide exactly one tensor or image path, and between 0 and 100 repeats")
@@ -165,6 +181,39 @@ func run(args []string, stdout io.Writer) error {
 		Modules      map[string]string `json:"modules"`
 	}{spec, result, hex.EncodeToString(hash.Sum(nil)), preprocessMS, loadMS, firstMS, totalFirstMS, repeatMS,
 		runtime.Version(), runtime.GOOS, runtime.GOARCH, runtime.GOMAXPROCS(0), memory.HeapAlloc, memory.Sys, settings, modules})
+}
+
+// This explicit mode is the only network operation in the probe. It lets the
+// checker distinguish an OS policy rejection from an unavailable destination.
+func networkCanary(address string, stdout io.Writer, dial func(string, string, time.Duration) (net.Conn, error)) error {
+	target, err := netip.ParseAddrPort(address)
+	if err != nil || target.Port() == 0 {
+		return errors.New("network canary requires a numeric IP address and a nonzero numeric port")
+	}
+	result := struct {
+		Address      string `json:"address"`
+		Reachable    bool   `json:"reachable"`
+		PolicyDenied bool   `json:"policy_denied"`
+		Timeout      bool   `json:"timeout"`
+		Errno        uint64 `json:"errno,omitempty"`
+		Error        string `json:"error,omitempty"`
+	}{Address: address}
+	connection, err := dial("tcp", address, 5*time.Second)
+	if err == nil {
+		result.Reachable = true
+		_ = connection.Close()
+	} else {
+		result.PolicyDenied = errors.Is(err, syscall.EPERM) || errors.Is(err, syscall.EACCES) || errors.Is(err, syscall.Errno(10013))
+		var networkError net.Error
+		result.Timeout = errors.Is(err, os.ErrDeadlineExceeded) || errors.Is(err, context.DeadlineExceeded) ||
+			(errors.As(err, &networkError) && networkError.Timeout())
+		var errno syscall.Errno
+		if errors.As(err, &errno) {
+			result.Errno = uint64(errno)
+		}
+		result.Error = err.Error()
+	}
+	return json.NewEncoder(stdout).Encode(result)
 }
 
 func milliseconds(duration time.Duration) float64 {

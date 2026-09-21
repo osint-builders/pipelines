@@ -85,7 +85,7 @@ jobs:
           version: '0.11.21'
           python-version: '3.13'
           enable-cache: true
-      - run: uv sync --frozen --extra image
+      - run: uv sync --frozen --extra image --no-install-package onnxruntime
       - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
         with:
           go-version-file: cli/go.mod
@@ -105,9 +105,38 @@ jobs:
             --manifest build/image-parity/model/mobileclip2-s0-fp16-storage.json \
             --reference build/image-parity/references --probe build/image-parity/imageprobe \
             --network-isolation linux-netns --output build/image-parity/native-report.json
-      - name: Verify native Windows and macOS execution
+      - name: Establish the same-binary TCP canary baseline
         if: runner.os != 'Linux'
-        run: uv run --no-sync python tools/check_image_encoder.py verify --manifest build/image-parity/model/mobileclip2-s0-fp16-storage.json --reference build/image-parity/references --probe build/image-parity/imageprobe${{ runner.os == 'Windows' && '.exe' || '' }} --output build/image-parity/native-report.json
+        run: uv run --no-sync python tools/check_image_encoder.py network-baseline --probe build/image-parity/imageprobe${{ runner.os == 'Windows' && '.exe' || '' }} --output build/image-parity/network-baseline.json
+      - name: Verify native macOS execution with networking denied
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          /usr/bin/sandbox-exec -p '(version 1)(allow default)(deny network*)' \
+            "$PWD/.venv/bin/python" tools/check_image_encoder.py verify \
+            --manifest build/image-parity/model/mobileclip2-s0-fp16-storage.json \
+            --reference build/image-parity/references --probe build/image-parity/imageprobe \
+            --network-isolation macos-sandbox --network-baseline build/image-parity/network-baseline.json \
+            --output build/image-parity/native-report.json
+      - name: Verify native Windows execution with outbound traffic blocked
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $probePath = (Resolve-Path -LiteralPath 'build/image-parity/imageprobe.exe').Path
+          $ruleName = 'pipelines-image-parity-' + [guid]::NewGuid().ToString('N')
+          $profiles = @(Get-NetFirewallProfile | Select-Object Name, Enabled)
+          try {
+            Set-NetFirewallProfile -Profile Domain,Private,Public -Enabled True
+            New-NetFirewallRule -Name $ruleName -DisplayName $ruleName -Direction Outbound -Action Block -Program $probePath -Profile Any -Protocol Any -Enabled True | Out-Null
+            & ./.venv/Scripts/python.exe tools/check_image_encoder.py verify --manifest build/image-parity/model/mobileclip2-s0-fp16-storage.json --reference build/image-parity/references --probe $probePath --network-isolation windows-firewall --network-baseline build/image-parity/network-baseline.json --firewall-rule $ruleName --output build/image-parity/native-report.json
+            if ($LASTEXITCODE -ne 0) { throw 'Native offline image parity failed' }
+          } finally {
+            Remove-NetFirewallRule -Name $ruleName -ErrorAction SilentlyContinue
+            foreach ($profile in $profiles) {
+              Set-NetFirewallProfile -Profile $profile.Name -Enabled $profile.Enabled
+            }
+          }
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: always()
         with:
