@@ -21,7 +21,7 @@ commands and the source table.
 | --- | --- | --- |
 | M1 — Baseline and acceptance targets | Existing CLI | Verified by user; `5102380`, baseline and seed checks passed; four visual cases tracked for M3 |
 | M2 — Shared media evidence and archive | M1 | Verified by user; `55d4046`, 250 tests and GitHub CI passed; offline compatibility confirmed |
-| M3 — Two-source media pilot | M2 | Ready for verification; `4f60ccd`, `build/m3/coverage.json`; 2,799 saved files, 294 tests and CI passed |
+| M3 — Two-source media pilot | M2 | Ready for verification; `69d28b2`, `build/m3/coverage.json`, `build/m3/tests.xml`; 2,799 saved files and 294 tests |
 | M4 — Portable image encoder | M1, M3 | Planned |
 | M5 — Image and combined queries | M2, M3, M4 | Planned |
 | M6 — OCR and visual descriptions | M3, M5 | Planned |
@@ -207,7 +207,10 @@ Validation: 294 Python tests, Ruff lint/format, full-project mypy, and package b
 pass. GitHub CI passed at `4f60ccd`, covering Python on Windows/Linux, Go on three
 platforms, and the offline Docker smoke check. All three final seed/pilot fixture
 checks pass, including the 27 locally cached image hashes.
-M4 waits for user verification of M3.
+Concurrency checks use controlled admission timing and explicit stop events, so
+throttle, retry, and interrupt checks do not depend on local HTTP response speed.
+The real pacing and cancellation paths remain exercised. M4 waits for user
+verification of M3.
 
 ## M4 — Portable image encoder
 

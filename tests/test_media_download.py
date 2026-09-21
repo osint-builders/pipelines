@@ -1,7 +1,6 @@
 import hashlib
 import json
 import threading
-import time
 from collections.abc import Callable, Iterator
 from concurrent.futures import Future
 from email.utils import formatdate
@@ -145,6 +144,57 @@ def register(root: Path, *urls: str) -> None:
 def records(root: Path) -> list[dict]:
     with MediaStore(root) as store:
         return store.records("test", "run")
+
+
+def observe_source_stop(monkeypatch: pytest.MonkeyPatch) -> threading.Event:
+    stopped = threading.Event()
+
+    class ObservedPacer(media_download._Pacer):
+        def __init__(self, source: Any) -> None:
+            super().__init__(source)
+            self.stopped = stopped
+
+    monkeypatch.setattr(media_download, "_Pacer", ObservedPacer)
+    return stopped
+
+
+def hold_request_slots_until_stopped(
+    monkeypatch: pytest.MonkeyPatch,
+) -> tuple[threading.Event, threading.Event, list[tuple[bool, bool]]]:
+    all_entered = threading.Event()
+    timer_waiting = threading.Event()
+    outcomes: list[tuple[bool, bool]] = []
+    lock = threading.Lock()
+    entered = 0
+
+    class ControlledStop(threading.Event):
+        def wait(self, timeout: float | None = None) -> bool:
+            assert timeout == pytest.approx(0.15)
+            timer_waiting.set()
+            assert super().wait(timeout=5), "Throttle did not cancel the timer wait"
+            return True
+
+    class ObservedPacer(media_download._Pacer):
+        def __init__(self, source: Any) -> None:
+            super().__init__(source)
+            self.stopped = ControlledStop()
+
+        def wait(self) -> bool:
+            nonlocal entered
+            with lock:
+                entered += 1
+                if entered == 4:
+                    all_entered.set()
+            allowed = super().wait()
+            with lock:
+                outcomes.append((allowed, self.stopped.is_set()))
+            return allowed
+
+    monkeypatch.setattr(
+        media_download, "time", SimpleNamespace(monotonic=lambda: 100.0)
+    )
+    monkeypatch.setattr(media_download, "_Pacer", ObservedPacer)
+    return all_entered, timer_waiting, outcomes
 
 
 def test_completed_images_reuse_offline_and_never_store_headers(
@@ -750,8 +800,13 @@ def test_parallel_requests_and_redirects_share_one_pacing_interval(
 
 @pytest.mark.parametrize("status", [401, 403, 429, 503])
 def test_parallel_auth_and_throttle_stop_new_jobs_and_inflight_retries(
-    tmp_path: Path, servers: Any, png: bytes, status: int
+    tmp_path: Path,
+    servers: Any,
+    png: bytes,
+    status: int,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    stopped = observe_source_stop(monkeypatch)
     gate = threading.Barrier(4)
     lock = threading.Lock()
     started = 0
@@ -770,7 +825,7 @@ def test_parallel_auth_and_throttle_stop_new_jobs_and_inflight_retries(
                 headers={"Retry-After": "120"} if status == 503 else {},
             )
         else:
-            time.sleep(0.05)
+            assert stopped.wait(timeout=5)
             reply(
                 request,
                 png if number == 1 else b"",
@@ -796,9 +851,16 @@ def test_parallel_auth_and_throttle_stop_new_jobs_and_inflight_retries(
 
 
 def test_throttle_cancels_workers_waiting_for_request_slot(
-    tmp_path: Path, servers: Any
+    tmp_path: Path, servers: Any, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    server = servers(lambda request: reply(request, status=429))
+    all_entered, timer_waiting, outcomes = hold_request_slots_until_stopped(monkeypatch)
+
+    def serve(request: BaseHTTPRequestHandler) -> None:
+        assert all_entered.wait(timeout=5)
+        assert timer_waiting.wait(timeout=5)
+        reply(request, status=429)
+
+    server = servers(serve)
     source = LocalSource(server.origin)
     source.media_workers = 4
     source.media_request_interval = 0.15
@@ -807,6 +869,7 @@ def test_throttle_cancels_workers_waiting_for_request_slot(
     assert len(server.requests) == 1
     assert report["counts"]["failed"] == 1
     assert report["counts"]["pending"] == 7
+    assert outcomes == [(True, False), (False, True), (False, True), (False, True)]
 
 
 def test_parallel_capture_resumes_only_the_interrupted_original(
@@ -881,11 +944,16 @@ def test_unsupported_decoded_format_has_actionable_failure_code(
 
 
 def test_parallel_short_retry_after_defers_the_whole_source(
-    tmp_path: Path, servers: Any
+    tmp_path: Path, servers: Any, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    server = servers(
-        lambda request: reply(request, status=503, headers={"Retry-After": "30"})
-    )
+    all_entered, timer_waiting, outcomes = hold_request_slots_until_stopped(monkeypatch)
+
+    def serve(request: BaseHTTPRequestHandler) -> None:
+        assert all_entered.wait(timeout=5)
+        assert timer_waiting.wait(timeout=5)
+        reply(request, status=503, headers={"Retry-After": "30"})
+
+    server = servers(serve)
     source = LocalSource(server.origin)
     source.media_workers = 4
     source.media_request_interval = 0.15
@@ -899,11 +967,13 @@ def test_parallel_short_retry_after_defers_the_whole_source(
     assert deferred[0]["retry_after"]
     assert capture_media(source, tmp_path, "run")["counts"]["pending"] == 8
     assert len(server.requests) == 1
+    assert outcomes == [(True, False), (False, True), (False, True), (False, True)]
 
 
 def test_main_thread_interrupt_stops_queue_before_executor_shutdown(
     tmp_path: Path, servers: Any, png: bytes, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    stopped = observe_source_stop(monkeypatch)
     inflight = threading.Event()
     lock = threading.Lock()
     started = 0
@@ -914,7 +984,7 @@ def test_main_thread_interrupt_stops_queue_before_executor_shutdown(
             started += 1
             if started == 2:
                 inflight.set()
-        time.sleep(0.15)
+        assert stopped.wait(timeout=5)
         reply(request, png)
 
     def interrupted_result(self: Future[Any], timeout: float | None = None) -> Any:
@@ -928,6 +998,7 @@ def test_main_thread_interrupt_stops_queue_before_executor_shutdown(
     register(tmp_path, *(server.origin + f"/{number}" for number in range(8)))
     with pytest.raises(KeyboardInterrupt):
         capture_media(source, tmp_path, "run")
+    assert stopped.is_set()
     assert len(server.requests) == 2
     current = records(tmp_path)
     assert sum(record["state"] == "saved" for record in current) == 2
