@@ -305,9 +305,12 @@ def publish(
             str(notes),
             "--draft",
         )
-    uploaded = json.loads(gh("api", f"repos/{repo}/releases/tags/{tag}"))
+    # GitHub's REST lookup by tag omits unpublished drafts. The CLI resolves both.
+    uploaded = json.loads(
+        gh("release", "view", tag, "--repo", repo, "--json", "isDraft,assets")
+    )
     sizes = {asset["name"]: asset["size"] for asset in uploaded["assets"]}
-    if not uploaded["draft"] or sizes != {
+    if not uploaded["isDraft"] or sizes != {
         name: (directory / name).stat().st_size for name in asset_names
     }:
         raise ValueError(

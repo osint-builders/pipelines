@@ -76,7 +76,7 @@ def test_publication_waits_for_complete_draft_assets(
 
     def fake_gh(*args: str) -> str:
         calls.append(args)
-        if args[0] == "api":
+        if args[:2] == ("release", "view"):
             uploaded = [
                 *(
                     release.archive_name(system, name)
@@ -89,7 +89,7 @@ def test_publication_waits_for_complete_draft_assets(
                 uploaded.pop()
             return json.dumps(
                 {
-                    "draft": True,
+                    "isDraft": True,
                     "assets": [
                         {"name": name, "size": (tmp_path / name).stat().st_size}
                         for name in uploaded
