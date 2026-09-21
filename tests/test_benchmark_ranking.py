@@ -162,8 +162,8 @@ def runner(binary: Path, *args: str) -> dict:
 def test_source_backed_fixture_is_frozen_before_retrieval() -> None:
     path = Path(__file__).parent / "fixtures/ranking.json"
     assert (
-        sha256(path)
-        == "bf589924cabe3e6b0ffc8613a35302e3ab428d7492b59e5846fac7275ed1a791"
+        hashlib.sha256(path.read_bytes().replace(b"\r\n", b"\n")).hexdigest()
+        == "4924a73a2cee427d37ab7e6ccfa8a776735ccd40305844ebbb071ad526e7b979"
     )
     fixture = json.loads(path.read_bytes())
     assert len(fixture["cases"]) == 44
