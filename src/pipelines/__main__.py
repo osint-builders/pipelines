@@ -36,6 +36,12 @@ def main() -> None:
     package.add_argument("--model", type=Path, required=True)
     package.add_argument("--cache", type=Path, required=True)
     package.add_argument("--output", type=Path, required=True)
+    package.add_argument(
+        "--image-model", type=Path, help="Pinned offline image model manifest"
+    )
+    package.add_argument(
+        "--image-selection", type=Path, help="Explicit gallery media ID selection"
+    )
     args = parser.parse_args()
     output: dict | list[str]
     if args.command == "sources":
@@ -89,7 +95,13 @@ def main() -> None:
         from pipelines.distribution import package as create_package
 
         result = create_package(
-            args.root.resolve(), args.source, args.model, args.cache, args.output
+            args.root.resolve(),
+            args.source,
+            args.model,
+            args.cache,
+            args.output,
+            image_model=args.image_model,
+            image_selection=args.image_selection,
         )
         output = {
             key: value for key, value in result.items() if key not in {"files", "model"}

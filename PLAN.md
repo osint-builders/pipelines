@@ -3,7 +3,7 @@
 Help researchers and educators find static entities quickly using names, descriptions,
 specifications, and images, with every result linked to captured evidence.
 
-**Progress:** 3/10 milestones verified. **Active:** M4, ready for user verification.
+**Progress:** 4/10 milestones verified. **Active:** M5, image and combined queries.
 
 **Branch:** `feature/multimodal-entity-search`.
 
@@ -22,8 +22,8 @@ commands and the source table.
 | M1 — Baseline and acceptance targets | Existing CLI | Verified by user; `5102380`, baseline and seed checks passed; four visual cases tracked for M3 |
 | M2 — Shared media evidence and archive | M1 | Verified by user; `55d4046`, 250 tests and GitHub CI passed; offline compatibility confirmed |
 | M3 — Two-source media pilot | M2 | Verified by user; `ba855a3`, 2,799 saved files, 294 tests and CI passed; two diagram cases remain unscored |
-| M4 — Portable image encoder | M1, M3 | Ready for verification; `e02bbeb`, 391 tests and CI passed; all five native targets pass 23 parity probes with network restrictions verified |
-| M5 — Image and combined queries | M2, M3, M4 | Planned |
+| M4 — Portable image encoder | M1, M3 | Verified by user; `e02bbeb`, 391 tests and CI passed; all five native targets pass 23 parity probes with network restrictions verified |
+| M5 — Image and combined queries | M2, M3, M4 | In progress: bundle construction, retrieval, and CLI integration |
 | M6 — OCR and visual descriptions | M3, M5 | Planned |
 | M7 — Better text and combined ranking | M1, M5, M6 | Planned |
 | M8 — Entity relationships and precise filters | M1, M7 | Planned |
@@ -283,29 +283,48 @@ and per-target reports under `build/m4/native-ci`. At `e02bbeb`, both
 [regular CI](https://github.com/osint-builders/pipelines/actions/runs/35627989559)
 and [native encoder checks](https://github.com/osint-builders/pipelines/actions/runs/35627989633)
 pass. Model selection, held-out labels, and frozen acceptance targets are unchanged.
-The root README and existing text CLI behavior remain unchanged. M5 waits for
-user verification of M4.
+The root README and existing text CLI behavior remain unchanged. User verification
+authorizes M5.
 
 ## M5 — Image and combined queries
 
-- [ ] Store image vectors separately from the existing text vectors, with model identity and media/evidence/entity references.
-- [ ] Implement image queries and image-plus-text queries through the existing `search` command and filters.
-- [ ] Combine rankings from compatible retrieval channels; never directly add embeddings from unrelated models.
-- [ ] Return one result per entity with matching media IDs, source pages, and the contributing retrieval channels.
-- [ ] Keep diverse image views and prevent duplicate or numerous images from dominating entity rankings.
-- [ ] Add media inspection/export and embed compact previews within the distribution budget, keeping originals in the local archive.
-- [ ] Extend bundle validation and `verify` to check image vectors, media references, and cross-runtime probes.
+- [x] Store image vectors separately from the existing text vectors, with model identity and media/evidence/entity references.
+- [x] Implement image queries and image-plus-text queries through the existing `search` command and filters.
+- [x] Combine rankings from compatible retrieval channels; never directly add embeddings from unrelated models.
+- [x] Return one result per entity with matching media IDs, source pages, and the contributing retrieval channels.
+- [x] Keep diverse image views and prevent duplicate or numerous images from dominating entity rankings.
+- [x] Add media inspection/export and embed compact previews within the distribution budget, keeping originals in the local archive.
+- [x] Extend bundle validation and `verify` to check image vectors, media references, and cross-runtime probes.
 
 Complete when a local photograph retrieves the expected pilot entities offline and the
 researcher can inspect the exact supporting image. Existing text commands must still pass.
 
-Proposed query interface, pending implementation:
+Implemented query interface (local bundle acceptance in progress):
 
 ```sh
 pipelines search --image photograph.jpg
 pipelines search --image photograph.jpg "truck-mounted"
 pipelines search --image photograph.jpg --kind radar --limit 5
+pipelines media SOURCE:ID
+pipelines media --id SOURCE:MEDIA_ID --output preview.jpg SOURCE:ID
 ```
+
+Implementation checks: 426 Python tests, Go tests/vet, lint, types, and Python package
+build pass locally. Format 3 adds the optional image model, float16 vectors, compact
+previews, and evidence associations; format 2 text bundles remain supported. Combined
+queries use equal reciprocal-rank fusion with constant 60. Image scores use the best
+view per entity, with at most eight selected views per entity and a 32 MiB preview cap.
+
+Image and combined responses return ranked suggestions with `no_supported_match`
+and `calibration_status: uncalibrated`. The frozen development set lacks negatives
+needed to establish an acceptance threshold. Keep ranked retrieval metrics separate
+from accepted matches; threshold calibration and broader quality gates remain M7/M10.
+The restricted nine-image bundle preserves all 9,440 text members byte-for-byte.
+Windows and Linux `verify` pass four text and three image probes; Linux ran with
+networking disabled. The development images rank their expected entity first in 6/6
+cases globally and with source filters. Full archive packaging, held-out evaluation,
+offline command acceptance, and CI are still in progress. M6 remains gated on user
+verification.
 
 ## M6 — OCR and visual descriptions
 
@@ -373,6 +392,7 @@ rebuilt from local captures. Each source must account for outstanding failures.
 - [ ] Measure cold/warm latency, peak memory, and compressed executable size on all supported targets.
 - [ ] Build and test one standalone executable per platform with required models, indices, evidence, and selected previews embedded.
 - [ ] Validate deterministic dataset identities, cached rebuilds, checksums, source exports, and operation without network access.
+- [ ] Extend release change detection and tag identity to include image artifacts; the existing gate compares text content only.
 - [ ] Run lint, types, unit/integration tests, Python/Go parity, and native release acceptance checks.
 - [ ] Update the root README with only shipped CLI options/API behavior and the source table.
 - [ ] Publish the verified binaries and checksums through the existing manual release process.

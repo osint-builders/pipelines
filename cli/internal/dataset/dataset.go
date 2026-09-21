@@ -33,6 +33,7 @@ type Manifest struct {
 	Model         Model             `json:"model"`
 	Sources       []string          `json:"sources"`
 	Files         map[string]string `json:"files"`
+	Image         *ImageManifest    `json:"image,omitempty"`
 }
 type Entity struct {
 	ID         string   `json:"id"`
@@ -65,6 +66,9 @@ type Dataset struct {
 	chunks          []Chunk
 	vectors         []float32
 	byID            map[string]int
+	members         map[string]*zip.File
+	images          *imageData
+	evidenceURLs    map[int]map[string]string
 }
 
 func Open(data []byte) (*Dataset, error) {
@@ -72,7 +76,13 @@ func Open(data []byte) (*Dataset, error) {
 	if err != nil {
 		return nil, err
 	}
-	d := &Dataset{Files: files, byID: map[string]int{}}
+	d := &Dataset{Files: files, byID: map[string]int{}, members: map[string]*zip.File{}}
+	for _, file := range files.File {
+		if !fs.ValidPath(file.Name) || strings.Contains(file.Name, "\\") || d.members[file.Name] != nil {
+			return nil, errors.New("invalid or duplicate bundle member")
+		}
+		d.members[file.Name] = file
+	}
 	raw, err := fs.ReadFile(files, "manifest.json")
 	if err != nil {
 		return nil, err
@@ -80,8 +90,11 @@ func Open(data []byte) (*Dataset, error) {
 	if err = json.Unmarshal(raw, &d.Manifest); err != nil {
 		return nil, err
 	}
-	if d.Manifest.FormatVersion != 2 || d.Manifest.Model.Dimensions != 384 {
+	if (d.Manifest.FormatVersion != 2 && d.Manifest.FormatVersion != 3) || d.Manifest.Model.Dimensions != 384 {
 		return nil, errors.New("unsupported dataset format or embedding dimensions")
+	}
+	if (d.Manifest.FormatVersion == 3) != (d.Manifest.Image != nil) {
+		return nil, errors.New("dataset format does not match image extension")
 	}
 	if len(d.Manifest.DatasetID) != 64 {
 		return nil, errors.New("invalid dataset ID")
@@ -178,6 +191,9 @@ func (d *Dataset) Verify() error {
 		if chunk.EvidenceID != "" && !pages[chunk.Entity][chunk.EvidenceID] {
 			return errors.New("chunk references unrelated evidence")
 		}
+	}
+	if d.HasImages() {
+		return d.verifyImages()
 	}
 	return nil
 }
@@ -295,11 +311,15 @@ func (f Filter) matches(e Entity) bool {
 }
 
 func (d *Dataset) Search(vector []float32, query string, hybrid bool, filter Filter, limit int, exclude string) ([]Result, error) {
-	if len(vector) != d.Manifest.Model.Dimensions {
-		return nil, errors.New("query vector dimension mismatch")
-	}
 	if limit < 1 || limit > 100 {
 		return nil, errors.New("limit must be between 1 and 100")
+	}
+	return d.search(vector, query, hybrid, filter, limit, exclude)
+}
+
+func (d *Dataset) search(vector []float32, query string, hybrid bool, filter Filter, limit int, exclude string) ([]Result, error) {
+	if len(vector) != d.Manifest.Model.Dimensions {
+		return nil, errors.New("query vector dimension mismatch")
 	}
 	var norm float64
 	for _, v := range vector {

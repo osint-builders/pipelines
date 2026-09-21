@@ -261,7 +261,14 @@ def write_bundle(output: Path, members: dict[str, bytes]) -> None:
 
 
 def package(
-    root: Path, sources: list[str], model: Path, cache: Path, output: Path
+    root: Path,
+    sources: list[str],
+    model: Path,
+    cache: Path,
+    output: Path,
+    *,
+    image_model: Path | None = None,
+    image_selection: Path | None = None,
 ) -> dict:
     from filelock import FileLock
 
@@ -271,17 +278,48 @@ def package(
         FileLock(cache / "writer.lock", timeout=0),
         FileLock(output.with_suffix(".lock"), timeout=0),
     ):
-        return _package(root, sources, model, cache, output)
+        return _package(
+            root,
+            sources,
+            model,
+            cache,
+            output,
+            image_model=image_model,
+            image_selection=image_selection,
+        )
 
 
 def _package(
-    root: Path, sources: list[str], model: Path, cache: Path, output: Path
+    root: Path,
+    sources: list[str],
+    model: Path,
+    cache: Path,
+    output: Path,
+    *,
+    image_model: Path | None = None,
+    image_selection: Path | None = None,
 ) -> dict:
+    if image_selection is not None and image_model is None:
+        raise ValueError("Image selection requires an image model")
     entities, html, responses = collect_artifacts(root, sources)
     digest = content_digest(entities)
-    recipe = sha256(
-        canonical({"format": FORMAT_VERSION, "search": SEARCH_VERSION, "model": LOCK})
-    )
+    format_version = 3 if image_model is not None else FORMAT_VERSION
+    recipe_spec = {"format": format_version, "search": SEARCH_VERSION, "model": LOCK}
+    image_members: dict[str, bytes] = {}
+    image_metadata: dict = {}
+    if image_model is not None:
+        from pipelines.image_distribution import build_image_members
+
+        image_members, image_metadata, _ = build_image_members(
+            root, sources, entities, image_model, image_selection
+        )
+        recipe_spec["image"] = {
+            "metadata": image_metadata,
+            "files": {
+                name: sha256(body) for name, body in sorted(image_members.items())
+            },
+        }
+    recipe = sha256(canonical(recipe_spec))
     if output.exists():
         with zipfile.ZipFile(output) as previous:
             manifest = json.loads(previous.read("manifest.json"))
@@ -291,6 +329,10 @@ def _package(
             ):
                 if previous.testzip() is not None:
                     raise ValueError("Existing bundle failed integrity check")
+                if image_model is not None:
+                    from pipelines.image_distribution import validate_image_bundle
+
+                    validate_image_bundle(previous, manifest, entities)
                 return {**manifest, "changed": False, "output": str(output)}
     encoder = Encoder(model)
     index = []
@@ -357,8 +399,9 @@ def _package(
     ]
     members["probes.json"] = canonical(probes)
     members["probes.f32"] = encoder.encode(probes)
+    members.update(image_members)
     manifest = {
-        "format_version": FORMAT_VERSION,
+        "format_version": format_version,
         "content_sha256": digest,
         "recipe_sha256": recipe,
         "dataset_id": sha256((digest + recipe).encode()),
@@ -369,6 +412,20 @@ def _package(
         "sources": sorted(set(sources)),
         "files": {name: sha256(body) for name, body in sorted(members.items())},
     }
+    if image_model is not None:
+        manifest["image"] = image_metadata
     members["manifest.json"] = canonical(manifest)
-    write_bundle(output, members)
+    if image_model is not None:
+        from pipelines.image_distribution import validate_image_bundle
+
+        pending = output.with_suffix(".pending.zip")
+        try:
+            write_bundle(pending, members)
+            with zipfile.ZipFile(pending) as archive:
+                validate_image_bundle(archive, manifest, entities)
+            pending.replace(output)
+        finally:
+            pending.unlink(missing_ok=True)
+    else:
+        write_bundle(output, members)
     return {**manifest, "changed": True, "output": str(output)}

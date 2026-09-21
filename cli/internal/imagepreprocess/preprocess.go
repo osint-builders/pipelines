@@ -4,6 +4,7 @@ package imagepreprocess
 import (
 	"bytes"
 	"encoding/binary"
+	"encoding/json"
 	"errors"
 	"image"
 	"image/color"
@@ -25,6 +26,36 @@ type Recipe struct {
 	Mean               [3]float64 `json:"mean"`
 	Std                [3]float64 `json:"std"`
 	Version            string     `json:"version"`
+}
+
+func (r *Recipe) UnmarshalJSON(body []byte) error {
+	var fields struct {
+		Size               *int       `json:"size"`
+		ResizeShortestEdge *int       `json:"resize_shortest_edge"`
+		Mean               []*float64 `json:"mean"`
+		Std                []*float64 `json:"std"`
+		Version            *string    `json:"version"`
+	}
+	decoder := json.NewDecoder(bytes.NewReader(body))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&fields); err != nil {
+		return err
+	}
+	if fields.Size == nil || fields.ResizeShortestEdge == nil || fields.Version == nil || len(fields.Mean) != 3 || len(fields.Std) != 3 {
+		return errors.New("image preprocessing recipe requires all fields and three mean/std channels")
+	}
+	candidate := Recipe{Size: *fields.Size, ResizeShortestEdge: *fields.ResizeShortestEdge, Version: *fields.Version}
+	for channel := range 3 {
+		if fields.Mean[channel] == nil || fields.Std[channel] == nil {
+			return errors.New("image preprocessing channels must be numbers")
+		}
+		candidate.Mean[channel], candidate.Std[channel] = *fields.Mean[channel], *fields.Std[channel]
+	}
+	if err := candidate.Validate(); err != nil {
+		return err
+	}
+	*r = candidate
+	return nil
 }
 
 func DefaultRecipe() Recipe {

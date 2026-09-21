@@ -3,6 +3,7 @@
 import hashlib
 import json
 import re
+from dataclasses import fields
 from pathlib import Path
 
 import numpy as np
@@ -35,6 +36,10 @@ class Encoder:
         ):
             raise ValueError("Unsupported image model manifest")
         try:
+            if not isinstance(manifest["preprocess"], dict) or set(
+                manifest["preprocess"]
+            ) != {field.name for field in fields(Recipe)}:
+                raise ValueError("Image preprocessing must declare the complete recipe")
             self.recipe = Recipe(**manifest["preprocess"])
             self.recipe.validate()
         except (KeyError, TypeError) as error:

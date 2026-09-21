@@ -12,6 +12,7 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -167,6 +168,64 @@ func TestRecipeValidation(t *testing.T) {
 		update(&recipe)
 		if _, err := Preprocess(nil, recipe); err == nil {
 			t.Fatal("invalid recipe accepted")
+		}
+	}
+}
+
+func TestRecipeJSONRequiresExactChannelsAndTypes(t *testing.T) {
+	valid, err := json.Marshal(DefaultRecipe())
+	if err != nil {
+		t.Fatal(err)
+	}
+	var roundtrip Recipe
+	if err := json.Unmarshal(valid, &roundtrip); err != nil || roundtrip != DefaultRecipe() {
+		t.Fatalf("valid recipe changed: %+v (%v)", roundtrip, err)
+	}
+	for _, field := range []string{"size", "resize_shortest_edge", "version", "mean", "std"} {
+		for _, replacement := range []json.RawMessage{nil, json.RawMessage("null")} {
+			var fields map[string]json.RawMessage
+			if err := json.Unmarshal(valid, &fields); err != nil {
+				t.Fatal(err)
+			}
+			if replacement == nil {
+				delete(fields, field)
+			} else {
+				fields[field] = replacement
+			}
+			body, err := json.Marshal(fields)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := json.Unmarshal(body, &roundtrip); err == nil {
+				t.Fatalf("missing/null %s accepted", field)
+			}
+		}
+	}
+	for _, test := range []struct{ before, after string }{
+		{`"mean":[0,0,0]`, `"mean":[0,0]`},
+		{`"mean":[0,0,0]`, `"mean":[0,0,0,1]`},
+		{`"std":[1,1,1]`, `"std":[1,1]`},
+		{`"std":[1,1,1]`, `"std":[1,1,1,2]`},
+		{`"mean":[0,0,0]`, `"mean":[0,null,0]`},
+		{`"mean":[0,0,0]`, `"mean":[false,0,0]`},
+		{`"mean":[0,0,0]`, `"mean":["0",0,0]`},
+		{`"mean":[0,0,0]`, `"mean":[1e400,0,0]`},
+		{`"mean":[0,0,0]`, `"mean":[1000001,0,0]`},
+		{`"std":[1,1,1]`, `"std":[0,1,1]`},
+		{`"size":256`, `"size":true`},
+		{`"size":256`, `"size":256.5`},
+		{`"size":256`, `"size":0`},
+		{`"version":`, `"unknown":1,"version":`},
+	} {
+		body := strings.Replace(string(valid), test.before, test.after, 1)
+		if body == string(valid) {
+			t.Fatalf("invalid test mutation: %s", test.before)
+		}
+		if err := json.Unmarshal([]byte(body), &roundtrip); err == nil {
+			t.Fatalf("invalid recipe accepted: %s", body)
+		}
+		if roundtrip != DefaultRecipe() {
+			t.Fatal("failed recipe decode partially replaced the previous value")
 		}
 	}
 }

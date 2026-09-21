@@ -88,3 +88,14 @@ def test_encoder_rejects_bad_pixels_and_empty_embedding(
             encoder.encode_tensor(tensor)  # type: ignore[arg-type]
     with pytest.raises(ValueError):
         encoder.encode(b"not an image")
+
+
+@pytest.mark.parametrize(
+    "missing", ["size", "resize_shortest_edge", "mean", "std", "version"]
+)
+def test_model_recipe_cannot_silently_use_default_fields(
+    tmp_path: Path, manifest: dict, missing: str
+) -> None:
+    del manifest["preprocess"][missing]
+    with pytest.raises(ValueError, match="complete recipe"):
+        Encoder(tmp_path, manifest)

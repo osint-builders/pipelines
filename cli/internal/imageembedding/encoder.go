@@ -23,6 +23,7 @@ import (
 	"github.com/gomlx/gomlx/ml/model"
 	"github.com/gomlx/onnx-gomlx/onnx"
 	"github.com/gomlx/onnx-gomlx/onnx/parser"
+	"github.com/osint-builders/pipelines/cli/internal/imagepreprocess"
 )
 
 // Spec fixes the graph contract. Inputs are preprocessed RGB float32 NCHW,
@@ -46,6 +47,7 @@ type Result struct {
 type Encoder struct {
 	mu      sync.Mutex
 	spec    Spec
+	recipe  imagepreprocess.Recipe
 	parsed  onnx.Model
 	store   *model.Store
 	backend compute.Backend
@@ -56,6 +58,38 @@ type Encoder struct {
 // New loads one self-contained ONNX file, verifies its bytes before parsing,
 // and validates its declared inputs and output. Compilation occurs on Encode.
 func New(ctx context.Context, filename string, spec Spec) (encoder *Encoder, err error) {
+	if err := validateSpec(spec); err != nil {
+		return nil, err
+	}
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	file, err := os.Open(filename)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+	contents, err := readModel(file)
+	if err != nil {
+		return nil, err
+	}
+	return newModel(ctx, contents, spec)
+}
+
+const maxModelBytes = 512 << 20
+
+func readModel(reader io.Reader) ([]byte, error) {
+	contents, err := io.ReadAll(io.LimitReader(reader, maxModelBytes+1))
+	if err != nil {
+		return nil, err
+	}
+	if len(contents) > maxModelBytes {
+		return nil, errors.New("image model exceeds 512 MiB")
+	}
+	return contents, nil
+}
+
+func newModel(ctx context.Context, contents []byte, spec Spec) (encoder *Encoder, err error) {
 	if err = validateSpec(spec); err != nil {
 		return nil, err
 	}
@@ -72,19 +106,6 @@ func New(ctx context.Context, filename string, spec Spec) (encoder *Encoder, err
 			encoder = nil
 		}
 	}()
-	file, err := os.Open(filename)
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
-	const maxModelBytes = 512 << 20
-	contents, err := io.ReadAll(io.LimitReader(file, maxModelBytes+1))
-	if err != nil {
-		return nil, err
-	}
-	if len(contents) > maxModelBytes {
-		return nil, errors.New("image model exceeds 512 MiB")
-	}
 	digest := sha256.Sum256(contents)
 	if hex.EncodeToString(digest[:]) != strings.ToLower(spec.ModelSHA256) {
 		return nil, errors.New("image model SHA-256 mismatch")
@@ -125,6 +146,20 @@ func New(ctx context.Context, filename string, spec Spec) (encoder *Encoder, err
 		return nil, err
 	}
 	return e, nil
+}
+
+func (e *Encoder) Recipe() imagepreprocess.Recipe { return e.recipe }
+
+// EncodeImage uses the recipe loaded with NewFromFS and never reads external files.
+func (e *Encoder) EncodeImage(ctx context.Context, contents []byte) (Result, error) {
+	if err := ctx.Err(); err != nil {
+		return Result{}, err
+	}
+	tensor, err := imagepreprocess.Preprocess(contents, e.recipe)
+	if err != nil {
+		return Result{}, err
+	}
+	return e.Encode(ctx, tensor)
 }
 
 // Encode serializes inference with Close. Cancellation is checked before and

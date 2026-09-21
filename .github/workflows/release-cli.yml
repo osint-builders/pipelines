@@ -24,11 +24,17 @@ jobs:
       bundle_sha256: ${{ steps.gate.outputs.bundle_sha256 }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+        with:
+          version: '0.11.21'
+          python-version: '3.13'
+          enable-cache: true
+      - run: uv sync --frozen --extra image --no-install-package onnxruntime
       - id: gate
         env:
           GH_TOKEN: ${{ github.token }}
           INPUT_TAG: ${{ inputs.input_tag }}
-        run: python tools/release.py gate --repo "$GITHUB_REPOSITORY" --tag "$INPUT_TAG"
+        run: uv run --no-sync python tools/release.py gate --repo "$GITHUB_REPOSITORY" --tag "$INPUT_TAG"
       - if: steps.gate.outputs.changed == 'true'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
@@ -64,6 +70,12 @@ jobs:
         shell: bash
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+        with:
+          version: '0.11.21'
+          python-version: '3.13'
+          enable-cache: true
+      - run: uv sync --frozen --extra image --no-install-package onnxruntime
       - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
         with:
           go-version-file: cli/go.mod
@@ -75,7 +87,7 @@ jobs:
       - run: python tools/check_bundle_hash.py build/release/dataset.zip
       - working-directory: cli
         run: go test -tags NODOWNLOAD ./...
-      - run: python tools/build_cli.py --bundle build/release/dataset.zip --output "dist/pipelines-$TARGET"
+      - run: uv run --no-sync python tools/build_cli.py --bundle build/release/dataset.zip --output "dist/pipelines-$TARGET"
       - run: python tools/accept_cli.py "dist/pipelines-$TARGET" build/release/dataset.zip
       - run: python tools/evaluate_cli.py "dist/pipelines-$TARGET"
       - if: matrix.target == 'linux-amd64'
