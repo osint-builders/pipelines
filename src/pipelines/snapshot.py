@@ -60,6 +60,16 @@ def status(source_dir: Path) -> dict:
     current = source_dir / "published/current.json"
     if current.is_file():
         result["published"] = json.loads(current.read_text())
+        if (source_dir.parent / "media/manifest.sqlite").is_file() or "media" in result[
+            "published"
+        ]:
+            from pipelines.media_pipeline import media_summary, read_media
+
+            media = read_media(
+                source_dir.name, source_dir.parent, result["published"]["archive"]
+            )
+            if media is not None:
+                result["media"] = media_summary(media)
     active = source_dir / "work.json"
     if active.is_file():
         work = json.loads(active.read_text())

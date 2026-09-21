@@ -10,7 +10,7 @@ def main() -> None:
     )
     commands = parser.add_subparsers(dest="command", required=True)
     commands.add_parser("sources", help="List installed source adapters")
-    for name in ("crawl", "extract", "status", "audit"):
+    for name in ("crawl", "extract", "status", "audit", "media"):
         command = commands.add_parser(name)
         command.add_argument("source")
         command.add_argument("--root", type=Path, required=True)
@@ -20,6 +20,11 @@ def main() -> None:
             )
         elif name == "audit":
             command.add_argument("--binary", type=Path, help="Also verify CLI exports")
+            command.add_argument("--output", type=Path, help="Save the JSON report")
+        elif name == "media":
+            command.add_argument(
+                "--download", action="store_true", help="Fetch discovered originals"
+            )
             command.add_argument("--output", type=Path, help="Save the JSON report")
     model = commands.add_parser("model", help="Download the pinned embedding model")
     model.add_argument("--output", type=Path, required=True)
@@ -66,6 +71,15 @@ def main() -> None:
         if args.output:
             args.output.parent.mkdir(parents=True, exist_ok=True)
             atomic_json(args.output, output)
+    elif args.command == "media":
+        from pipelines.archive import atomic_json
+        from pipelines.media_pipeline import media
+        from pipelines.registry import get_source
+
+        output = media(get_source(args.source), args.root, download=args.download)
+        if args.output:
+            args.output.parent.mkdir(parents=True, exist_ok=True)
+            atomic_json(args.output, output)
     elif args.command == "model":
         from pipelines.distribution import download_model
 
@@ -81,6 +95,16 @@ def main() -> None:
             key: value for key, value in result.items() if key not in {"files", "model"}
         }
     print(json.dumps(output, ensure_ascii=True, indent=2))
+    if isinstance(output, dict) and (
+        (args.command == "audit" and not output["ok"])
+        or (
+            args.command == "media"
+            and args.download
+            and output.get("supported")
+            and not output["complete"]
+        )
+    ):
+        raise SystemExit(1)
 
 
 if __name__ == "__main__":

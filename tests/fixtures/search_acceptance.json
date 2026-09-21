@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "status": "proposed_awaiting_user_verification",
+  "status": "frozen_after_m1_user_verification",
   "scope": "Acceptance contract for the first multimodal release; targets are not measurements or shipped features.",
   "baseline": {
     "dataset_id": "572bc6071b705821d35d2b12264efdc6e7e29545dc23def6fd62b2c58db68802",
@@ -53,7 +53,7 @@
     }
   },
   "quality_targets": {
-    "status": "proposed; evaluate at release sample sizes, not the small pilot",
+    "status": "frozen M1 targets; evaluate at release sample sizes, not the small pilot",
     "exact_designation": {"top1_min": 0.95, "recall_at_5_min": 0.99},
     "descriptive": {"top1_min": 0.75, "recall_at_5_min": 0.9},
     "specification": {"top1_min": 0.75, "recall_at_5_min": 0.9},
@@ -67,7 +67,7 @@
     "integrity": {"duplicate_entity_results_max": 0, "filter_leaks_max": 0, "broken_evidence_or_media_references_max": 0}
   },
   "resource_targets": {
-    "status": "proposed budgets; no image or combined performance measurements exist in M1",
+    "status": "frozen M1 budgets; no image or combined performance measurements exist in M1",
     "comparison_scope": "Frozen 4337-entity text corpus plus at most 10000 indexed image views; same hardware, text dataset, query set, runtime settings, and background load for regression comparisons. Record both executable hashes and each media-gallery hash.",
     "latency_seconds": {
       "text": {"first_process_max": 5, "repeated_process_p95_max": 3},
@@ -122,6 +122,6 @@
     "stable_ids": "Preserve every existing SOURCE:ID and evidence ID. Deduplicating image bytes never merges entity identities.",
     "commands": "Existing text search, similar, get formats json/markdown/html/source, info, version, and verify continue to work. Original source exports remain byte-identical.",
     "bundles": "New code can read existing format-2 text bundles and snapshots; absent media is valid. Unsupported newer formats fail clearly. Old binaries are not expected to read new bundle formats.",
-    "verification_gate": "Implement only M1 now. User verification of this contract and its baseline is required before M2 or later milestone work."
+    "verification_gate": "M1 verified by the user. Advance one milestone at a time, requiring user verification before starting the next."
   }
 }

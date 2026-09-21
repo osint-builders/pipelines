@@ -3,7 +3,7 @@
 Help researchers and educators find static entities quickly using names, descriptions,
 specifications, and images, with every result linked to captured evidence.
 
-**Progress:** 0/10 milestones verified. **Active:** M1, awaiting user verification.
+**Progress:** 1/10 milestones verified. **Active:** M2, awaiting user verification.
 
 **Branch:** `feature/multimodal-entity-search`.
 
@@ -19,8 +19,8 @@ commands and the source table.
 
 | Milestone | Depends on | Status |
 | --- | --- | --- |
-| M1 — Baseline and acceptance targets | Existing CLI | Ready for verification: measured baseline, validated seed, proposed targets; four visual cases explicitly pending |
-| M2 — Shared media evidence and archive | M1 | Planned |
+| M1 — Baseline and acceptance targets | Existing CLI | Verified by user; `5102380`, baseline and seed checks passed; four visual cases tracked for M3 |
+| M2 — Shared media evidence and archive | M1 | Ready for verification: 250 tests; offline archive and full-corpus compatibility reports |
 | M3 — Two-source media pilot | M2 | Planned |
 | M4 — Portable image encoder | M1, M3 | Planned |
 | M5 — Image and combined queries | M2, M3, M4 | Planned |
@@ -41,14 +41,14 @@ its milestone begins. Final model selection uses the pilot images from M3.
 - [x] Define representative tasks: exact designation, descriptive query, specifications, photograph, and photograph plus text.
 - [x] Build seed evaluation sets covering unseen views, crops, diagrams, similar variants, and queries with no matching entity; mark missing inputs explicitly.
 - [x] Separate development and evaluation images by underlying photograph, including resized and cropped duplicates.
-- [x] Propose numerical acceptance targets for retrieval quality, false matches, latency, memory, and binary size before model selection; freeze after user verification.
+- [x] Freeze numerical acceptance targets for retrieval quality, false matches, latency, memory, and binary size before model selection.
 - [x] Define the first release's query modes, result fields, media retention, and compatibility requirements.
 
 Complete when a repeatable baseline and explicit acceptance targets exist. Record target
 hardware and distinguish measured results from proposed budgets.
 
 Current contract: [search_acceptance.json](tests/fixtures/search_acceptance.json).
-Targets remain proposed until the user verifies M1; image capabilities are not implemented yet.
+Targets are frozen following user verification of M1; image capabilities are not implemented yet.
 
 Measured on Windows 11 / AMD Ryzen 9 5950X / 128 GiB RAM, using dataset
 `572bc6071b705821d35d2b12264efdc6e7e29545dc23def6fd62b2c58db68802`
@@ -94,22 +94,58 @@ positive queries ranked an accepted entity within two results. The five global p
 scored 3/5 first; the four source-filtered positives scored 3/4 first. The fictional
 negative returned candidates, and the current CLI has no abstention signal to score.
 
-Validation: 196 Python tests; Ruff lint/format and full-project mypy. No production
-image-search code, model selection, or M2 work has begun. Await user verification before
-freezing the proposed contract and starting M2.
+Validation: 196 Python tests; Ruff lint/format and full-project mypy; GitHub CI passed.
+User verification authorizes M2; image-search implementation and model selection remain
+in their later milestones.
 
 ## M2 — Shared media evidence and archive
 
-- [ ] Add versioned media records containing stable IDs, original URL, evidence/entity associations, captions, dimensions, MIME type, capture time, and content hash.
-- [ ] Let adapters describe media through one shared interface; keep website-specific discovery and supporting files in their source folders.
-- [ ] Implement one resumable downloader with retries, atomic temporary files, response validation, and source-scoped authentication and redirects.
-- [ ] Keep verified originals in a durable local archive; use temporary storage for decoding, resizing, and other intermediate work.
-- [ ] Deduplicate identical bytes across sources and track near-duplicate images without automatically merging entity identities.
-- [ ] Version processing recipes and cache derived output by media hash, model revision, and preprocessing settings.
-- [ ] Extend shared commands and audits to report discovered, saved, excluded, failed, and unassociated media. Keep indexing and packaging offline.
+- [x] Add versioned media records containing stable IDs, original URL, evidence/entity associations, captions, dimensions, MIME type, capture time, and content hash.
+- [x] Let adapters describe media through one shared interface; keep website-specific discovery and supporting files in their source folders.
+- [x] Implement one resumable downloader with retries, atomic temporary files, response validation, and source-scoped authentication and redirects.
+- [x] Keep verified originals in a durable local archive; use temporary storage for decoding, resizing, and other intermediate work.
+- [x] Deduplicate identical bytes across sources and track near-duplicate images without automatically merging entity identities.
+- [x] Version processing recipes and cache derived output by media hash, model revision, and preprocessing settings.
+- [x] Extend shared commands and audits to report discovered, saved, excluded, failed, and unassociated media. Keep indexing and packaging offline.
 
 Complete when interrupted downloads resume, source associations survive deduplication,
 existing text snapshots remain usable, and extraction can replay saved media offline.
+
+Implemented in `media.py`, `media_download.py`, and `media_pipeline.py`. One optional
+`MediaSource` interface describes candidates from saved responses. The shared archive
+keeps originals under `DATA/media/objects`, a versioned SQLite manifest, resumable
+partials under `DATA/media/tmp`, and derived artifacts keyed by original hash, recipe,
+model identity/revision, and settings. Per-source/archive records retain every evidence
+association. Near-duplicate fingerprints are review hints, never entity merges.
+
+Producer commands:
+
+```sh
+pipeline-build media SOURCE --root DATA
+pipeline-build media SOURCE --root DATA --download --output REPORT.json
+```
+
+The first command discovers and reports offline; `--download` enables HTTP capture.
+Downloads validate JPEG/PNG/WebP originals, with 20 MiB and 40 MP limits. Interrupted
+transfers resume only with matching validators; authentication failures and throttling
+stop the source run. Failed records remain visible and retryable. Incomplete capture
+and audits return a nonzero exit status with their JSON report.
+
+Text snapshots remain schema 2; media uses its own schema 1. Offline extraction adds a
+media sidecar to the new snapshot without changing entity or source-export bytes.
+Existing adapters report `no_media_adapter` until their milestone enables discovery;
+the Military Periscope/Commons implementations and live capture remain M3 work.
+
+Validation: all 250 tests pass, including 54 media tests; Ruff lint/format, full-project
+mypy, and the Python package build pass. A Windows path-prefix race found during final
+validation is covered by a regression test and passed 240 concurrent cache calls.
+An offline smoke check archived all 17 existing seed originals (2,210,817 bytes),
+retained links to seven entities, and reused a derived preview without recomputing it.
+With network access disabled, all 11 existing sources loaded: 4,337 entities and 5,090
+evidence pages, with the exact M1 text content hash unchanged.
+Reports: `build/m2/archive-smoke.json`, `build/m2/compatibility.json`,
+`build/m2/tests.xml`. All generated data stays outside Git. Await user verification
+before starting M3.
 
 ## M3 — Two-source media pilot
 

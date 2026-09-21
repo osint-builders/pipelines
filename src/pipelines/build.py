@@ -149,6 +149,21 @@ def publish(source: Source, archive: Archive, source_dir: Path) -> Path:
         "crawl": archive.counts(),
         "excluded_from_entities": excluded,
     }
+    from pipelines.media_pipeline import read_media
+
+    media = read_media(
+        source.id,
+        source_dir.parent,
+        archive.path.name,
+        entities=[entity.metadata(source.id) for entity in entities.values()],
+        verify=True,
+    )
+    if media is not None:
+        atomic_json(snapshot / "media.json", media)
+        manifest["media"] = {
+            "schema_version": media["schema_version"],
+            "file": "media.json",
+        }
     atomic_json(snapshot / "manifest.json", manifest)
     atomic_json(current, manifest)
     return snapshot

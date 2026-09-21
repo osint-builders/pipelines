@@ -70,7 +70,7 @@ def audit(source: Source, root: Path, binary: Path | None = None) -> dict:
                                 f"CLI export mismatch: {entity['id']} {format}"
                             )
                     export_pages += 1
-    return {
+    result = {
         "source": source.id,
         "archive": manifest["archive"],
         "snapshot": manifest["snapshot"],
@@ -83,3 +83,10 @@ def audit(source: Source, root: Path, binary: Path | None = None) -> dict:
         "cli_export_pages_checked": export_pages,
         "ok": True,
     }
+    from pipelines.media_pipeline import audit_media
+
+    media = audit_media(source.id, root, manifest, entities)
+    if media is not None:
+        result["media"] = media
+        result["ok"] = result["media"]["complete"]
+    return result

@@ -1,0 +1,410 @@
+import hashlib
+import json
+import os
+import sqlite3
+from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
+
+import pytest
+from PIL import Image
+
+from pipelines.media import (
+    MAX_IMAGE_BYTES,
+    MediaCandidate,
+    MediaReference,
+    MediaStore,
+    ProcessingRecipe,
+    media_id,
+    recipe_key,
+)
+
+URL = "https://images.example/radar.png"
+
+
+def candidate(source: str = "fixture", url: str = URL) -> MediaCandidate:
+    return MediaCandidate(
+        url, [MediaReference(f"{source}:radar", "evidence-1", "Side view")]
+    )
+
+
+def image_file(path: Path, *, color: str = "blue", format: str = "PNG") -> Path:
+    image = Image.new("RGB", (32, 24), color)
+    image.save(path, format=format)
+    return path
+
+
+def saved(store: MediaStore, path: Path, *, archive: str = "run-1") -> dict:
+    store.register("fixture", archive, [candidate()])
+    return store.save(
+        "fixture", archive, media_id("fixture", URL), path, content_type="image/png"
+    )
+
+
+def test_duplicate_bytes_keep_source_records_and_merged_references(
+    tmp_path: Path,
+) -> None:
+    path = image_file(tmp_path / "input.png")
+    with MediaStore(tmp_path) as store:
+        first = saved(store, path)
+        store.register(
+            "fixture",
+            "run-1",
+            [
+                candidate(),
+                MediaCandidate(
+                    URL, [MediaReference("fixture:radar", "evidence-2", "Front view")]
+                ),
+                MediaCandidate(URL, [MediaReference("fixture:radar-2", "evidence-1")]),
+            ],
+        )
+        same = store.records("fixture", "run-1")[0]
+        assert same["id"] == first["id"]
+        assert same["captured_at"] == first["captured_at"]
+        assert same["state"] == "saved"
+        assert {ref["caption"] for ref in same["references"]} == {
+            "Side view",
+            "Front view",
+            "",
+        }
+        store.register("second", "run-2", [candidate("second")])
+        other = store.save(
+            "second", "run-2", media_id("second", URL), path, content_type="image/png"
+        )
+        assert first["id"] != other["id"]
+        assert first["sha256"] == other["sha256"]
+        assert store.body(other["sha256"]) == path.read_bytes()
+    assert len(list((tmp_path / "media" / "objects").glob("*/*"))) == 1
+
+
+def test_url_identity_keeps_each_archived_version(tmp_path: Path) -> None:
+    blue = image_file(tmp_path / "blue.png")
+    red = image_file(tmp_path / "red.png", color="red")
+    with MediaStore(tmp_path) as store:
+        first = saved(store, blue)
+        second = saved(store, red, archive="run-2")
+        assert first["id"] == second["id"]
+        assert first["sha256"] != second["sha256"]
+        assert store.body(first["sha256"]) == blue.read_bytes()
+        assert store.body(second["sha256"]) == red.read_bytes()
+        with pytest.raises(ValueError, match="cannot change"):
+            saved(store, red)
+
+
+def test_states_resume_and_empty_associations_are_explicit(tmp_path: Path) -> None:
+    path = image_file(tmp_path / "input.png")
+    excluded = URL + "?excluded=1"
+    unassociated = URL + "?unassociated=1"
+    with MediaStore(tmp_path) as store:
+        store.register(
+            "fixture",
+            "run-1",
+            [
+                candidate(),
+                MediaCandidate(excluded, exclusion_reason="Navigation image"),
+                MediaCandidate(unassociated),
+            ],
+        )
+        store.mark(
+            "fixture",
+            "run-1",
+            media_id("fixture", URL),
+            "failed",
+            "HTTP 429",
+            http_status=429,
+            retry_after="60",
+        )
+        store.register("fixture", "run-1", [candidate()])
+        manifest = store.manifest("fixture", "run-1")
+        assert manifest["counts"] == {
+            "discovered": 3,
+            "pending": 0,
+            "saved": 0,
+            "failed": 1,
+            "excluded": 1,
+            "unassociated": 1,
+        }
+        for url in (excluded, unassociated):
+            with pytest.raises(ValueError, match="cannot be saved"):
+                store.save(
+                    "fixture",
+                    "run-1",
+                    media_id("fixture", url),
+                    path,
+                    content_type="image/png",
+                )
+        store.register("fixture", "run-1", [candidate(url=unassociated)])
+        assert store.manifest("fixture", "run-1")["counts"]["pending"] == 1
+        record = saved(store, path)
+        assert record["error"] == ""
+        assert record["retry_after"] is None
+
+
+@pytest.mark.parametrize(
+    "format,mime",
+    [("PNG", "image/png"), ("JPEG", "image/jpeg"), ("WEBP", "image/webp")],
+)
+def test_decodes_supported_formats(tmp_path: Path, format: str, mime: str) -> None:
+    path = image_file(tmp_path / "input", format=format)
+    with MediaStore(tmp_path) as store:
+        store.register("fixture", "run-1", [candidate()])
+        record = store.save(
+            "fixture", "run-1", media_id("fixture", URL), path, content_type=mime
+        )
+        assert (record["width"], record["height"], record["content_type"]) == (
+            32,
+            24,
+            mime,
+        )
+        assert record["bytes"] == path.stat().st_size
+        assert len(record["perceptual_hash"]) == 16
+
+
+def test_rejects_mismatch_truncation_animation_and_limits(tmp_path: Path) -> None:
+    path = image_file(tmp_path / "input.png")
+    with MediaStore(tmp_path) as store:
+        store.register("fixture", "run-1", [candidate()])
+        with pytest.raises(ValueError, match="MIME"):
+            store.save(
+                "fixture",
+                "run-1",
+                media_id("fixture", URL),
+                path,
+                content_type="image/jpeg",
+            )
+        path.write_bytes(path.read_bytes()[:40])
+        with pytest.raises(ValueError, match="Invalid or truncated"):
+            saved(store, path)
+        frames = [Image.new("RGB", (2, 2), color) for color in ("red", "blue")]
+        frames[0].save(path, format="PNG", save_all=True, append_images=frames[1:])
+        with pytest.raises(ValueError, match="Animated"):
+            saved(store, path)
+        Image.new("1", (6400, 6300)).save(path, format="PNG")
+        with pytest.raises(ValueError, match="pixel limit"):
+            saved(store, path)
+        with path.open("wb") as handle:
+            handle.truncate(MAX_IMAGE_BYTES + 1)
+        with pytest.raises(ValueError, match="byte limit"):
+            saved(store, path)
+        assert store.manifest("fixture", "run-1")["counts"]["saved"] == 0
+    assert not (tmp_path / "media" / "objects").exists()
+
+
+def test_corruption_is_rejected_and_verified_recapture_repairs_blob(
+    tmp_path: Path,
+) -> None:
+    path = image_file(tmp_path / "input.png")
+    with MediaStore(tmp_path) as store:
+        record = saved(store, path)
+        with pytest.raises(ValueError, match="cannot be marked failed"):
+            store.mark("fixture", "run-1", record["id"], "failed", "corruption")
+        digest = record["sha256"]
+        (tmp_path / "media" / "objects" / digest[:2] / digest).write_bytes(b"corrupted")
+        with pytest.raises(ValueError, match="checksum"):
+            store.body(digest)
+        store.mark("fixture", "run-1", record["id"], "failed", "checksum mismatch")
+        different = image_file(tmp_path / "changed.png", color="red")
+        with pytest.raises(ValueError, match="cannot change"):
+            saved(store, different)
+        saved(store, path)
+        assert store.body(digest) == path.read_bytes()
+
+
+def test_near_duplicates_are_hints_and_originals_remain_distinct(
+    tmp_path: Path,
+) -> None:
+    image = Image.new("RGB", (72, 64))
+    image.putdata([(x * 3, y * 3, (x + y) * 2) for y in range(64) for x in range(72)])
+    original = tmp_path / "view.png"
+    rotated = tmp_path / "exif.jpg"
+    image.save(original)
+    exif = Image.Exif()
+    exif[274] = 6
+    image.transpose(Image.Transpose.ROTATE_90).save(rotated, quality=95, exif=exif)
+    other_url = URL + "?view=2"
+    with MediaStore(tmp_path) as store:
+        first = saved(store, original)
+        store.register("fixture", "run-1", [candidate(url=other_url)])
+        other = store.save(
+            "fixture",
+            "run-1",
+            media_id("fixture", other_url),
+            rotated,
+            content_type="image/jpeg",
+        )
+        assert (other["width"], other["height"]) == (72, 64)
+        report = store.manifest("fixture", "run-1")
+        assert report["counts"]["saved"] == 2
+        assert report["exact_duplicates"] == []
+        assert len(report["near_duplicates"]) == 1
+        assert report["near_duplicates"][0]["distance"] <= 5
+        assert store.body(first["sha256"]) != store.body(other["sha256"])
+        store.register("second", "run-2", [candidate("second")])
+        store.save(
+            "second",
+            "run-2",
+            media_id("second", URL),
+            rotated,
+            content_type="image/jpeg",
+        )
+        global_report = store.manifest("second", "run-2")
+        assert global_report["counts"]["saved"] == 1
+        hint = global_report["near_duplicates"][0]
+        assert {
+            ref["source"] for ref in hint["left_records"] + hint["right_records"]
+        } == {"fixture", "second"}
+
+
+def test_recipes_cache_offline_and_invalidate_on_each_input(tmp_path: Path) -> None:
+    path = image_file(tmp_path / "input.png")
+    calls: list[Path] = []
+
+    def produce(original: Path, output: Path) -> None:
+        calls.append(output)
+        with Image.open(original) as image:
+            image.resize((8, 8)).save(output, format="PNG")
+
+    recipe = ProcessingRecipe("preview-v1", "model-commit", {"size": 8, "color": "RGB"})
+    with MediaStore(tmp_path) as store:
+        record = saved(store, path)
+        digest = record["sha256"]
+        target = store.derive(digest, recipe, produce)
+    path.unlink()
+    with MediaStore(tmp_path) as store:
+        assert store.derive(digest, recipe, produce) == target
+        assert len(calls) == 1
+        ordered = ProcessingRecipe(
+            "preview-v1", "model-commit", {"color": "RGB", "size": 8}
+        )
+        assert recipe_key(digest, recipe) == recipe_key(digest, ordered)
+        variants = [
+            ProcessingRecipe("preview-v2", "model-commit", recipe.settings),
+            ProcessingRecipe("preview-v1", "new-model-commit", recipe.settings),
+            ProcessingRecipe("preview-v1", "model-commit", {"size": 12}),
+            ProcessingRecipe(
+                "preview-v1", "model-commit", recipe.settings, model_id="another-model"
+            ),
+        ]
+        for variant in variants:
+            assert store.derive(digest, variant, produce) != target
+        assert len(calls) == 5
+        different = hashlib.sha256(b"different original").hexdigest()
+        assert recipe_key(different, recipe) != recipe_key(digest, recipe)
+        target.write_bytes(b"corrupted")
+        with pytest.raises(ValueError, match="checksum"):
+            store.derive(digest, recipe, produce)
+        assert len(calls) == 5
+    assert list((tmp_path / "media" / "tmp").iterdir()) == []
+
+
+def test_failed_recipe_leaves_no_partial_outputs(tmp_path: Path) -> None:
+    path = image_file(tmp_path / "input.png")
+    recipe = ProcessingRecipe("preview-v1")
+
+    def fail(original: Path, output: Path) -> None:
+        original.write_bytes(b"producer modifies its temporary input")
+        output.write_bytes(b"partial")
+        raise RuntimeError("analysis interrupted")
+
+    with MediaStore(tmp_path) as store:
+        record = saved(store, path)
+        with pytest.raises(RuntimeError, match="interrupted"):
+            store.derive(record["sha256"], recipe, fail)
+        assert store.body(record["sha256"]) == path.read_bytes()
+    assert not (tmp_path / "media" / "derived").exists()
+    assert list((tmp_path / "media" / "tmp").iterdir()) == []
+
+
+def test_concurrent_stores_reuse_one_complete_derived_artifact(tmp_path: Path) -> None:
+    path = image_file(tmp_path / "input.png")
+    with MediaStore(tmp_path) as store:
+        digest = saved(store, path)["sha256"]
+    calls: list[bool] = []
+
+    def produce(original: Path, output: Path) -> None:
+        calls.append(True)
+        output.write_bytes(original.read_bytes())
+
+    def derive(_: int) -> bytes:
+        with MediaStore(tmp_path) as store:
+            return store.derive(
+                digest, ProcessingRecipe("copy-v1"), produce
+            ).read_bytes()
+
+    with ThreadPoolExecutor(max_workers=3) as pool:
+        outputs = list(pool.map(derive, range(3)))
+    assert outputs == [path.read_bytes()] * 3
+    assert calls == [True]
+
+
+@pytest.mark.skipif(os.name != "nt", reason="Windows extended-path prefix")
+def test_concurrent_directory_path_prefix_does_not_change_archive_scope(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    path = image_file(tmp_path / "input.png")
+    resolve = Path.resolve
+
+    def extended(path: Path, strict: bool = False) -> Path:
+        resolved = resolve(path, strict=strict)
+        if "locks" in path.parts and not str(resolved).startswith("\\\\?\\"):
+            return Path("\\\\?\\" + str(resolved))
+        return resolved
+
+    def produce(original: Path, output: Path) -> None:
+        output.write_bytes(original.read_bytes())
+
+    with MediaStore(tmp_path) as store:
+        digest = saved(store, path)["sha256"]
+        monkeypatch.setattr(Path, "resolve", extended)
+        result = store.derive(digest, ProcessingRecipe("copy-v1"), produce)
+        assert result.read_bytes() == path.read_bytes()
+
+
+def test_read_only_does_not_create_and_versions_are_validated(tmp_path: Path) -> None:
+    missing = tmp_path / "missing"
+    with pytest.raises(sqlite3.OperationalError):
+        MediaStore(missing, read_only=True)
+    assert not missing.exists()
+    with MediaStore(tmp_path) as store:
+        store.register("fixture", "run-1", [candidate()])
+    with MediaStore(tmp_path, read_only=True) as store:
+        assert store.manifest("fixture", "run-1")["counts"]["pending"] == 1
+        with pytest.raises(ValueError, match="read-only"):
+            store.register("fixture", "run-2", [])
+    db_path = tmp_path / "media" / "manifest.sqlite"
+    with sqlite3.connect(db_path) as db:
+        record = json.loads(db.execute("SELECT data FROM media").fetchone()[0])
+        record["schema_version"] = 999
+        db.execute("UPDATE media SET data=?", (json.dumps(record),))
+    with MediaStore(tmp_path, read_only=True) as store:
+        with pytest.raises(ValueError, match="record version"):
+            store.records("fixture", "run-1")
+    with sqlite3.connect(db_path) as db:
+        db.execute("PRAGMA user_version=999")
+    with pytest.raises(ValueError, match="schema version"):
+        MediaStore(tmp_path)
+    with sqlite3.connect(db_path) as db:
+        assert db.execute("PRAGMA user_version").fetchone()[0] == 999
+
+
+def test_invalid_ids_urls_and_recipes_are_rejected(tmp_path: Path) -> None:
+    for url in (
+        "file:///picture.png",
+        "https://user:secret@example/image.png",
+        URL + "#fragment",
+    ):
+        with pytest.raises(ValueError, match="HTTP"):
+            media_id("fixture", url)
+    with MediaStore(tmp_path) as store:
+        for source, archive in (("../outside", "run"), ("fixture", "../outside")):
+            with pytest.raises(ValueError, match="safe keys"):
+                store.register(source, archive, [candidate()])
+        with pytest.raises(ValueError, match="source-qualified"):
+            store.register("fixture", "run", [candidate("other")])
+        with pytest.raises(ValueError, match="SHA-256"):
+            store.body("../../outside")
+    with pytest.raises(ValueError, match="version"):
+        recipe_key("a" * 64, ProcessingRecipe(""))
+    with pytest.raises(ValueError, match="JSON compliant"):
+        recipe_key(
+            "a" * 64, ProcessingRecipe("v1", settings={"threshold": float("nan")})
+        )
