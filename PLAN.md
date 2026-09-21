@@ -691,12 +691,23 @@ and failure counts. Bulk registration writes each URL once while preserving occu
 Rich occurrence references prevent excluded captions from entering image or text indexes.
 Source text, reviewed relationships, and the frozen evaluation gallery remain preserved.
 
+Implementation `62d438c` passes 822 local Python tests, lint/format/type checks,
+all six [CI jobs](https://github.com/osint-builders/pipelines/actions/runs/35660734830),
+and [image encoder checks on all five native targets](https://github.com/osint-builders/pipelines/actions/runs/35660734788).
+Independent preliminary audit verified all source snapshot identities, 4,324 archived
+responses, and every captured entity/evidence reference. Final capture, gallery,
+observation, cache-reuse, and standalone CLI checks remain in progress. All downloads
+have reached a saved, failed, excluded, or unassociated outcome; no requests remain
+pending. Every source has been rediscovered with complete occurrence contexts.
+The first expanded gallery built offline; the final gallery and CUDA image analysis
+are running with the existing model recipes and 32 MiB embedded-preview budget.
+
 | Source | Status | Completion evidence |
 | --- | --- | --- |
 | militaryperiscope | Capture verified; processing pending | 427 originals; 132/143 entities with media; 11 without applicable images |
 | commons | Capture audited; processing pending | 2,372 originals/previews; 148/151 entities with media; 44 failed originals retain previews (41 unsupported, two invalid, one HTTP 429) |
-| radartutorial | Capture running | 3,749 eligible URLs; 1,732/1,735 entities have candidates |
-| deagel | Capture running | 2,615 recorded previews; 943/1,285 entities have candidates; unresolved family images excluded |
+| radartutorial | Captured; processing pending | 3,745 saved files covering 1,732/1,735 entities; two HTTP 404 and two MIME mismatches retained |
+| deagel | Captured; processing pending | 2,615 recorded previews covering 943/1,285 entities; no failures; unresolved family images excluded |
 | virtualglobetrotting | Captured; processing pending | 204 recorded previews covering 100/100 entities |
 | russianforces | Captured; processing pending | 16 original/preview files covering 7/57 entities; filename associations marked uncertain |
 | wikipedia | Captured; processing pending | 31 files covering 18/41 entities; recorded thumbnails retained when originals absent |
