@@ -100,11 +100,8 @@ def test_publication_waits_for_complete_draft_assets(
 
     if local:
         monkeypatch.delenv("GITHUB_SHA", raising=False)
-        notes = tmp_path / "manual-notes.md"
-        notes.write_text("Manually built; native macOS acceptance pending.")
     else:
         monkeypatch.setenv("GITHUB_SHA", "c" * 40)
-        notes = None
     monkeypatch.setattr(release, "latest_manifest", lambda repo, path: None)
     monkeypatch.setattr(release, "gh", fake_gh)
     monkeypatch.setattr(
@@ -118,10 +115,10 @@ def test_publication_waits_for_complete_draft_assets(
             tmp_path,
             "cli-" + manifest["dataset_id"],
             target="d" * 40 if local else None,
-            notes_file=notes,
         )
         assert calls[-1][:2] == ("release", "edit")
         assert "--draft=false" in calls[-1]
+        assert calls[-1][calls[-1].index("--notes") + 1] == ""
     else:
         with pytest.raises(ValueError, match="incomplete"):
             release.publish(
@@ -129,15 +126,13 @@ def test_publication_waits_for_complete_draft_assets(
                 tmp_path,
                 "cli-" + manifest["dataset_id"],
                 target="d" * 40 if local else None,
-                notes_file=notes,
             )
         assert not any(call[:2] == ("release", "edit") for call in calls)
     assert calls[0][:2] == ("release", "create")
     assert "--draft" in calls[0] and "--latest" not in calls[0]
     assert calls[0][calls[0].index("--target") + 1] == ("d" if local else "c") * 40
-    if notes:
-        assert notes.read_text() == "Manually built; native macOS acceptance pending."
-        assert calls[0][calls[0].index("--notes-file") + 1] == str(notes)
+    assert calls[0][calls[0].index("--notes") + 1] == ""
+    assert not list(tmp_path.glob("*.md"))
 
 
 @pytest.mark.parametrize("system", ["linux", "windows"])

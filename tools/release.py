@@ -232,7 +232,7 @@ def stage(repo: str, bundle: Path) -> None:
             "--title",
             f"Dataset input {manifest['content_sha256'][:16]}",
             "--notes",
-            "Verified input for the explicit Release CLI workflow.",
+            "",
         )
     print(
         json.dumps(
@@ -251,7 +251,6 @@ def publish(
     tag: str,
     *,
     target: str | None = None,
-    notes_file: Path | None = None,
 ) -> None:
     manifest = json.loads((directory / "dataset-manifest.json").read_text())
     if tag != "cli-" + manifest["dataset_id"]:
@@ -261,18 +260,6 @@ def publish(
             print("Content already published; skipping.")
             return
     asset_names = prepare_assets(directory)
-    notes = notes_file or directory / "release-notes.md"
-    if notes_file is not None and not notes_file.is_file():
-        raise ValueError(f"Release notes do not exist: {notes_file}")
-    if notes_file is None:
-        notes.write_text(
-            f"Offline search over {manifest['entities']:,} source entities.\n\n"
-            f"Dataset: `{manifest['dataset_id']}`\n\n"
-            "Download and extract the archive for your platform: it contains one standalone executable. No API key or model download is required.\n\n"
-            'Run `pipelines search "your query"`, then `pipelines get SOURCE:ID`.\n'
-            "Run `pipelines --help` for filters, pure vector search, and full HTML export.\n",
-            encoding="utf-8",
-        )
     assets = [str(directory / name) for name in asset_names]
     existing = subprocess.run(
         ["gh", "release", "view", tag, "--repo", repo, "--json", "isDraft"],
@@ -301,8 +288,8 @@ def publish(
             target,
             "--title",
             f"pipelines CLI {manifest['dataset_id'][:16]}",
-            "--notes-file",
-            str(notes),
+            "--notes",
+            "",
             "--draft",
         )
     # GitHub's REST lookup by tag omits unpublished drafts. The CLI resolves both.
@@ -324,8 +311,8 @@ def publish(
         repo,
         "--draft=false",
         "--latest",
-        "--notes-file",
-        str(notes),
+        "--notes",
+        "",
     )
 
 
@@ -337,7 +324,6 @@ def main() -> None:
     parser.add_argument("--tag")
     parser.add_argument("--directory", type=Path, default=Path("build/release"))
     parser.add_argument("--target", help="Commit SHA for a manually built release")
-    parser.add_argument("--notes-file", type=Path, help="Prepared release notes")
     args = parser.parse_args()
     if not re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", args.repo):
         parser.error("Invalid repository")
@@ -353,7 +339,6 @@ def main() -> None:
             args.directory,
             args.tag or "",
             target=args.target,
-            notes_file=args.notes_file,
         )
 
 
