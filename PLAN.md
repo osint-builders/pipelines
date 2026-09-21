@@ -3,19 +3,23 @@
 Help researchers and educators find static entities quickly using names, descriptions,
 specifications, and images, with every result linked to captured evidence.
 
-**Progress:** 0/10 milestones complete. **Next:** M1.
+**Progress:** 0/10 milestones verified. **Active:** M1, awaiting user verification.
+
+**Branch:** `feature/multimodal-entity-search`.
 
 Existing foundation: 11 source adapters, shared crawl/extract/audit commands, archived
 evidence, offline text search, and standalone CLI releases.
 
 Keep this file as the current tracker. Update statuses and checkboxes as work lands.
-Mark a milestone complete only when its acceptance checks pass; record the validation
-artifact or commit in its status cell. Store generated reports under ignored build/data
-directories. Keep the root README focused on shipped CLI commands and the source table.
+Use `Ready for verification` when implementation and acceptance checks are complete.
+Mark a milestone `Verified` only after the user verifies it, then begin the next milestone.
+Record the validation artifact or commit in its status cell. Store generated reports
+under ignored build/data directories. Keep the root README focused on shipped CLI
+commands and the source table.
 
 | Milestone | Depends on | Status |
 | --- | --- | --- |
-| M1 — Baseline and acceptance targets | Existing CLI | Planned |
+| M1 — Baseline and acceptance targets | Existing CLI | Ready for verification: measured baseline, validated seed, proposed targets; four visual cases explicitly pending |
 | M2 — Shared media evidence and archive | M1 | Planned |
 | M3 — Two-source media pilot | M2 | Planned |
 | M4 — Portable image encoder | M1, M3 | Planned |
@@ -26,21 +30,73 @@ directories. Keep the root README focused on shipped CLI commands and the source
 | M9 — Media coverage across all sources | M3, M5, M6 | Planned |
 | M10 — Quality gates and compact releases | M4–M9 | Planned |
 
-M2 and the runtime feasibility work in M4 can proceed together after M1. Final model
-selection uses the pilot images from M3. M8 and M9 can proceed independently once
-their dependencies are complete. Prioritize media capture from expiring sessions.
+Advance in milestone order and stop for user verification between milestones.
+Agents may work concurrently within the active milestone; dependencies do not authorize
+starting later milestones early. Prioritize media capture from expiring sessions when
+its milestone begins. Final model selection uses the pilot images from M3.
 
 ## M1 — Baseline and acceptance targets
 
-- [ ] Record current text retrieval quality, cold/warm latency, peak memory, and compressed release sizes.
-- [ ] Define representative tasks: exact designation, descriptive query, specifications, photograph, and photograph plus text.
-- [ ] Build evaluation sets covering unseen views, crops, diagrams, similar variants, and queries with no matching entity.
-- [ ] Separate development and evaluation images by underlying photograph, including resized and cropped duplicates.
-- [ ] Fix numerical acceptance targets for retrieval quality, false matches, latency, memory, and binary size before model selection.
-- [ ] Define the first release's query modes, result fields, media retention, and compatibility requirements.
+- [x] Record current text retrieval quality, first/repeated-process latency, peak memory, and compressed release sizes.
+- [x] Define representative tasks: exact designation, descriptive query, specifications, photograph, and photograph plus text.
+- [x] Build seed evaluation sets covering unseen views, crops, diagrams, similar variants, and queries with no matching entity; mark missing inputs explicitly.
+- [x] Separate development and evaluation images by underlying photograph, including resized and cropped duplicates.
+- [x] Propose numerical acceptance targets for retrieval quality, false matches, latency, memory, and binary size before model selection; freeze after user verification.
+- [x] Define the first release's query modes, result fields, media retention, and compatibility requirements.
 
 Complete when a repeatable baseline and explicit acceptance targets exist. Record target
 hardware and distinguish measured results from proposed budgets.
+
+Current contract: [search_acceptance.json](tests/fixtures/search_acceptance.json).
+Targets remain proposed until the user verifies M1; image capabilities are not implemented yet.
+
+Measured on Windows 11 / AMD Ryzen 9 5950X / 128 GiB RAM, using dataset
+`572bc6071b705821d35d2b12264efdc6e7e29545dc23def6fd62b2c58db68802`
+(4,337 entities, all 11 sources):
+
+| Baseline | Result |
+| --- | --- |
+| Required text cases, expected entity first | 73/73 |
+| Exploratory cases, expected entity first / within five | 28/43 / 37/43 |
+| First observed process / median of five repeat processes | 1.987 s / 1.963 s |
+| Latency p95 across 116 queries | 2.222 s |
+| Peak process working set | 791.08 MiB |
+| Windows executable / compressed ZIP | 184.86 MiB / 174.99 MiB |
+| Compressed archives across five targets | 165.51–174.99 MiB |
+
+These text cases use source filters. Filesystem cache state is uncontrolled; each query
+loads a new process. This does not measure a reboot-cold start or a resident warm model.
+Native performance on the other four targets remains unmeasured. Full measurements,
+hardware, artifact hashes, and per-case outcomes are in ignored `build/m1/baseline.json`.
+
+Repeat from the repository root with the full local CLI:
+
+```sh
+uv run --no-sync python tools/benchmark_cli.py dist/release/pipelines-windows-amd64.exe --releases dist/release --repeats 5 --output build/m1/baseline.json
+```
+
+Seed fixture: [multimodal.json](tests/fixtures/multimodal.json), with 29 cases and
+20 captured assets (17 originals, three crops; 2.61 MiB). Ten text cases and 15 visual
+cases have ready inputs. Four visual cases remain unscored: the captured Bofors diagram
+needs an independent gallery view; two Commons variant cases need images; a Commons
+diagram needs both. Six Commons originals returned HTTP 429; further requests stopped.
+M3 must resolve these gaps and expand the seed before model evaluation. The seed does
+not establish image-search quality or satisfy the larger release sample minimums.
+
+Validated photo-group separation, crop bounds, all 20 cached hashes, and all 27 media
+evidence references against the full CLI. Originals and crops stay under ignored
+`build/m1/media`; the fixture records exact URLs, hashes, and restoration recipes.
+Future full-corpus benchmark indexes must also exclude every query photo group and its
+derivatives; fixture separation alone cannot prevent later capture from introducing them.
+
+Additional seed text measurements are in `build/m1/seed-text-baseline.json`: all nine
+positive queries ranked an accepted entity within two results. The five global positives
+scored 3/5 first; the four source-filtered positives scored 3/4 first. The fictional
+negative returned candidates, and the current CLI has no abstention signal to score.
+
+Validation: 196 Python tests; Ruff lint/format and full-project mypy. No production
+image-search code, model selection, or M2 work has begun. Await user verification before
+freezing the proposed contract and starting M2.
 
 ## M2 — Shared media evidence and archive
 
