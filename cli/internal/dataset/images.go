@@ -78,28 +78,32 @@ type ImageProbe struct {
 }
 
 type Match struct {
-	Channel              string  `json:"channel"`
-	Score                float64 `json:"score"`
-	EvidenceID           string  `json:"evidence_id"`
-	URL                  string  `json:"url"`
-	MediaID              string  `json:"media_id,omitempty"`
-	ModelSHA256          string  `json:"model_sha256,omitempty"`
-	Origin               string  `json:"origin,omitempty"`
-	ObservationID        string  `json:"observation_id,omitempty"`
-	RecipeSHA256         string  `json:"recipe_sha256,omitempty"`
-	ModelID              string  `json:"model_id,omitempty"`
-	ModelRevision        string  `json:"model_revision,omitempty"`
-	EmbeddingModelSHA256 string  `json:"embedding_model_sha256,omitempty"`
+	Method               string   `json:"method,omitempty"`
+	Terms                []string `json:"terms,omitempty"`
+	Reason               string   `json:"reason,omitempty"`
+	Channel              string   `json:"channel"`
+	Score                float64  `json:"score"`
+	EvidenceID           string   `json:"evidence_id"`
+	URL                  string   `json:"url"`
+	MediaID              string   `json:"media_id,omitempty"`
+	ModelSHA256          string   `json:"model_sha256,omitempty"`
+	Origin               string   `json:"origin,omitempty"`
+	ObservationID        string   `json:"observation_id,omitempty"`
+	RecipeSHA256         string   `json:"recipe_sha256,omitempty"`
+	ModelID              string   `json:"model_id,omitempty"`
+	ModelRevision        string   `json:"model_revision,omitempty"`
+	EmbeddingModelSHA256 string   `json:"embedding_model_sha256,omitempty"`
 }
 
 type VisualResult struct {
 	Entity
-	Score      float64  `json:"score"`
-	Cosine     *float64 `json:"cosine"`
-	NameMatch  bool     `json:"name_match"`
-	Snippet    string   `json:"snippet"`
-	EvidenceID string   `json:"evidence_id"`
-	Matches    []Match  `json:"matches"`
+	Score      float64      `json:"score"`
+	Cosine     *float64     `json:"cosine"`
+	NameMatch  bool         `json:"name_match"`
+	Snippet    string       `json:"snippet"`
+	EvidenceID string       `json:"evidence_id"`
+	Matches    []Match      `json:"matches"`
+	Ranking    *TextRanking `json:"ranking,omitempty"`
 }
 
 type imageData struct {
@@ -685,6 +689,7 @@ func (d *Dataset) searchImages(imageVector, textVector []float32, query string, 
 			textByID[result.ID] = result
 			visual := combined[result.ID]
 			visual.Entity, visual.Cosine, visual.NameMatch = result.Entity, &result.Cosine, result.NameMatch
+			visual.Ranking = result.Ranking
 			visual.Snippet, visual.EvidenceID = result.Snippet, result.EvidenceID
 			visual.Score += 1 / float64(60+i+1)
 			visual.Matches = append(visual.Matches, Match{Channel: "text", Score: result.Score, EvidenceID: result.EvidenceID})
@@ -701,6 +706,14 @@ func (d *Dataset) searchImages(imageVector, textVector []float32, query string, 
 	}
 	for i := range results {
 		if text, ok := textByID[results[i].ID]; ok {
+			if text.Ranking != nil {
+				matches, err := d.TextMatches(text)
+				if err != nil {
+					return nil, err
+				}
+				results[i].Matches = append(results[i].Matches[:len(results[i].Matches)-1], matches...)
+				continue
+			}
 			match, derived := generated[text.ID]
 			if !derived {
 				var err error

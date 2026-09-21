@@ -100,6 +100,34 @@ def test_ranked_suggestions_do_not_inflate_accepted_quality() -> None:
     assert result["false_acceptance"]["rate"] == 1
 
 
+@pytest.mark.parametrize("query_caption", [False, True])
+def test_caption_gallery_excludes_held_out_media(
+    tmp_path: Path, query_caption: bool
+) -> None:
+    _, _, fixture, _ = seed(tmp_path)
+    with zipfile.ZipFile(io.BytesIO(archive_for(fixture))) as original:
+        members = {name: original.read(name) for name in original.namelist()}
+    manifest = json.loads(members["manifest.json"])
+    gallery = json.loads(members["image/index.json"])
+    captions = json.dumps(
+        [{"media_id": "query" if query_caption else gallery[0]["id"]}]
+    ).encode()
+    manifest["search"] = {"version": "bm25-minilm-v1"}
+    manifest["files"] = {"search/captions.json": hashlib.sha256(captions).hexdigest()}
+    members["manifest.json"] = json.dumps(manifest).encode()
+    members["search/captions.json"] = captions
+    body = io.BytesIO()
+    with zipfile.ZipFile(body, "w") as output:
+        for name, value in members.items():
+            output.writestr(name, value)
+    with zipfile.ZipFile(body) as archive:
+        if query_caption:
+            with pytest.raises(ValueError, match="captions must belong"):
+                gallery_contract(archive, fixture)
+        else:
+            gallery_contract(archive, fixture)
+
+
 @pytest.mark.parametrize(
     "failure", ["duplicate", "filter", "text_cosine", "association"]
 )

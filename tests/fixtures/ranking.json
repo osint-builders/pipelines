@@ -1,0 +1,1007 @@
+{
+  "schema_version": 1,
+  "status": "frozen_before_retrieval",
+  "source_content_sha256": "f82d70c7591e9e13c1a04ce11a256831a764e4f15761773e67a4604aab4bc4b6",
+  "source_entities_sha256": "055f1a8ead3ed4fdba79b3991ed879c5a0f595301982a3a478ca8f1272661cf3",
+  "authorship": "Queries and labels authored from archived entity names, aliases and source evidence before executing either retrieval implementation on these queries.",
+  "limitations": [
+    "Small author-labeled text pilot; not blinded expert assessment or a release acceptance sample.",
+    "Development and evaluation split by named entity group, with no source-qualified expected ID crossing splits.",
+    "Prior baseline entities are identified per case; new query wording does not make previously measured entities unseen.",
+    "Global labels allow documented equivalent source records where reviewed; exhaustive cross-source entity resolution is outside this milestone.",
+    "Source filters are reported separately from global results. Rank improvements and accepted matches are distinct measurements.",
+    "Specifications reproduce archived statements; numeric range filtering and current capability validation are outside this milestone.",
+    "Negative queries mix deliberately absent in-domain names and unrelated tasks; this small synthetic set cannot calibrate general false-match rates."
+  ],
+  "cases": [
+    {
+      "id": "ranking-dev-01",
+      "split": "development",
+      "task": "punctuation",
+      "source": "armyrecognition",
+      "query": "MSP-500 NASAMS",
+      "expected_ids": [
+        "armyrecognition:e4a5aecde1b187a0deffbab3"
+      ],
+      "confusable_ids": [],
+      "entity_group": "MSP 500 NASAMS electro-optical sensor",
+      "rationale": "The query changes punctuation or spacing in the archived designation.",
+      "evidence": [
+        {
+          "entity_id": "armyrecognition:e4a5aecde1b187a0deffbab3",
+          "evidence_id": "e4a5aecde1b187a0deffbab3",
+          "field": "title",
+          "quote": "MSP 500 NASAMS electro-optical sensor"
+        }
+      ],
+      "previous_baseline_entities": [
+        "armyrecognition:e4a5aecde1b187a0deffbab3"
+      ]
+    },
+    {
+      "id": "ranking-dev-02",
+      "split": "development",
+      "task": "spelling",
+      "source": "cambridgepixel",
+      "query": "Numerica Spylgass",
+      "expected_ids": [
+        "cambridgepixel:03683b1af05fc775a4f14651"
+      ],
+      "confusable_ids": [],
+      "entity_group": "Numerica Spyglass",
+      "rationale": "The query introduces a single misspelling in the archived name; remaining words preserve context.",
+      "evidence": [
+        {
+          "entity_id": "cambridgepixel:03683b1af05fc775a4f14651",
+          "evidence_id": "9762a5963e9ed94a519c3011",
+          "field": "title",
+          "quote": "Numerica Spyglass"
+        }
+      ],
+      "previous_baseline_entities": []
+    },
+    {
+      "id": "ranking-dev-03",
+      "split": "development",
+      "task": "original_name",
+      "source": "cambridgepixel",
+      "query": "Anschütz NautoScan NX",
+      "expected_ids": [
+        "cambridgepixel:b2ef98b48c42ceb24917d972"
+      ],
+      "confusable_ids": [],
+      "entity_group": "Anschütz NautoScan NX",
+      "rationale": "The query retains a Unicode source name or explicit source alias.",
+      "evidence": [
+        {
+          "entity_id": "cambridgepixel:b2ef98b48c42ceb24917d972",
+          "evidence_id": "cff98e1eff081fd2f8f1915f",
+          "field": "title",
+          "quote": "Anschütz NautoScan NX"
+        }
+      ],
+      "previous_baseline_entities": []
+    },
+    {
+      "id": "ranking-dev-04",
+      "split": "development",
+      "task": "partial_name",
+      "source": "climateviewer",
+      "query": "BackNet_6",
+      "expected_ids": [
+        "climateviewer:fortress-russia-016fe9e8d0f5847634c5230d"
+      ],
+      "confusable_ids": [],
+      "entity_group": "BackNet_6: 5N87 Back Net site",
+      "rationale": "The query drops words from the archived title or uses its source marker/name.",
+      "evidence": [
+        {
+          "entity_id": "climateviewer:fortress-russia-016fe9e8d0f5847634c5230d",
+          "evidence_id": "5cdf56ff2a242c630c9c09cc",
+          "field": "title",
+          "quote": "BackNet_6: 5N87 Back Net site"
+        }
+      ],
+      "previous_baseline_entities": []
+    },
+    {
+      "id": "ranking-dev-05",
+      "split": "development",
+      "task": "partial_name",
+      "source": "commons",
+      "query": "Redut",
+      "expected_ids": [
+        "commons:100885367",
+        "radartutorial:6c63f6e2c1b1727e8892616a"
+      ],
+      "confusable_ids": [],
+      "entity_group": "RUS-2 Redut",
+      "rationale": "The query drops words from the archived title or uses its source marker/name. Both accepted records identify RUS-2 Redut.",
+      "evidence": [
+        {
+          "entity_id": "commons:100885367",
+          "evidence_id": "1780e5e79a870f6ff4ef9c74",
+          "field": "title",
+          "quote": "RUS-2 Redut"
+        },
+        {
+          "entity_id": "radartutorial:6c63f6e2c1b1727e8892616a",
+          "evidence_id": "6c63f6e2c1b1727e8892616a",
+          "field": "title",
+          "quote": "RUS-2"
+        }
+      ],
+      "previous_baseline_entities": []
+    },
+    {
+      "id": "ranking-dev-06",
+      "split": "development",
+      "task": "reviewed_alias",
+      "source": "deagel",
+      "query": "medium mine protected vehicle",
+      "expected_ids": [
+        "deagel:a000012-003"
+      ],
+      "confusable_ids": [],
+      "entity_group": "MMPV",
+      "rationale": "The query is an explicit archived alias, not an incidental source mention.",
+      "evidence": [
+        {
+          "entity_id": "deagel:a000012-003",
+          "evidence_id": "d2eca3a1d25f650519eca760",
+          "field": "alias",
+          "quote": "Medium Mine Protected Vehicle"
+        }
+      ],
+      "previous_baseline_entities": []
+    },
+    {
+      "id": "ranking-dev-07",
+      "split": "development",
+      "task": "original_name",
+      "source": "deagel",
+      "query": "Geschütztes Fahrzeugsystem",
+      "expected_ids": [
+        "deagel:a000050-001"
+      ],
+      "confusable_ids": [],
+      "entity_group": "GeFaS",
+      "rationale": "The query retains a Unicode source name or explicit source alias.",
+      "evidence": [
+        {
+          "entity_id": "deagel:a000050-001",
+          "evidence_id": "7238fedcc78b5dcd8a18084d",
+          "field": "alias",
+          "quote": "Geschütztes Fahrzeugsystem"
+        }
+      ],
+      "previous_baseline_entities": []
+    },
+    {
+      "id": "ranking-dev-08",
+      "split": "development",
+      "task": "reviewed_alias",
+      "source": "fandom",
+      "query": "Balkhash-9",
+      "expected_ids": [
+        "fandom:106919"
+      ],
+      "confusable_ids": [],
+      "entity_group": "Balkhash Radar Station",
+      "rationale": "The query is an explicit archived alias, not an incidental source mention.",
+      "evidence": [
+        {
+          "entity_id": "fandom:106919",
+          "evidence_id": "f860a945a0eb4fe7455ec5a3",
+          "field": "alias",
+          "quote": "Balkhash-9"
+        }
+      ],
+      "previous_baseline_entities": []
+    },
+    {
+      "id": "ranking-dev-09",
+      "split": "development",
+      "task": "specification",
+      "source": "militaryperiscope",
+      "query": "maritime patrol aircraft fly-by-light four turbojet engines",
+      "expected_ids": [
+        "militaryperiscope:318615"
+      ],
+      "confusable_ids": [],
+      "entity_group": "P-1 maritime patrol aircraft",
+      "rationale": "The query combines attributes explicitly stated in the cited archived evidence.",
+      "evidence": [
+        {
+          "entity_id": "militaryperiscope:318615",
+          "evidence_id": "7f355815c976e24496024a3d",
+          "field": "evidence",
+          "quote": "four turbojet engines"
+        },
+        {
+          "entity_id": "militaryperiscope:318615",
+          "evidence_id": "7f355815c976e24496024a3d",
+          "field": "evidence",
+          "quote": "The aircraft is equipped with a fly-by-light flight control system."
+        }
+      ],
+      "previous_baseline_entities": []
+    },
+    {
+      "id": "ranking-dev-10",
+      "split": "development",
+      "task": "partial_name",
+      "source": "militaryperiscope",
+      "query": "Mirage 2000",
+      "expected_ids": [
+        "militaryperiscope:318006"
+      ],
+      "confusable_ids": [],
+      "entity_group": "Mirage 2000 strike fighter",
+      "rationale": "The query drops words from the archived title or uses its source marker/name.",
+      "evidence": [
+        {
+          "entity_id": "militaryperiscope:318006",
+          "evidence_id": "738239b5813e02302d6d942f",
+          "field": "title",
+          "quote": "Mirage 2000 strike fighter"
+        }
+      ],
+      "previous_baseline_entities": []
+    },
+    {
+      "id": "ranking-dev-11",
+      "split": "development",
+      "task": "specification",
+      "source": "radartutorial",
+      "query": "coastal surface radar 33.85 GHz 12 kW",
+      "expected_ids": [
+        "radartutorial:00024d45b74ea22e27919068"
+      ],
+      "confusable_ids": [],
+      "entity_group": "Neva-B",
+      "rationale": "The query combines attributes explicitly stated in the cited archived evidence.",
+      "evidence": [
+        {
+          "entity_id": "radartutorial:00024d45b74ea22e27919068",
+          "evidence_id": "00024d45b74ea22e27919068",
+          "field": "evidence",
+          "quote": "33.85 ± 0.25 GHz"
+        },
+        {
+          "entity_id": "radartutorial:00024d45b74ea22e27919068",
+          "evidence_id": "00024d45b74ea22e27919068",
+          "field": "evidence",
+          "quote": "12 kW"
+        },
+        {
+          "entity_id": "radartutorial:00024d45b74ea22e27919068",
+          "evidence_id": "00024d45b74ea22e27919068",
+          "field": "evidence",
+          "quote": "detect and track surface targets"
+        }
+      ],
+      "previous_baseline_entities": []
+    },
+    {
+      "id": "ranking-dev-12",
+      "split": "development",
+      "task": "punctuation",
+      "source": "radartutorial",
+      "query": "AN APQ 110",
+      "expected_ids": [
+        "radartutorial:009eabb858d19917ed603cec"
+      ],
+      "confusable_ids": [],
+      "entity_group": "AN/APQ-110",
+      "rationale": "The query changes punctuation or spacing in the archived designation.",
+      "evidence": [
+        {
+          "entity_id": "radartutorial:009eabb858d19917ed603cec",
+          "evidence_id": "009eabb858d19917ed603cec",
+          "field": "title",
+          "quote": "AN/APQ-110"
+        }
+      ],
+      "previous_baseline_entities": []
+    },
+    {
+      "id": "ranking-dev-13",
+      "split": "development",
+      "task": "spelling",
+      "source": "radartutorial",
+      "query": "Calipso radar",
+      "expected_ids": [
+        "radartutorial:020501dc647669d6472b8864"
+      ],
+      "confusable_ids": [],
+      "entity_group": "Calypso",
+      "rationale": "The query introduces a single misspelling in the archived name; remaining words preserve context.",
+      "evidence": [
+        {
+          "entity_id": "radartutorial:020501dc647669d6472b8864",
+          "evidence_id": "020501dc647669d6472b8864",
+          "field": "title",
+          "quote": "Calypso"
+        }
+      ],
+      "previous_baseline_entities": []
+    },
+    {
+      "id": "ranking-dev-14",
+      "split": "development",
+      "task": "punctuation",
+      "source": "russianforces",
+      "query": "Angara 1 2",
+      "expected_ids": [
+        "russianforces:angara-1.2"
+      ],
+      "confusable_ids": [],
+      "entity_group": "Angara 1.2",
+      "rationale": "The query changes punctuation or spacing in the archived designation.",
+      "evidence": [
+        {
+          "entity_id": "russianforces:angara-1.2",
+          "evidence_id": "d99333328ce2382542254ead",
+          "field": "title",
+          "quote": "Angara 1.2"
+        }
+      ],
+      "previous_baseline_entities": []
+    },
+    {
+      "id": "ranking-dev-15",
+      "split": "development",
+      "task": "spelling",
+      "source": "russianforces",
+      "query": "Avangrd",
+      "expected_ids": [
+        "russianforces:avangard"
+      ],
+      "confusable_ids": [],
+      "entity_group": "Avangard",
+      "rationale": "The query introduces a single misspelling in the archived name; remaining words preserve context.",
+      "evidence": [
+        {
+          "entity_id": "russianforces:avangard",
+          "evidence_id": "5ae4fdfa1c31c3d682ba991b",
+          "field": "title",
+          "quote": "Avangard"
+        }
+      ],
+      "previous_baseline_entities": []
+    },
+    {
+      "id": "ranking-dev-16",
+      "split": "development",
+      "task": "partial_name",
+      "source": "virtualglobetrotting",
+      "query": "Fort McMurray Weather",
+      "expected_ids": [
+        "virtualglobetrotting:261423"
+      ],
+      "confusable_ids": [],
+      "entity_group": "CASFM - Fort McMurray Weather Radar",
+      "rationale": "The query drops words from the archived title or uses its source marker/name.",
+      "evidence": [
+        {
+          "entity_id": "virtualglobetrotting:261423",
+          "evidence_id": "0d776426e78144677cab8a33",
+          "field": "title",
+          "quote": "CASFM - Fort McMurray Weather Radar"
+        }
+      ],
+      "previous_baseline_entities": []
+    },
+    {
+      "id": "ranking-dev-17",
+      "split": "development",
+      "task": "punctuation",
+      "source": "wikipedia",
+      "query": "H LJQ 382",
+      "expected_ids": [
+        "wikipedia:51133886"
+      ],
+      "confusable_ids": [],
+      "entity_group": "Type 382 radar",
+      "rationale": "The query changes punctuation or spacing in the archived designation.",
+      "evidence": [
+        {
+          "entity_id": "wikipedia:51133886",
+          "evidence_id": "881413e5f947bd30739f6b23",
+          "field": "title",
+          "quote": "Type 382 radar"
+        }
+      ],
+      "previous_baseline_entities": []
+    },
+    {
+      "id": "ranking-dev-18",
+      "split": "development",
+      "task": "specification",
+      "source": "wikipedia",
+      "query": "HQ-61 centimeter wave monopulse tracking radar Jiangdong frigate",
+      "expected_ids": [
+        "wikipedia:51044653"
+      ],
+      "confusable_ids": [],
+      "entity_group": "Type 342 Radar",
+      "rationale": "The query combines attributes explicitly stated in the cited archived evidence.",
+      "evidence": [
+        {
+          "entity_id": "wikipedia:51044653",
+          "evidence_id": "5d400d440caab8b98a14384c",
+          "field": "evidence",
+          "quote": "Type 342 is a centimeter wave, mono-pulse tracking radar for HQ-61 SAM."
+        },
+        {
+          "entity_id": "wikipedia:51044653",
+          "evidence_id": "5d400d440caab8b98a14384c",
+          "field": "evidence",
+          "quote": "Type 053K Jiangdong class frigate"
+        }
+      ],
+      "previous_baseline_entities": []
+    },
+    {
+      "id": "ranking-eva-19",
+      "split": "evaluation",
+      "task": "punctuation",
+      "source": "armyrecognition",
+      "query": "MPQ 64F1",
+      "expected_ids": [
+        "armyrecognition:ca84d1ed32a80525d6dc5f24"
+      ],
+      "confusable_ids": [],
+      "entity_group": "MPQ-64F1 3D Radar",
+      "rationale": "The query changes punctuation or spacing in the archived designation. Only the indexed F1 record establishes this exact variant; generic Sentinel family records are not exact-variant labels.",
+      "evidence": [
+        {
+          "entity_id": "armyrecognition:ca84d1ed32a80525d6dc5f24",
+          "evidence_id": "ca84d1ed32a80525d6dc5f24",
+          "field": "title",
+          "quote": "MPQ-64F1 3D Radar"
+        }
+      ],
+      "previous_baseline_entities": [
+        "armyrecognition:ca84d1ed32a80525d6dc5f24"
+      ]
+    },
+    {
+      "id": "ranking-eva-20",
+      "split": "evaluation",
+      "task": "original_name",
+      "source": "cambridgepixel",
+      "query": "Wärtsilä NACOS Platinum",
+      "expected_ids": [
+        "cambridgepixel:f1c495e10a31a6441bc1d763"
+      ],
+      "confusable_ids": [],
+      "entity_group": "Wärtsilä NACOS Platinum Series",
+      "rationale": "The query retains a Unicode source name or explicit source alias.",
+      "evidence": [
+        {
+          "entity_id": "cambridgepixel:f1c495e10a31a6441bc1d763",
+          "evidence_id": "2b5331c8acf74f1eb5a5ebf6",
+          "field": "title",
+          "quote": "Wärtsilä NACOS Platinum Series"
+        }
+      ],
+      "previous_baseline_entities": []
+    },
+    {
+      "id": "ranking-eva-21",
+      "split": "evaluation",
+      "task": "partial_name",
+      "source": "climateviewer",
+      "query": "TinTrap_9",
+      "expected_ids": [
+        "climateviewer:fortress-russia-04cae62dd3fc9e2c4c164940"
+      ],
+      "confusable_ids": [],
+      "entity_group": "TinTrap_9: 22Zh6 TIN TRAP site",
+      "rationale": "The query drops words from the archived title or uses its source marker/name.",
+      "evidence": [
+        {
+          "entity_id": "climateviewer:fortress-russia-04cae62dd3fc9e2c4c164940",
+          "evidence_id": "ebed1185db1be8038ea6a437",
+          "field": "title",
+          "quote": "TinTrap_9: 22Zh6 TIN TRAP site"
+        }
+      ],
+      "previous_baseline_entities": []
+    },
+    {
+      "id": "ranking-eva-22",
+      "split": "evaluation",
+      "task": "punctuation",
+      "source": "commons",
+      "query": "RP 23 Sapfir",
+      "expected_ids": [
+        "commons:146001450"
+      ],
+      "confusable_ids": [],
+      "entity_group": "RP-23 Sapfir",
+      "rationale": "The query changes punctuation or spacing in the archived designation.",
+      "evidence": [
+        {
+          "entity_id": "commons:146001450",
+          "evidence_id": "4aebb81f1be3a963b28350ad",
+          "field": "title",
+          "quote": "RP-23 Sapfir"
+        }
+      ],
+      "previous_baseline_entities": []
+    },
+    {
+      "id": "ranking-eva-23",
+      "split": "evaluation",
+      "task": "spelling",
+      "source": "deagel",
+      "query": "Pinzgauar",
+      "expected_ids": [
+        "deagel:a000018-001",
+        "deagel:a000018-002"
+      ],
+      "confusable_ids": [],
+      "entity_group": "Pinzgauer",
+      "rationale": "The query introduces a single misspelling in the archived name; remaining words preserve context. Without a generation constraint both indexed Pinzgauer family variants are accepted.",
+      "evidence": [
+        {
+          "entity_id": "deagel:a000018-001",
+          "evidence_id": "3b6a9a658cd7856102fef1df",
+          "field": "title",
+          "quote": "Pinzgauer"
+        },
+        {
+          "entity_id": "deagel:a000018-002",
+          "evidence_id": "3b6a9a658cd7856102fef1df",
+          "field": "title",
+          "quote": "Pinzgauer II"
+        }
+      ],
+      "previous_baseline_entities": []
+    },
+    {
+      "id": "ranking-eva-24",
+      "split": "evaluation",
+      "task": "original_name",
+      "source": "deagel",
+      "query": "К-53949",
+      "expected_ids": [
+        "deagel:a003519-003"
+      ],
+      "confusable_ids": [],
+      "entity_group": "Linza",
+      "rationale": "The query retains a Unicode source name or explicit source alias.",
+      "evidence": [
+        {
+          "entity_id": "deagel:a003519-003",
+          "evidence_id": "caa2722a384da17b9b311f92",
+          "field": "alias",
+          "quote": "К-53949"
+        }
+      ],
+      "previous_baseline_entities": []
+    },
+    {
+      "id": "ranking-eva-25",
+      "split": "evaluation",
+      "task": "specification",
+      "source": "deagel",
+      "query": "two-seat utility vehicle 5100 pound payload 365 hp",
+      "expected_ids": [
+        "deagel:a000015-002"
+      ],
+      "confusable_ids": [
+        "deagel:a000015-003",
+        "deagel:a000015-004",
+        "deagel:a000015-005",
+        "deagel:a000015-006"
+      ],
+      "entity_group": "JLTV-UTL",
+      "rationale": "The query combines attributes explicitly stated in the cited archived evidence.",
+      "evidence": [
+        {
+          "entity_id": "deagel:a000015-002",
+          "evidence_id": "bfc25d0318d585a22b64142d",
+          "field": "evidence",
+          "quote": "The JLTV-UTL is a two-seat variant designed as a utility vehicle."
+        },
+        {
+          "entity_id": "deagel:a000015-002",
+          "evidence_id": "bfc25d0318d585a22b64142d",
+          "field": "evidence",
+          "quote": "5,100 pound"
+        },
+        {
+          "entity_id": "deagel:a000015-002",
+          "evidence_id": "bfc25d0318d585a22b64142d",
+          "field": "evidence",
+          "quote": "365 hp"
+        }
+      ],
+      "previous_baseline_entities": []
+    },
+    {
+      "id": "ranking-eva-26",
+      "split": "evaluation",
+      "task": "spelling",
+      "source": "fandom",
+      "query": "Sevastpol Radar Station",
+      "expected_ids": [
+        "fandom:119908"
+      ],
+      "confusable_ids": [],
+      "entity_group": "Sevastopol Radar Station",
+      "rationale": "The query introduces a single misspelling in the archived name; remaining words preserve context.",
+      "evidence": [
+        {
+          "entity_id": "fandom:119908",
+          "evidence_id": "edc8004eb1c6b7a8159fbb85",
+          "field": "title",
+          "quote": "Sevastopol Radar Station"
+        }
+      ],
+      "previous_baseline_entities": []
+    },
+    {
+      "id": "ranking-eva-27",
+      "split": "evaluation",
+      "task": "specification",
+      "source": "militaryperiscope",
+      "query": "heavy lift helicopter eight main rotor blades 25000 kg payload",
+      "expected_ids": [
+        "militaryperiscope:318738"
+      ],
+      "confusable_ids": [],
+      "entity_group": "Mi-26 Halo",
+      "rationale": "The query combines attributes explicitly stated in the cited archived evidence.",
+      "evidence": [
+        {
+          "entity_id": "militaryperiscope:318738",
+          "evidence_id": "2deaa9b4c2645dfa7240afb7",
+          "field": "evidence",
+          "quote": "25,000 kg"
+        },
+        {
+          "entity_id": "militaryperiscope:318738",
+          "evidence_id": "2deaa9b4c2645dfa7240afb7",
+          "field": "evidence",
+          "quote": "The main rotor head is titanium and turns eight blades"
+        }
+      ],
+      "previous_baseline_entities": []
+    },
+    {
+      "id": "ranking-eva-28",
+      "split": "evaluation",
+      "task": "punctuation",
+      "source": "militaryperiscope",
+      "query": "H 175",
+      "expected_ids": [
+        "militaryperiscope:318834"
+      ],
+      "confusable_ids": [],
+      "entity_group": "H175",
+      "rationale": "The query changes punctuation or spacing in the archived designation.",
+      "evidence": [
+        {
+          "entity_id": "militaryperiscope:318834",
+          "evidence_id": "77e218fb34b71fbedc53d775",
+          "field": "title",
+          "quote": "H175"
+        }
+      ],
+      "previous_baseline_entities": []
+    },
+    {
+      "id": "ranking-eva-29",
+      "split": "evaluation",
+      "task": "spelling",
+      "source": "radartutorial",
+      "query": "TRS 2210 Matadr",
+      "expected_ids": [
+        "radartutorial:0505fb57debaa94ea5a16cd1"
+      ],
+      "confusable_ids": [],
+      "entity_group": "TRS 2210 “Matador”",
+      "rationale": "The query introduces a single misspelling in the archived name; remaining words preserve context.",
+      "evidence": [
+        {
+          "entity_id": "radartutorial:0505fb57debaa94ea5a16cd1",
+          "evidence_id": "0505fb57debaa94ea5a16cd1",
+          "field": "title",
+          "quote": "TRS 2210 “Matador”"
+        }
+      ],
+      "previous_baseline_entities": []
+    },
+    {
+      "id": "ranking-eva-30",
+      "split": "evaluation",
+      "task": "specification",
+      "source": "radartutorial",
+      "query": "3D early warning S band 155 kW 450 km",
+      "expected_ids": [
+        "radartutorial:00c74566c06ac8962c253e9e"
+      ],
+      "confusable_ids": [],
+      "entity_group": "RAT-31SL",
+      "rationale": "The query combines attributes explicitly stated in the cited archived evidence.",
+      "evidence": [
+        {
+          "entity_id": "radartutorial:00c74566c06ac8962c253e9e",
+          "evidence_id": "00c74566c06ac8962c253e9e",
+          "field": "evidence",
+          "quote": "155 kW"
+        },
+        {
+          "entity_id": "radartutorial:00c74566c06ac8962c253e9e",
+          "evidence_id": "00c74566c06ac8962c253e9e",
+          "field": "evidence",
+          "quote": "450 km"
+        },
+        {
+          "entity_id": "radartutorial:00c74566c06ac8962c253e9e",
+          "evidence_id": "00c74566c06ac8962c253e9e",
+          "field": "evidence",
+          "quote": "S band"
+        }
+      ],
+      "previous_baseline_entities": []
+    },
+    {
+      "id": "ranking-eva-31",
+      "split": "evaluation",
+      "task": "punctuation",
+      "source": "russianforces",
+      "query": "Cosmos 2613",
+      "expected_ids": [
+        "russianforces:cosmos-2613"
+      ],
+      "confusable_ids": [],
+      "entity_group": "Cosmos-2613",
+      "rationale": "The query changes punctuation or spacing in the archived designation.",
+      "evidence": [
+        {
+          "entity_id": "russianforces:cosmos-2613",
+          "evidence_id": "066aefbd09eaa150b3860704",
+          "field": "title",
+          "quote": "Cosmos-2613"
+        }
+      ],
+      "previous_baseline_entities": []
+    },
+    {
+      "id": "ranking-eva-32",
+      "split": "evaluation",
+      "task": "exact_designation",
+      "source": "russianforces",
+      "query": "Bryansk",
+      "expected_ids": [
+        "russianforces:bryansk"
+      ],
+      "confusable_ids": [],
+      "entity_group": "Bryansk",
+      "rationale": "The query is the exact source title.",
+      "evidence": [
+        {
+          "entity_id": "russianforces:bryansk",
+          "evidence_id": "a210543db9033f5266ab6942",
+          "field": "title",
+          "quote": "Bryansk"
+        }
+      ],
+      "previous_baseline_entities": []
+    },
+    {
+      "id": "ranking-eva-33",
+      "split": "evaluation",
+      "task": "partial_name",
+      "source": "virtualglobetrotting",
+      "query": "Carvel Weather",
+      "expected_ids": [
+        "virtualglobetrotting:261426"
+      ],
+      "confusable_ids": [],
+      "entity_group": "CASCV - Carvel Weather Radar",
+      "rationale": "The query drops words from the archived title or uses its source marker/name.",
+      "evidence": [
+        {
+          "entity_id": "virtualglobetrotting:261426",
+          "evidence_id": "04709961a93dcaafe64d3836",
+          "field": "title",
+          "quote": "CASCV - Carvel Weather Radar"
+        }
+      ],
+      "previous_baseline_entities": []
+    },
+    {
+      "id": "ranking-eva-34",
+      "split": "evaluation",
+      "task": "specification",
+      "source": "wikipedia",
+      "query": "Type 344 laser ranging two targets simultaneously",
+      "expected_ids": [
+        "wikipedia:5608272"
+      ],
+      "confusable_ids": [],
+      "entity_group": "Type 344 radar",
+      "rationale": "The query combines attributes explicitly stated in the cited archived evidence.",
+      "evidence": [
+        {
+          "entity_id": "wikipedia:5608272",
+          "evidence_id": "9d379eec10c95441e6134ced",
+          "field": "evidence",
+          "quote": "It tracks two targets simultaneously."
+        },
+        {
+          "entity_id": "wikipedia:5608272",
+          "evidence_id": "9d379eec10c95441e6134ced",
+          "field": "evidence",
+          "quote": "It integrates optoelectronic tracking and laser ranging systems."
+        }
+      ],
+      "previous_baseline_entities": []
+    },
+    {
+      "id": "ranking-eva-35",
+      "split": "evaluation",
+      "task": "reviewed_alias",
+      "source": "wikipedia",
+      "query": "Mighty Dragon",
+      "expected_ids": [
+        "wikipedia:30236719"
+      ],
+      "confusable_ids": [],
+      "entity_group": "Chengdu J-20",
+      "rationale": "The query is an explicit archived alias, not an incidental source mention.",
+      "evidence": [
+        {
+          "entity_id": "wikipedia:30236719",
+          "evidence_id": "5b7c56a253b53b65a1c05e54",
+          "field": "alias",
+          "quote": "Mighty Dragon"
+        }
+      ],
+      "previous_baseline_entities": []
+    },
+    {
+      "id": "ranking-eva-36",
+      "split": "evaluation",
+      "task": "original_name",
+      "source": "deagel",
+      "query": "Spürfuchs",
+      "expected_ids": [
+        "deagel:a000703-002"
+      ],
+      "confusable_ids": [
+        "deagel:a000703-001"
+      ],
+      "entity_group": "Fuchs/Fox 2 NBC-RS",
+      "rationale": "The query retains a Unicode source name or explicit source alias.",
+      "evidence": [
+        {
+          "entity_id": "deagel:a000703-002",
+          "evidence_id": "f7d2694023ec40a4b5ab5cf7",
+          "field": "alias",
+          "quote": "Spürfuchs"
+        }
+      ],
+      "previous_baseline_entities": []
+    },
+    {
+      "id": "ranking-negative-01",
+      "split": "development",
+      "task": "no_match",
+      "negative_domain": "in_domain",
+      "source": "radartutorial",
+      "query": "AN/TPS-9999 Cobalt coastal radar",
+      "expected_ids": [],
+      "confusable_ids": [],
+      "entity_group": "negative-1",
+      "rationale": "Deliberately invented designation and name absent from the frozen source index.",
+      "evidence": [],
+      "previous_baseline_entities": []
+    },
+    {
+      "id": "ranking-negative-02",
+      "split": "development",
+      "task": "no_match",
+      "negative_domain": "in_domain",
+      "source": "deagel",
+      "query": "M9901 Zephyr armored engineering vehicle",
+      "expected_ids": [],
+      "confusable_ids": [],
+      "entity_group": "negative-2",
+      "rationale": "Deliberately invented designation and name absent from the frozen source index.",
+      "evidence": [],
+      "previous_baseline_entities": []
+    },
+    {
+      "id": "ranking-negative-03",
+      "split": "development",
+      "task": "no_match",
+      "negative_domain": "unrelated",
+      "source": "militaryperiscope",
+      "query": "sourdough croissant laminated butter recipe",
+      "expected_ids": [],
+      "confusable_ids": [],
+      "entity_group": "negative-3",
+      "rationale": "An unrelated instruction or media request with no corresponding static entity in the frozen military corpus.",
+      "evidence": [],
+      "previous_baseline_entities": []
+    },
+    {
+      "id": "ranking-negative-04",
+      "split": "development",
+      "task": "no_match",
+      "negative_domain": "unrelated",
+      "source": "commons",
+      "query": "baroque violin sonata sheet music",
+      "expected_ids": [],
+      "confusable_ids": [],
+      "entity_group": "negative-4",
+      "rationale": "An unrelated instruction or media request with no corresponding static entity in the frozen military corpus.",
+      "evidence": [],
+      "previous_baseline_entities": []
+    },
+    {
+      "id": "ranking-negative-05",
+      "split": "evaluation",
+      "task": "no_match",
+      "negative_domain": "in_domain",
+      "source": "cambridgepixel",
+      "query": "ELM-99991 Larkspur surveillance radar",
+      "expected_ids": [],
+      "confusable_ids": [],
+      "entity_group": "negative-5",
+      "rationale": "Deliberately invented designation and name absent from the frozen source index.",
+      "evidence": [],
+      "previous_baseline_entities": []
+    },
+    {
+      "id": "ranking-negative-06",
+      "split": "evaluation",
+      "task": "no_match",
+      "negative_domain": "in_domain",
+      "source": "russianforces",
+      "query": "Project 99991 Juniper submarine",
+      "expected_ids": [],
+      "confusable_ids": [],
+      "entity_group": "negative-6",
+      "rationale": "Deliberately invented designation and name absent from the frozen source index.",
+      "evidence": [],
+      "previous_baseline_entities": []
+    },
+    {
+      "id": "ranking-negative-07",
+      "split": "evaluation",
+      "task": "no_match",
+      "negative_domain": "unrelated",
+      "source": "wikipedia",
+      "query": "sourdough starter hydration feeding schedule",
+      "expected_ids": [],
+      "confusable_ids": [],
+      "entity_group": "negative-7",
+      "rationale": "An unrelated instruction or media request with no corresponding static entity in the frozen military corpus.",
+      "evidence": [],
+      "previous_baseline_entities": []
+    },
+    {
+      "id": "ranking-negative-08",
+      "split": "evaluation",
+      "task": "no_match",
+      "negative_domain": "unrelated",
+      "source": "virtualglobetrotting",
+      "query": "knitted wool scarf cable stitch tutorial",
+      "expected_ids": [],
+      "confusable_ids": [],
+      "entity_group": "negative-8",
+      "rationale": "An unrelated instruction or media request with no corresponding static entity in the frozen military corpus.",
+      "evidence": [],
+      "previous_baseline_entities": []
+    }
+  ]
+}

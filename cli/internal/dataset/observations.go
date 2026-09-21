@@ -599,7 +599,7 @@ func (d *Dataset) observedText(vector []float32, query string, hybrid bool, filt
 	}
 	results := make([]Result, 0, len(best))
 	for _, result := range best {
-		if hybrid && nameMatch(query, append([]string{result.Title}, result.Aliases...)) {
+		if hybrid && d.Manifest.Search == nil && nameMatch(query, append([]string{result.Title}, result.Aliases...)) {
 			result.NameMatch = true
 			result.Score += 2
 		}
@@ -608,6 +608,10 @@ func (d *Dataset) observedText(vector []float32, query string, hybrid bool, filt
 			generated[result.ID] = match
 		}
 		results = append(results, result)
+	}
+	if hybrid && d.Manifest.Search != nil {
+		results, err = d.rankText(results, generated, query, true)
+		return results, generated, err
 	}
 	sort.Slice(results, func(i, j int) bool {
 		if results[i].Score != results[j].Score {
@@ -634,6 +638,14 @@ func (d *Dataset) SearchObservations(vector []float32, query string, hybrid bool
 	}
 	output := make([]VisualResult, len(results))
 	for i, result := range results {
+		if result.Ranking != nil {
+			matches, err := d.TextMatches(result)
+			if err != nil {
+				return nil, err
+			}
+			output[i] = VisualResult{Entity: result.Entity, Score: result.Score, Cosine: &result.Cosine, NameMatch: result.NameMatch, Snippet: result.Snippet, EvidenceID: result.EvidenceID, Matches: matches, Ranking: result.Ranking}
+			continue
+		}
 		match, derived := generated[result.ID]
 		if !derived {
 			match, err = d.TextMatch(result)

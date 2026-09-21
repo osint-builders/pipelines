@@ -3,7 +3,7 @@
 Help researchers and educators find static entities quickly using names, descriptions,
 specifications, and images, with every result linked to captured evidence.
 
-**Progress:** 5/10 milestones verified. **Active:** M6 ready for verification.
+**Progress:** 6/10 milestones verified. **Active:** M7 in progress.
 
 **Branch:** `feature/multimodal-entity-search`.
 
@@ -24,8 +24,8 @@ commands and the source table.
 | M3 — Two-source media pilot | M2 | Verified by user; `ba855a3`, 2,799 saved files, 294 tests and CI passed; two diagram cases remain unscored |
 | M4 — Portable image encoder | M1, M3 | Verified by user; `e02bbeb`, 391 tests and CI passed; all five native targets pass 23 parity probes with network restrictions verified |
 | M5 — Image and combined queries | M2, M3, M4 | Verified by user; `9bb1574`, 426 tests and CI pass; full pilot CLI, offline acceptance, held-out rankings, and Windows resource checks complete |
-| M6 — OCR and visual descriptions | M3, M5 | Ready for verification; `3bb8c29`, 542 tests and CI pass; 1,694 observations, cache reuse, held-out ranking and offline CLI checks complete; opt-in text resource gaps tracked in M10 |
-| M7 — Better text and combined ranking | M1, M5, M6 | Planned |
+| M6 — OCR and visual descriptions | M3, M5 | Verified by user; `3bb8c29`, 542 tests and CI pass; 1,694 observations, cache reuse, held-out ranking and offline CLI checks complete; opt-in text resource gaps tracked in M10 |
+| M7 — Better text and combined ranking | M1, M5, M6 | In progress; lexical ranking, source-name protection, and development-only fusion selection |
 | M8 — Entity relationships and precise filters | M1, M7 | Planned |
 | M9 — Media coverage across all sources | M3, M5, M6 | Planned |
 | M10 — Quality gates and compact releases | M4–M9 | Planned |
@@ -464,18 +464,38 @@ Local review artifacts: `build/m6/pipelines.exe`, `pipelines-windows-amd64.zip`,
 `pipelines-linux`, and `full-dataset.zip`. Evidence in the same directory:
 `coverage.json`, `full-analysis-report.json`, `full-package.json`,
 `windows-acceptance.json`, `linux-acceptance.json`, `distribution-size.json`,
-`performance.json`, and `resource-gates.json`. M7 awaits user verification of M6.
+`performance.json`, and `resource-gates.json`. The user verified M6 and authorized M7.
 
 ## M7 — Better text and combined ranking
 
-- [ ] Add full-text lexical ranking alongside semantic search, preserving exact designation and alias matches.
-- [ ] Index original names, abbreviations, reviewed alternate names, captions, and OCR without converting incidental mentions into aliases.
-- [ ] Tune rank fusion against the evaluation set and keep text, image, and combined query behavior explicit.
+- [x] Add full-text lexical ranking alongside semantic search, preserving exact designation and alias matches.
+- [x] Index original names, abbreviations, reviewed alternate names, captions, and OCR without converting incidental mentions into aliases.
+- [ ] Select rank fusion on development cases, freeze it before evaluation, and keep text, image, and combined query behavior explicit.
 - [ ] Test partial names, spelling variations, specification phrases, and queries with no supported match.
 - [ ] Expose useful match reasons and treat similarity scores as ranking signals rather than identity probabilities.
 
 Complete when the frozen text baseline has no unacceptable regression and the combined
 retrieval targets pass. Keep exact vector search until measurements justify another index.
+
+Implementation in progress: BM25 over existing source chunks and complete source names,
+plus 1,689 associated source captions. Generated observations remain opt-in. Unicode
+normalization and conservative name-only spelling tolerance do not create aliases or
+equate numeric variants. Hybrid text combines lexical and semantic entity ranks;
+source-name matches retain priority. Image/text fusion still receives one text rank,
+regardless of how many lexical or generated evidence fragments are present.
+
+The new source-caption member is 503,467 bytes uncompressed; existing source text,
+vectors, images, and observations are unchanged. The isolated benchmark includes only
+its nine gallery captions. The 44-query text fixture was frozen before retrieval at
+`bf589924cabe3e6b0ffc8613a35302e3ab428d7492b59e5846fac7275ed1a791`.
+Each split has 18 positive and four negative queries, reported globally and with source
+filters. Development-only comparison selected lexical weight 2, semantic weight 1,
+and rank constant 60: global first/within-five improved from 15/18 and 16/18 to
+16/18 and 18/18; filtered results improved from 16/18 and 17/18 to 17/18 and 18/18.
+No positive development rank worsened. Actual CLI regression/evaluation runs are in
+progress; evaluation has not been run. Ranking arithmetic and evidence contracts are
+covered by 655 Python tests plus Go tests/vet. Windows offline acceptance passed;
+the public packager reproduced the complete bundle byte-for-byte in 112.3 seconds.
 
 ## M8 — Entity relationships and precise filters
 

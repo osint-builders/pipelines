@@ -33,6 +33,112 @@ def bundle_evidence(archive: zipfile.ZipFile) -> dict[str, dict[str, str]]:
     }
 
 
+def validate_text_ranking(item: dict, manifest: dict) -> float:
+    policy, ranking = manifest.get("search"), item.get("ranking")
+    if (
+        not policy
+        or not isinstance(ranking, dict)
+        or ranking.get("method") != policy["version"]
+    ):
+        raise ValueError("Missing or unsupported text ranking policy")
+    semantic_rank, lexical_rank = (
+        ranking.get("semantic_rank"),
+        ranking.get("lexical_rank", 0),
+    )
+    if (
+        type(semantic_rank) is not int
+        or semantic_rank < 1
+        or type(lexical_rank) is not int
+        or lexical_rank < 0
+        or (
+            "entities" in manifest
+            and max(semantic_rank, lexical_rank) > manifest["entities"]
+        )
+    ):
+        raise ValueError("Invalid text contribution rank")
+    if type(item.get("name_match")) is not bool:
+        raise ValueError("Invalid text name-match signal")
+    text = [match for match in item["matches"] if match["channel"] != "image"]
+    semantic = [match for match in text if match.get("method") == "semantic"]
+    lexical = [match for match in text if match.get("method") == "lexical"]
+    if (
+        len(semantic) != 1
+        or len(lexical) != bool(lexical_rank)
+        or len(text) != len(semantic) + len(lexical)
+    ):
+        raise ValueError("Invalid lexical and semantic contributions")
+    if (
+        not finite(item.get("cosine"))
+        or not finite(semantic[0].get("score"))
+        or abs(semantic[0]["score"] - item["cosine"]) > 1e-6
+    ):
+        raise ValueError("Semantic contribution changed the cosine signal")
+    if any(
+        not isinstance(match.get("reason"), str) or not match["reason"].strip()
+        for match in text
+    ):
+        raise ValueError("Text contribution has no match reason")
+    if lexical and (
+        not finite(lexical[0].get("score"))
+        or lexical[0]["score"] <= 0
+        or not isinstance(lexical[0].get("terms"), list)
+        or not 1 <= len(lexical[0]["terms"]) <= 1000
+        or any(
+            not isinstance(term, str) or not term.strip()
+            for term in lexical[0]["terms"]
+        )
+    ):
+        raise ValueError("Lexical contribution has no positive term match")
+    score = policy["semantic_weight"] / (policy["rank_constant"] + semantic_rank)
+    if lexical_rank:
+        score += policy["lexical_weight"] / (policy["rank_constant"] + lexical_rank)
+    if item["name_match"]:
+        score = 2 + max(-1, min(1, item["cosine"]))
+    if (
+        not finite(ranking.get("text_score"))
+        or abs(ranking["text_score"] - score) > 1e-6
+    ):
+        raise ValueError("Text ranking score does not match its contributions")
+    return score
+
+
+def accept_search_policy(run: Callable[..., bytes], manifest: dict) -> None:
+    if "search" not in manifest:
+        return
+    response = json.loads(run("search", "--limit", "3", "zzqvxjknobberplux"))
+    if (
+        response.get("dataset_id") != manifest["dataset_id"]
+        or response.get("query_type") != "text"
+        or response.get("mode") != "hybrid"
+        or response.get("ranking_policy") != manifest["search"]
+        or response.get("score_kind") != "ranking_signal"
+        or response.get("match_status") != "no_supported_match"
+        or response.get("calibration_status") != "uncalibrated"
+        or response.get("observations")
+    ):
+        raise ValueError("Unsupported text query changed its ranking policy or status")
+    items = response.get("results")
+    if not isinstance(items, list) or not 1 <= len(items) <= 3:
+        raise ValueError("Unsupported query must retain ranked suggestions")
+    for item in items:
+        score = validate_text_ranking(item, manifest)
+        if (
+            item["name_match"]
+            or item["ranking"].get("lexical_rank", 0)
+            or not finite(item.get("score"))
+            or abs(item["score"] - score) > 1e-6
+            or any(
+                match.get("channel") != "text"
+                or match.get("origin") == "generated"
+                or match.get("observation_id")
+                for match in item["matches"]
+            )
+        ):
+            raise ValueError(
+                "Unsupported query acquired a source name or lexical match"
+            )
+
+
 def validate_observation_response(
     response: dict,
     manifest: dict,
@@ -94,12 +200,21 @@ def validate_observation_response(
             raise ValueError("Observation result has no contributions")
         text = [match for match in matches if match.get("channel") != "image"]
         visual = [match for match in matches if match.get("channel") == "image"]
-        if len(text) != 1 or len(visual) > 1 or (visual and image_sha256 is None):
+        ranked = "search" in manifest and response.get("mode") != "vector"
+        if (
+            (len(text) not in {1, 2} if ranked else len(text) != 1)
+            or len(visual) > 1
+            or (visual and image_sha256 is None)
+        ):
             raise ValueError("Invalid observation contribution channels")
-        text_score = item["cosine"] + (2 if item["name_match"] else 0)
+        text_score = (
+            validate_text_ranking(item, manifest)
+            if ranked
+            else item["cosine"] + (2 if item["name_match"] else 0)
+        )
         if (
             not finite(text[0].get("score"))
-            or abs(text[0]["score"] - text_score) > 1e-6
+            or (not ranked and abs(text[0]["score"] - text_score) > 1e-6)
             or (image_sha256 is None and abs(item["score"] - text_score) > 1e-6)
         ):
             raise ValueError(
@@ -425,10 +540,14 @@ def validate_image_response(
         if len(matches) != len(visual) + len(text) or len(visual) > 1:
             raise ValueError("Invalid contribution channels")
         if combined:
-            if len(text) != 1 or not finite(item.get("cosine")):
+            if (
+                len(text) not in {1, 2} if "search" in manifest else len(text) != 1
+            ) or not finite(item.get("cosine")):
                 raise ValueError(
                     "Combined result requires a text contribution and cosine"
                 )
+            if "search" in manifest:
+                validate_text_ranking(item, manifest)
         elif (
             len(visual) != 1 or text or item["cosine"] is not None or item["name_match"]
         ):
@@ -479,6 +598,7 @@ def accept(binary: Path, bundle: Path) -> None:
     with zipfile.ZipFile(bundle) as archive:
         manifest = json.loads(archive.read("manifest.json"))
         assert info["dataset_id"] == manifest["dataset_id"]
+        accept_search_policy(run, manifest)
         if manifest.get("observations"):
             assert info.get("observations_available") is True
             assert info.get("observations") == manifest["observations"]

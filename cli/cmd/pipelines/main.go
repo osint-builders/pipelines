@@ -173,7 +173,7 @@ func runWithFiles(ctx context.Context, args []string, out io.Writer, files fs.FS
 			}
 			calibration = "uncalibrated"
 		}
-		return output.Encode(map[string]any{"version": version, "dataset_id": d.Manifest.DatasetID, "content_sha256": d.Manifest.ContentSHA256, "entities": d.Manifest.Entities, "evidence_pages": d.Manifest.EvidencePages, "chunks": d.Manifest.Chunks, "model": d.Manifest.Model, "sources": d.Manifest.Sources, "image_available": d.HasImages(), "image": d.Manifest.Image, "image_model": imageModel, "image_calibration_status": calibration, "observations_available": d.HasObservations(), "observations": d.Manifest.Observations})
+		return output.Encode(map[string]any{"version": version, "dataset_id": d.Manifest.DatasetID, "content_sha256": d.Manifest.ContentSHA256, "entities": d.Manifest.Entities, "evidence_pages": d.Manifest.EvidencePages, "chunks": d.Manifest.Chunks, "model": d.Manifest.Model, "sources": d.Manifest.Sources, "image_available": d.HasImages(), "image": d.Manifest.Image, "image_model": imageModel, "image_calibration_status": calibration, "observations_available": d.HasObservations(), "observations": d.Manifest.Observations, "search": d.Manifest.Search})
 	case "get":
 		raw, err := d.Export(value, format, evidence)
 		if err != nil {
@@ -256,7 +256,11 @@ func runWithFiles(ctx context.Context, args []string, out io.Writer, files fs.FS
 		if err != nil {
 			return err
 		}
-		return output.Encode(map[string]any{"dataset_id": d.Manifest.DatasetID, "query": value, "query_type": "text", "mode": mode, "observations": true, "match_status": "no_supported_match", "calibration_status": "uncalibrated", "results": results})
+		response := map[string]any{"dataset_id": d.Manifest.DatasetID, "query": value, "query_type": "text", "mode": mode, "observations": true, "match_status": "no_supported_match", "calibration_status": "uncalibrated", "results": results}
+		if mode == "hybrid" && d.Manifest.Search != nil {
+			response["ranking_policy"], response["score_kind"] = d.Manifest.Search, "ranking_signal"
+		}
+		return output.Encode(response)
 	}
 	results, err := d.Search(vector, value, mode == "hybrid", filter, limit, "")
 	if err != nil {
@@ -268,17 +272,26 @@ func runWithFiles(ctx context.Context, args []string, out io.Writer, files fs.FS
 	}
 	contributions := make([]textResult, len(results))
 	for i, result := range results {
-		match, err := d.TextMatch(result)
+		matches, err := d.TextMatches(result)
 		if err != nil {
 			return err
 		}
-		contributions[i] = textResult{result, []dataset.Match{match}}
+		contributions[i] = textResult{result, matches}
 	}
 	status := "candidates"
 	if len(results) == 0 {
 		status = "no_supported_match"
 	}
-	return output.Encode(map[string]any{"dataset_id": d.Manifest.DatasetID, "query": value, "query_type": "text", "match_status": status, "mode": mode, "results": contributions})
+	response := map[string]any{"dataset_id": d.Manifest.DatasetID, "query": value, "query_type": "text", "match_status": status, "mode": mode, "results": contributions}
+	if mode == "hybrid" && d.Manifest.Search != nil {
+		response["ranking_policy"] = d.Manifest.Search
+		response["score_kind"] = "ranking_signal"
+		response["calibration_status"] = "uncalibrated"
+		if len(results) == 0 || (!results[0].NameMatch && results[0].Ranking.LexicalRank == 0) {
+			response["match_status"] = "no_supported_match"
+		}
+	}
+	return output.Encode(response)
 }
 
 func verifyText(ctx context.Context, d *dataset.Dataset) (int, error) {

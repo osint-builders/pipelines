@@ -71,6 +71,9 @@ func searchImage(ctx context.Context, d *dataset.Dataset, filename, query string
 	if observations {
 		response["observations"] = true
 	}
+	if query != "" && d.Manifest.Search != nil {
+		response["ranking_policy"], response["score_kind"] = d.Manifest.Search, "ranking_signal"
+	}
 	return output.Encode(response)
 }
 

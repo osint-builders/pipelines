@@ -142,6 +142,9 @@ def verify_bundle(bundle: Path) -> dict:
             from pipelines.observation_distribution import validate_observation_bundle
 
             validate_observation_bundle(archive, manifest)
+        from pipelines.search_distribution import validate_search_bundle
+
+        validate_search_bundle(archive, manifest, entities)
         return manifest
 
 

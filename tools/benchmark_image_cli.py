@@ -37,6 +37,16 @@ def gallery_contract(archive: zipfile.ZipFile, fixture: dict) -> tuple[dict, dic
         raise ValueError(
             "Benchmark bundle must contain only the frozen gallery and associations"
         )
+    if "search" in manifest:
+        captions = archive.read("search/captions.json")
+        if (
+            hashlib.sha256(captions).hexdigest()
+            != manifest["files"]["search/captions.json"]
+        ):
+            raise ValueError("Caption checksum does not match the benchmark bundle")
+        allowed = {row["id"] for row in records if row["vector_index"] is not None}
+        if any(row["media_id"] not in allowed for row in json.loads(captions)):
+            raise ValueError("Benchmark captions must belong to the frozen gallery")
     return manifest, {row["id"]: row for row in records}
 
 

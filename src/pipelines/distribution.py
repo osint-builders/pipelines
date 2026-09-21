@@ -13,7 +13,7 @@ from pipelines.model import response_member
 from pipelines.snapshot import load_snapshot
 
 FORMAT_VERSION = 2
-SEARCH_VERSION = "minilm-chunks-v1"
+SEARCH_VERSION = "bm25-minilm-v1"
 LOCK = json.loads(Path(__file__).with_name("model.lock.json").read_text())
 
 
@@ -302,6 +302,11 @@ def _package(
     image_selection: Path | None = None,
     observations: Path | None = None,
 ) -> dict:
+    from pipelines.search_distribution import (
+        build_search_members,
+        validate_search_bundle,
+    )
+
     if image_selection is not None and image_model is None:
         raise ValueError("Image selection requires an image model")
     if observations is not None and image_model is None:
@@ -313,7 +318,7 @@ def _package(
         if observations is not None
         else (3 if image_model is not None else FORMAT_VERSION)
     )
-    recipe_spec = {"format": format_version, "search": SEARCH_VERSION, "model": LOCK}
+    recipe_spec = {"format": format_version, "model": LOCK}
     image_members: dict[str, bytes] = {}
     image_metadata: dict = {}
     observation_members: dict[str, bytes] = {}
@@ -330,6 +335,22 @@ def _package(
                 name: sha256(body) for name, body in sorted(image_members.items())
             },
         }
+    allowed_media_ids = (
+        {
+            row["id"]
+            for row in json.loads(image_members["image/index.json"])
+            if row["vector_index"] is not None
+        }
+        if image_selection is not None
+        else None
+    )
+    search_members, search_metadata = build_search_members(
+        root, sources, entities, allowed_media_ids=allowed_media_ids
+    )
+    recipe_spec["search"] = {
+        "metadata": search_metadata,
+        "files": {name: sha256(body) for name, body in sorted(search_members.items())},
+    }
     if observations is not None:
         from pipelines.observation_distribution import build_observation_members
 
@@ -352,6 +373,7 @@ def _package(
             ):
                 if previous.testzip() is not None:
                     raise ValueError("Existing bundle failed integrity check")
+                validate_search_bundle(previous, manifest, entities)
                 if image_model is not None:
                     from pipelines.image_distribution import validate_image_bundle
 
@@ -430,6 +452,7 @@ def _package(
     members["probes.f32"] = encoder.encode(probes)
     members.update(image_members)
     members.update(observation_members)
+    members.update(search_members)
     manifest = {
         "format_version": format_version,
         "content_sha256": digest,
@@ -439,6 +462,7 @@ def _package(
         "evidence_pages": len(html),
         "chunks": len(chunks),
         "model": LOCK,
+        "search": search_metadata,
         "sources": sorted(set(sources)),
         "files": {name: sha256(body) for name, body in sorted(members.items())},
     }
@@ -447,23 +471,22 @@ def _package(
     if observations is not None:
         manifest["observations"] = observation_metadata
     members["manifest.json"] = canonical(manifest)
-    if image_model is not None:
-        from pipelines.image_distribution import validate_image_bundle
+    pending = output.with_suffix(".pending.zip")
+    try:
+        write_bundle(pending, members)
+        with zipfile.ZipFile(pending) as archive:
+            validate_search_bundle(archive, manifest, entities)
+            if image_model is not None:
+                from pipelines.image_distribution import validate_image_bundle
 
-        pending = output.with_suffix(".pending.zip")
-        try:
-            write_bundle(pending, members)
-            with zipfile.ZipFile(pending) as archive:
                 validate_image_bundle(archive, manifest, entities)
-                if observations is not None:
-                    from pipelines.observation_distribution import (
-                        validate_observation_bundle,
-                    )
+            if observations is not None:
+                from pipelines.observation_distribution import (
+                    validate_observation_bundle,
+                )
 
-                    validate_observation_bundle(archive, manifest)
-            pending.replace(output)
-        finally:
-            pending.unlink(missing_ok=True)
-    else:
-        write_bundle(output, members)
+                validate_observation_bundle(archive, manifest)
+        pending.replace(output)
+    finally:
+        pending.unlink(missing_ok=True)
     return {**manifest, "changed": True, "output": str(output)}

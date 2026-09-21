@@ -371,19 +371,24 @@ def test_package_default_stays_format2_and_image_changes_only_recipe(
     )
     (root / "text.onnx").write_bytes(b"text graph")
     arguments = (root, [entities[0]["source"]], root, root / "cache")
+    add(setup, "view.png")
     first = distribution.package(*arguments, root / "text.zip")
     assert first["format_version"] == 2 and "image" not in first
     expected = sha256(
         canonical(
             {
                 "format": 2,
-                "search": distribution.SEARCH_VERSION,
+                "search": {
+                    "metadata": first["search"],
+                    "files": {
+                        "search/captions.json": first["files"]["search/captions.json"]
+                    },
+                },
                 "model": distribution.LOCK,
             }
         )
     )
     assert first["recipe_sha256"] == expected
-    add(setup, "view.png")
     second = distribution.package(
         *arguments, root / "image.zip", image_model=image_model
     )
@@ -410,6 +415,9 @@ def test_package_default_stays_format2_and_image_changes_only_recipe(
     assert third["changed"] is True
     assert second["content_sha256"] == third["content_sha256"]
     assert second["dataset_id"] != third["dataset_id"]
+    refreshed = distribution.package(*arguments, root / "text.zip")
+    assert refreshed["content_sha256"] == first["content_sha256"]
+    assert refreshed["files"]["vectors.f32"] == first["files"]["vectors.f32"]
     assert distribution.package(*arguments, root / "text.zip")["changed"] is False
     with pytest.raises(ValueError, match="requires"):
         distribution.package(
@@ -447,6 +455,42 @@ def test_image_validation_failure_preserves_previous_output(
         distribution.package(*arguments, image_model=image_model)
     assert (root / "bundle.zip").read_bytes() == previous
     assert not (root / "bundle.pending.zip").exists()
+
+
+def test_package_selection_restricts_search_captions_to_indexed_media(
+    setup: tuple[Path, list[dict], Path], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root, entities, image_model = setup
+    entity = entities[0]
+    wanted = add(setup, "gallery.png")
+    add(
+        setup,
+        "held-out.png",
+        color="blue",
+        references=[
+            MediaReference(
+                entity["id"], entity["evidence"][0]["id"], "Held-out antenna caption"
+            )
+        ],
+    )
+    selection = root / "selection.json"
+    selection.write_bytes(canonical({"schema_version": 1, "media_ids": [wanted["id"]]}))
+    monkeypatch.setattr(distribution, "Encoder", TextEncoder)
+    monkeypatch.setattr(distribution, "LOCK", {"dimensions": 2, "files": {}})
+    output = root / "selected.zip"
+    distribution.package(
+        root,
+        [entity["source"]],
+        root,
+        root / "cache",
+        output,
+        image_model=image_model,
+        image_selection=selection,
+    )
+    with zipfile.ZipFile(output) as archive:
+        captions = json.loads(archive.read("search/captions.json"))
+        assert {row["media_id"] for row in captions} == {wanted["id"]}
+        assert {row["text"] for row in captions} == {"Publisher caption", "Side view"}
 
 
 def test_canonical_model_lock_ignores_input_formatting_and_export_telemetry(

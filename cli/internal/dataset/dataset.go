@@ -35,6 +35,7 @@ type Manifest struct {
 	Files         map[string]string    `json:"files"`
 	Image         *ImageManifest       `json:"image,omitempty"`
 	Observations  *ObservationManifest `json:"observations,omitempty"`
+	Search        *SearchPolicy        `json:"search,omitempty"`
 }
 type Entity struct {
 	ID         string   `json:"id"`
@@ -52,11 +53,13 @@ type Chunk struct {
 }
 type Result struct {
 	Entity
-	Score      float64 `json:"score"`
-	Cosine     float64 `json:"cosine"`
-	NameMatch  bool    `json:"name_match"`
-	Snippet    string  `json:"snippet"`
-	EvidenceID string  `json:"evidence_id"`
+	Score      float64      `json:"score"`
+	Cosine     float64      `json:"cosine"`
+	NameMatch  bool         `json:"name_match"`
+	Snippet    string       `json:"snippet"`
+	EvidenceID string       `json:"evidence_id"`
+	Ranking    *TextRanking `json:"ranking,omitempty"`
+	matches    []Match
 }
 type Filter struct{ Source, Kind, Category string }
 type Dataset struct {
@@ -71,6 +74,7 @@ type Dataset struct {
 	images          *imageData
 	evidenceURLs    map[int]map[string]string
 	observations    *observationData
+	lexical         [2]*textIndex
 }
 
 func Open(data []byte) (*Dataset, error) {
@@ -91,6 +95,21 @@ func Open(data []byte) (*Dataset, error) {
 	}
 	if err = json.Unmarshal(raw, &d.Manifest); err != nil {
 		return nil, err
+	}
+	manifestFields, err := rawObject(raw)
+	if err != nil {
+		return nil, err
+	}
+	if search, ok := manifestFields["search"]; ok {
+		fields, err := rawObject(search)
+		if err != nil || !hasFields(fields, "version", "k1", "b", "rank_constant", "lexical_weight", "semantic_weight", "captions") {
+			return nil, errors.New("invalid text search policy fields")
+		}
+		for _, value := range fields {
+			if bytes.Equal(value, []byte("null")) {
+				return nil, errors.New("null text search policy value")
+			}
+		}
 	}
 	if (d.Manifest.FormatVersion < 2 || d.Manifest.FormatVersion > 4) || d.Manifest.Model.Dimensions != 384 {
 		return nil, errors.New("unsupported dataset format or embedding dimensions")
@@ -124,6 +143,9 @@ func Open(data []byte) (*Dataset, error) {
 			return nil, errors.New("duplicate entity ID")
 		}
 		d.byID[entity.ID] = i
+	}
+	if err := d.validateSearchPolicy(); err != nil {
+		return nil, err
 	}
 	return d, nil
 }
@@ -197,6 +219,11 @@ func (d *Dataset) Verify() error {
 	}
 	if d.HasImages() {
 		if err := d.verifyImages(); err != nil {
+			return err
+		}
+	}
+	if d.Manifest.Search != nil {
+		if _, err := d.loadTextIndex(false); err != nil {
 			return err
 		}
 	}
@@ -326,6 +353,17 @@ func (d *Dataset) Search(vector []float32, query string, hybrid bool, filter Fil
 }
 
 func (d *Dataset) search(vector []float32, query string, hybrid bool, filter Filter, limit int, exclude string) ([]Result, error) {
+	if hybrid && d.Manifest.Search != nil {
+		results, err := d.search(vector, query, false, filter, len(d.Entities), exclude)
+		if err != nil {
+			return nil, err
+		}
+		results, err = d.rankText(results, nil, query, false)
+		if len(results) > limit {
+			results = results[:limit]
+		}
+		return results, err
+	}
 	if len(vector) != d.Manifest.Model.Dimensions {
 		return nil, errors.New("query vector dimension mismatch")
 	}

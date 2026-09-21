@@ -10,11 +10,13 @@ import pytest
 from accept_cli import (
     accept_empty_gallery,
     accept_observations,
+    accept_search_policy,
     contains_query_path,
     source_probe_scores,
     validate_image_response,
     validate_observation_export,
     validate_observation_response,
+    validate_text_ranking,
 )
 
 
@@ -179,6 +181,306 @@ def observation_response(*, enabled: bool = True) -> dict:
     item["matches"] = [match]
     response["results"] = [item]
     return response
+
+
+def ranked_response(
+    *, enabled: bool = False, lexical: bool = True
+) -> tuple[dict, dict]:
+    manifest = observation_contract()[0]
+    manifest.update(
+        entities=3,
+        search={
+            "version": "bm25-minilm-v1",
+            "k1": 1.2,
+            "b": 0.75,
+            "rank_constant": 60,
+            "semantic_weight": 0.5,
+            "lexical_weight": 2.0,
+            "captions": 1,
+        },
+    )
+    response = observation_response(enabled=enabled)
+    response.update(
+        mode="hybrid", ranking_policy=manifest["search"], score_kind="ranking_signal"
+    )
+    item = response["results"][0]
+    semantic = item["matches"][0]
+    item["cosine"] = semantic["score"] = 0.8
+    semantic.update(method="semantic", reason="ocr" if enabled else "source_text")
+    score = 0.5 / 62
+    item["ranking"] = {
+        "method": "bm25-minilm-v1",
+        "semantic_rank": 2,
+        "text_score": score,
+    }
+    if lexical:
+        contribution = deepcopy(semantic)
+        contribution.update(method="lexical", score=4.25, terms=["radar"])
+        item["matches"].append(contribution)
+        score += 2.0 / 61
+        item["ranking"].update(lexical_rank=1, text_score=score)
+    item["score"] = score
+    return manifest, response
+
+
+@pytest.mark.parametrize("lexical", [False, True])
+def test_ranked_text_keeps_cosine_and_bm25_separate_from_weighted_fusion(
+    lexical: bool,
+) -> None:
+    manifest, response = ranked_response(lexical=lexical)
+    item = response["results"][0]
+    expected = 0.5 / 62 + (2.0 / 61 if lexical else 0)
+    assert validate_text_ranking(item, manifest) == pytest.approx(expected)
+    assert item["matches"][0]["score"] == 0.8
+    if lexical:
+        assert item["matches"][1]["score"] == 4.25
+
+
+@pytest.mark.parametrize("cosine", [-1.000001, -0.5, 0.8, 1.000001])
+def test_ranked_source_name_priority_keeps_raw_cosine_signal(cosine: float) -> None:
+    manifest, response = ranked_response()
+    item = response["results"][0]
+    item.update(name_match=True, cosine=cosine, score=2 + min(1, max(-1, cosine)))
+    item["matches"][0]["score"] = cosine
+    item["ranking"]["text_score"] = item["score"]
+    assert validate_text_ranking(item, manifest) == pytest.approx(item["score"])
+
+
+@pytest.mark.parametrize(
+    ("path", "value"),
+    [
+        (("ranking",), None),
+        (("ranking", "method"), "unsupported-v2"),
+        (("ranking", "semantic_rank"), 0),
+        (("ranking", "semantic_rank"), True),
+        (("ranking", "semantic_rank"), 4),
+        (("ranking", "lexical_rank"), -1),
+        (("ranking", "lexical_rank"), 1.0),
+        (("ranking", "lexical_rank"), 4),
+        (("ranking", "lexical_rank"), 0),
+        (("ranking", "text_score"), 0.8),
+        (("ranking", "text_score"), float("nan")),
+        (("name_match",), "false"),
+        (("cosine",), float("inf")),
+        (("cosine",), 0.9),
+        (("matches", 0, "method"), "lexical"),
+        (("matches", 0, "score"), True),
+        (("matches", 0, "reason"), True),
+        (("matches", 0, "reason"), " "),
+        (("matches", 1, "reason"), ""),
+        (("matches", 1, "score"), 0),
+        (("matches", 1, "score"), float("nan")),
+        (("matches", 1, "terms"), []),
+        (("matches", 1, "terms"), "radar"),
+        (("matches", 1, "terms"), [""]),
+        (("matches", 1, "terms"), [1]),
+        (("matches", 1, "terms"), [" "]),
+        (("matches", 1, "terms"), ["radar"] * 1001),
+    ],
+)
+def test_ranked_text_rejects_tampered_contributions(
+    path: tuple[str | int, ...], value: object
+) -> None:
+    manifest, response = ranked_response()
+    item = response["results"][0]
+    parent = item
+    for key in path[:-1]:
+        parent = parent[key]
+    parent[path[-1]] = value
+    with pytest.raises(ValueError):
+        validate_text_ranking(item, manifest)
+
+
+@pytest.mark.parametrize("field", ["semantic_rank", "lexical_rank", "name_match"])
+def test_forged_ranks_or_name_signal_fail_even_with_consistent_arithmetic(
+    field: str,
+) -> None:
+    manifest, response = ranked_response()
+    item = response["results"][0]
+    if field == "name_match":
+        item["name_match"] = "true"
+        item["ranking"]["text_score"] = 2.8
+    else:
+        item["ranking"][field] = 4
+        item["ranking"]["text_score"] = 0.5 / (
+            60 + item["ranking"]["semantic_rank"]
+        ) + 2.0 / (60 + item["ranking"]["lexical_rank"])
+    with pytest.raises(ValueError):
+        validate_text_ranking(item, manifest)
+
+
+@pytest.mark.parametrize(
+    "failure", [None, "status", "policy", "score_kind", "lexical", "name", "generated"]
+)
+def test_acceptance_exercises_source_query_without_lexical_support(
+    failure: str | None,
+) -> None:
+    manifest, response = ranked_response(lexical=False)
+    response.update(
+        match_status="no_supported_match", calibration_status="uncalibrated"
+    )
+    item = response["results"][0]
+    if failure == "status":
+        response["match_status"] = "candidates"
+    elif failure == "policy":
+        response["ranking_policy"] = {**manifest["search"], "semantic_weight": 1.0}
+    elif failure == "score_kind":
+        response["score_kind"] = "identity_probability"
+    elif failure == "lexical":
+        item["ranking"]["lexical_rank"] = 1
+        item["ranking"]["text_score"] += 2 / 61
+        item["score"] = item["ranking"]["text_score"]
+        item["matches"].append(
+            {
+                **item["matches"][0],
+                "method": "lexical",
+                "score": 1.0,
+                "terms": ["invented"],
+            }
+        )
+    elif failure == "name":
+        item["name_match"] = True
+        item["score"] = item["ranking"]["text_score"] = 2.8
+    elif failure == "generated":
+        item["matches"][0]["origin"] = "generated"
+    calls = []
+
+    def run(*args: str) -> bytes:
+        calls.append(args)
+        return json.dumps(response).encode()
+
+    if failure:
+        with pytest.raises(ValueError):
+            accept_search_policy(run, manifest)
+    else:
+        accept_search_policy(run, manifest)
+    assert calls == [("search", "--limit", "3", "zzqvxjknobberplux")]
+    calls.clear()
+    accept_search_policy(run, contract())
+    assert calls == []
+
+
+@pytest.mark.parametrize("enabled", [False, True])
+@pytest.mark.parametrize("combined", [False, True])
+def test_ranked_observations_keep_both_text_provenances_and_optional_image(
+    enabled: bool, combined: bool
+) -> None:
+    manifest, response = ranked_response(enabled=enabled)
+    _, rows, recipes, evidence, images = observation_contract()
+    item = response["results"][0]
+    if enabled:
+        item["matches"][0] = {
+            "channel": "text",
+            "method": "semantic",
+            "reason": "source_text",
+            "score": 0.8,
+            "evidence_id": "page",
+            "url": "https://source.test/one",
+        }
+    if combined:
+        response.update(query_type="image_text", query_image_sha256="hash")
+        item["score"] = 2 / 61
+        item["matches"].append(
+            {
+                "channel": "image",
+                "score": 0.9,
+                "evidence_id": "page",
+                "url": "https://source.test/one",
+                "media_id": "media",
+                "model_sha256": "a" * 64,
+            }
+        )
+    assert validate_observation_response(
+        response,
+        manifest,
+        rows,
+        recipes,
+        evidence,
+        enabled=enabled,
+        image_sha256="hash" if combined else None,
+        images=images,
+    ) == [item]
+    item["matches"][1]["evidence_id"] = "unrelated"
+    with pytest.raises(ValueError, match="evidence"):
+        validate_observation_response(
+            response,
+            manifest,
+            rows,
+            recipes,
+            evidence,
+            enabled=enabled,
+            image_sha256="hash" if combined else None,
+            images=images,
+        )
+
+
+def test_ranked_generated_lexical_match_requires_the_same_recipe_and_opt_in() -> None:
+    manifest, response = ranked_response(enabled=True)
+    _, rows, recipes, evidence, _ = observation_contract()
+    validate_observation_response(
+        response, manifest, rows, recipes, evidence, enabled=True
+    )
+    item = response["results"][0]
+    item["matches"][1]["recipe_sha256"] = "other-recipe"
+    with pytest.raises(ValueError, match="provenance"):
+        validate_observation_response(
+            response, manifest, rows, recipes, evidence, enabled=True
+        )
+    item["matches"][1]["recipe_sha256"] = "recipe"
+    response.pop("observations")
+    with pytest.raises(ValueError, match="generated"):
+        validate_observation_response(
+            response, manifest, rows, recipes, evidence, enabled=False
+        )
+
+
+def test_source_caption_lexical_evidence_is_not_a_generated_observation() -> None:
+    manifest, response = ranked_response()
+    _, rows, recipes, evidence, _ = observation_contract()
+    caption = response["results"][0]["matches"][1]
+    caption.update(reason="source_caption", media_id="source:media:" + "a" * 24)
+    validate_observation_response(
+        response, manifest, rows, recipes, evidence, enabled=False
+    )
+    caption.update(origin="generated", observation_id="observation")
+    with pytest.raises(ValueError, match="source contribution"):
+        validate_observation_response(
+            response, manifest, rows, recipes, evidence, enabled=False
+        )
+
+
+@pytest.mark.parametrize("lexical", [False, True])
+def test_ranked_combined_source_queries_preserve_text_channel_score(
+    lexical: bool,
+) -> None:
+    manifest, response = ranked_response(lexical=lexical)
+    response.update(
+        query_type="image_text",
+        query_image_sha256="hash",
+        match_status="no_supported_match",
+        calibration_status="uncalibrated",
+    )
+    item = response["results"][0]
+    item["score"] = 1 / 61
+    assert validate_image_response(response, manifest, "hash", True) == [item]
+    item["ranking"]["text_score"] = item["score"]
+    with pytest.raises(ValueError, match="ranking score"):
+        validate_image_response(response, manifest, "hash", True)
+
+
+def test_new_policy_does_not_apply_lexical_ranking_to_vector_mode() -> None:
+    manifest, _ = ranked_response()
+    response = observation_response(enabled=False)
+    response["mode"] = "vector"
+    _, rows, recipes, evidence, _ = observation_contract()
+    assert validate_observation_response(
+        response, manifest, rows, recipes, evidence, enabled=False
+    )
+    response["mode"] = "hybrid"
+    with pytest.raises(ValueError, match="ranking policy"):
+        validate_observation_response(
+            response, manifest, rows, recipes, evidence, enabled=False
+        )
 
 
 @pytest.mark.parametrize(
