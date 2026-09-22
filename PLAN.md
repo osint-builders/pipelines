@@ -27,14 +27,15 @@ cause false table/schema disagreements; functional URL differences still fail.
 Catalog archive: `20260922T142532Z-932ca3c5`. Image reviews are stored beside the
 adapter in `image_reviews.json`; matched originals use the shared media archive,
 with separate captured source evidence. Browser DOM captures are explicitly labelled.
-The first 60 models have been reviewed and audited: 54 image URLs saved for 55
+The first 75 models have been reviewed and audited: 69 image URLs saved for 70
 matched records, five unresolved matches, and no failed or pending downloads.
-Four associations are explicitly marked ambiguous. Individual review has continued
-through X-Trac SMR (65 decisions), including a fifth ambiguous association where
-Easat alternates between EA40575 and EA45075 on its product page. Four BAE and
-three BEL images were exported from displayed browser assets and validated by the
-shared image store. Source URL spaces and encoded spaces now compare correctly
-without collapsing reserved path characters.
+Five associations are explicitly marked ambiguous. Individual review has continued
+through DRS2D-NXT (82 decisions), including two more shared NXT family illustrations.
+Easat's inconsistent EA40575/EA45075 designation remains explicit. Four BAE, three
+BEL, and one Foxtrack image were exported from displayed browser assets and
+validated by the shared image store. Foxtrack's public article capture excludes
+account controls. Source URL spaces and encoded spaces compare correctly without
+collapsing reserved path characters.
 Validation: 80 focused tests and Ruff passed, including poster images, linked
 originals, responsive images, gallery thumbnails, and ambiguous associations.
 All 393 records and 2,700 source facts pass the current capture audit.
