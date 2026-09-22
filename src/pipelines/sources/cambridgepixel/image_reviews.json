@@ -72,5 +72,199 @@
     "caption": "Aerostar Vista F25 aerostat installation with radar payload inset",
     "quote": "The Vista F25 is a distinguished sensor utilized for its high performance and tactical size and weight.",
     "notes": "Google Images links the exact manufacturer product page. Inspected the dedicated f25-2 image below the description: aerostat with inset showing its radar payload. The separate generic header image was not selected."
+  },
+  {
+    "manufacturer": "Aerostar (was Raven Aerostar)",
+    "model": "Vista F50ER",
+    "search_url": "https://www.google.com/search?udm=2&q=Aerostar+Vista+F50ER+radar",
+    "status": "matched",
+    "page_url": "https://aerostar.com/products/radar-systems/ssrs-f50er",
+    "image_url": "https://s3-us-west-2.amazonaws.com/com-aerostar-cdn/general-uploads/_910x540_fit_center-center/f50er-1.png?mtime=20171001213228",
+    "caption": "Aerostar Vista F50ER radar payload mounted beneath an aerostat",
+    "quote": "The Vista F50ER Radar System is a revolutionary 360° wide-area radar system that boasts extended range capabilities.",
+    "notes": "Google Images links the exact manufacturer model page. Inspected its dedicated f50er-1 image, 910 by 379: underside of an aerostat with the radar payload and antenna visible. Kept separate from the Vista F25 image."
+  },
+  {
+    "manufacturer": "Amphitech Systems (now Teledyne FLIR)",
+    "model": "PSR-2",
+    "search_url": "https://www.google.com/search?udm=2&q=Amphitech+PSR-2+radar",
+    "status": "unresolved",
+    "notes": "Reviewed Google Images results: AN/PSR-2 chemical alarm, other primary surveillance radars, Raymarine Quantum, and unrelated AN/APS-2 equipment. No model-specific Amphitech PSR-2 image was supported; none assigned."
+  },
+  {
+    "manufacturer": "Anduril",
+    "model": "Spark",
+    "search_url": "https://www.google.com/search?udm=2&q=Anduril+Spark+radar",
+    "status": "matched",
+    "page_url": "https://www.anduril.com/spark",
+    "image_url": "https://cdn.sanity.io/images/61nocsj5/production/0f5f2789d15ac22d66e840f5f0c8247fbdb57d17-1920x1080.png?w=1920&fit=min&auto=format",
+    "caption": "Anduril Spark radar mounted on a vehicle; manufacturer video poster",
+    "quote": "Spark is a dual band, hemispheric radar purpose-built for on-the-move sensing of both fast, low vehicle threats and slow, high air threats in a single package.",
+    "notes": "Google Images identifies the exact manufacturer Spark page. The displayed video explicitly names Spark; its original poster was inspected and shows a rectangular Anduril-marked radar panel mounted on a vehicle. Archived still image, not the video.",
+    "capture_method": "browser-dom"
+  },
+  {
+    "manufacturer": "Anduril",
+    "model": "Spyglass",
+    "search_url": "https://www.google.com/search?udm=2&q=Anduril+Spyglass+radar",
+    "status": "matched",
+    "page_url": "https://www.anduril.com/spyglass",
+    "image_url": "https://cdn.sanity.io/images/61nocsj5/production/abfa56431af8bda79323a6a01ce6654397165511-1920x1080.png?w=1920&fit=min&auto=format",
+    "capture_method": "browser-dom",
+    "caption": "Anduril Spyglass installation shown in the manufacturer product video poster",
+    "quote": "Spyglass is an algorithmic enhanced Ku-band phased array radar that delivers high quality target tracking for integrated weapons systems.",
+    "notes": "Google Images links the exact manufacturer Spyglass page. Inspected its original video poster: radar panels around a mast with other sensors. This is an installation view with surrounding equipment, not an isolated radar product photograph."
+  },
+  {
+    "manufacturer": "Anschütz",
+    "model": "NautoScan NX",
+    "search_url": "https://www.google.com/search?udm=2&q=Anschütz+NautoScan+NX+radar",
+    "status": "matched",
+    "page_url": "https://www.mackaycomm.com/products/navigation/radar/raytheon-nautoscan-nx-radar/",
+    "image_url": "https://static.mackaycomm.com/wp-content/uploads/2018/06/Raytheon-Nautoscan-NX.png",
+    "caption": "Anschütz NautoScan NX antenna and pedestal with former Raytheon branding",
+    "quote": "The Anschutz NautoScan NX Radar transceivers distribute the radar raw video via Ethernet to an unlimited number of radar workstations on the bridge (depending on network setup).",
+    "notes": "Google Images identified the model-specific Mackay listing. Manufacturer site returned a 522 origin timeout. Inspected the full image linked by the labelled product thumbnail: white antenna and pedestal marked Raytheon Anschütz."
+  },
+  {
+    "manufacturer": "Anschütz",
+    "model": "SST",
+    "search_url": "https://www.google.com/search?udm=2&q=Anschütz+SST+radar",
+    "status": "matched",
+    "page_url": "https://www.anschuetz.com/products/radarsystems/anschuetz-sst",
+    "image_url": "https://www.anschuetz.com/fileadmin/_processed_/c/5/csm_Header_SST_Radar_neu_8f14ba1a2f.jpg",
+    "caption": "Anschütz SST solid-state marine radar antenna and transceiver",
+    "quote": "The Anschütz SST Network Radar Transceivers represent a radical departure from technical convention, using solid-state transmitters with a low-power RF architecture.",
+    "notes": "Google Images links the exact manufacturer SST page. Inspected its SST-labelled header image: large Anschütz-branded antenna and solid-state pedestal, with equipment and harbour context visible."
+  },
+  {
+    "manufacturer": "Anschütz",
+    "model": "SYNAPSIS Naval Radar NX",
+    "search_url": "https://www.google.com/search?udm=2&q=Anschütz+SYNAPSIS+Naval+Radar+NX",
+    "status": "matched",
+    "page_url": "https://www.anschuetz.com/products/radarsystems/naval-radar-nx",
+    "image_url": "https://www.anschuetz.com/fileadmin/_processed_/1/4/csm_Naval_Radar_NX_Overview_cd5ebcd43f.jpg",
+    "caption": "SYNAPSIS Naval Radar NX application interface overview",
+    "quote": "SYNAPSIS Naval Radar NX is a radar application designed for naval navigation, surveillance and mission support.",
+    "notes": "Google Images and the manufacturer identify the naval variant. Inspected the original overview linked from the model page: labelled NAVAL RADAR NX interface and display callouts. This record describes a radar application; its relevant image is a software interface, not an antenna."
+  },
+  {
+    "manufacturer": "APS (Advanced Protection Systems)",
+    "model": "FIELDctrl Advance",
+    "search_url": "https://www.google.com/search?udm=2&q=APS+FIELDctrl+Advance+radar",
+    "status": "matched",
+    "page_url": "https://apsystems.tech/en/products/fieldctrl-advance/",
+    "image_url": "https://apsystems.tech/img/containers/assets/products/fieldctrl/advance_baner_tmp-png/fccb4e978db2844bcc04f57143333f06/advance_baner_tmp.png",
+    "caption": "APS FIELDctrl Advance front and rear product render",
+    "quote": "A versatile radar unit designed to accurately detect and classify objects in diverse terrain conditions.",
+    "notes": "Google Images links the exact FIELDctrl Advance manufacturer page. Inspected the Advance-specific header asset: paired front and rear views of the APS panel radar. Related Range, Runway and Ultra images on the page were not selected."
+  },
+  {
+    "manufacturer": "APS (Advanced Protection Systems)",
+    "model": "FIELDctrl Range",
+    "search_url": "https://www.google.com/search?udm=2&q=APS+FIELDctrl+Range+radar",
+    "status": "matched",
+    "page_url": "https://apsystems.tech/en/products/fieldctrl-range/",
+    "image_url": "https://apsystems.tech/img/containers/assets/products/fieldctrl/vector-11-png/7dcd9d6665bcba71faaa3171d88e13b8/vector-11.webp",
+    "caption": "APS FIELDctrl family gallery illustration used on the Range page",
+    "quote": "An extended-range radar that allows earlier identification of potential air threats.",
+    "notes": "The first Google Images result was Advance; selected the separate Range manufacturer page. That page reuses an Advance-named header, so selected its dedicated gallery image instead. Inspected the linked full image showing sand-coloured front and rear panel views. Subsequent Runway review found the same gallery image reused there. Retained as a family illustration with an ambiguous association; it does not establish an exact Range appearance.",
+    "ambiguous": true
+  },
+  {
+    "manufacturer": "APS (Advanced Protection Systems)",
+    "model": "FIELDctrl Runway",
+    "search_url": "https://www.google.com/search?udm=2&q=APS+FIELDctrl+Runway+radar",
+    "status": "matched",
+    "page_url": "https://apsystems.tech/en/products/fieldctrl-runway/",
+    "image_url": "https://apsystems.tech/img/containers/assets/products/fieldctrl/runway_baner_tmp-png/3a7a9938b0ec977125d2a7a12a4ccbad/runway_baner_tmp.png",
+    "caption": "APS FIELDctrl Runway front and rear product render",
+    "quote": "A specialized model with characteristics optimized to protect longitudinal facilities such as runways.",
+    "notes": "Google Images links the Runway model page. Inspected its Runway-named header image, which shows a different panel shape from Advance. Rejected the generic gallery images reused on Range and other FIELDctrl pages."
+  },
+  {
+    "manufacturer": "APS (Advanced Protection Systems)",
+    "model": "FIELDctrl Ultra",
+    "search_url": "https://www.google.com/search?udm=2&q=APS+FIELDctrl+Ultra+radar",
+    "status": "matched",
+    "page_url": "https://apsystems.tech/en/products/fieldctrl-ultra-lr/",
+    "image_url": "https://apsystems.tech/img/containers/assets/products/fieldctrl/ultra_baner_tmp-png/9f6d242851298b00978ff84eb8810a8c/ultra_baner_tmp.png",
+    "caption": "APS FIELDctrl Ultra product render from the Ultra LR page",
+    "quote": "This is the most advanced radar in the product family, designed for comprehensive airspace monitoring with a very large angle of coverage.",
+    "notes": "Google Images finds Ultra LR, and Cambridge Pixel explicitly links that LR product. Inspected the Ultra-specific header image: large dual-section front panel and finned rear view. Generic shared gallery illustrations were rejected."
+  },
+  {
+    "manufacturer": "Arbe",
+    "model": "Alerion",
+    "search_url": "https://www.google.com/search?udm=2&q=Arbe+Alerion+radar",
+    "status": "unresolved",
+    "page_url": "https://arberobotics.com/applications/counter-drone/",
+    "notes": "Google Images returned Alerion announcement articles. The inspected Unmanned Airspace result explicitly credits a stock image via Arbe. The manufacturer page identifies Alerion, but its inspected main banner shows a consumer drone, not the radar. No model-specific hardware image confirmed or assigned."
+  },
+  {
+    "manufacturer": "ART (Advanced Radar Technologies)",
+    "model": "ART DAR 4D MM",
+    "search_url": "https://www.google.com/search?udm=2&q=ART+DAR+4D+MM+radar",
+    "status": "matched",
+    "page_url": "https://www.advancedradartechnologies.com/products/art-dar-4d-mm",
+    "image_url": "https://cms.artradar.cloud/uploads/ART_DAR_4_D_MM_01_5d337eb7cf.webp",
+    "caption": "ART DAR 4D MM radar mounted beside a harbour",
+    "quote": "ART DAR 4D MM is a state-of-the-art digital array 4D radar system developed to meet the demanding operational needs of nationwide integrated surveillance networks and critical asset protection systems.",
+    "notes": "Google Images links the exact manufacturer product page. Selected its model-labelled main image, resolving the original CMS asset explicitly encoded in the page image proxy URL. Inspected the full original: tall olive-green radar panel on a mounting bracket by a harbour."
+  },
+  {
+    "manufacturer": "ART (Advanced Radar Technologies)",
+    "model": "ART Longrange",
+    "search_url": "https://www.google.com/search?udm=2&q=ART+Longrange+radar",
+    "status": "matched",
+    "page_url": "https://www.advancedradartechnologies.com/products/art-longrange",
+    "image_url": "https://cms.artradar.cloud/uploads/Art_Longrange_Compact_H_Dv1_8969d136df.jpg",
+    "caption": "ART Longrange radar antenna assembly",
+    "quote": "ART Longrange is a radar sensor designed to provide outstanding detection and tracking performance for unregulated border surveillance systems.",
+    "notes": "Google Images returns the exact manufacturer model page alongside distinct CS and 3D models. Selected the model-labelled main photograph, resolved from its image proxy URL, and inspected the original olive-green antenna assembly."
+  },
+  {
+    "manufacturer": "ART (Advanced Radar Technologies)",
+    "model": "ART Longrange 3D",
+    "search_url": "https://www.google.com/search?udm=2&q=ART+Longrange+3D+radar",
+    "status": "matched",
+    "page_url": "https://www.advancedradartechnologies.com/products/art-longrange-3d",
+    "image_url": "https://cms.artradar.cloud/uploads/Art_Longrange3_D_HD_58b6af46bf.jpg",
+    "caption": "ART Longrange 3D radar with tan radome and pedestal",
+    "quote": "ART Longrange 3D is part of the fourth generation of ART award-winning high-resolution C-UAS surveillance radar family.",
+    "notes": "Google Images identifies the exact manufacturer model. Inspected the original main photograph: tan radome and pedestal in an open field, distinct from the exposed antenna on the Longrange page."
+  },
+  {
+    "manufacturer": "ART (Advanced Radar Technologies)",
+    "model": "ART Longrange CS",
+    "search_url": "https://www.google.com/search?udm=2&q=ART+Longrange+CS+radar",
+    "status": "matched",
+    "page_url": "https://www.advancedradartechnologies.com/products/art-longrange-cs",
+    "image_url": "https://cms.artradar.cloud/uploads/Art_Longrange_CS_HD_356198766a.jpg",
+    "caption": "ART Longrange CS coastal surveillance radar antenna",
+    "quote": "ART Longrange Coastal Surveillance radar is a high-resolution continuous wave linear frequency modulated radar sensor designed to address the operational requirements of nation-wide blue border integrated surveillance networks.",
+    "notes": "Exact manufacturer result in Google Images. Inspected the model-labelled original main photograph showing the grey open antenna assembly against blue sky."
+  },
+  {
+    "manufacturer": "ART (Advanced Radar Technologies)",
+    "model": "ART Midrange 3D",
+    "search_url": "https://www.google.com/search?udm=2&q=ART+Midrange+3D+radar",
+    "status": "matched",
+    "page_url": "https://www.advancedradartechnologies.com/products/art-midrange-3d",
+    "image_url": "https://cms.artradar.cloud/uploads/Art_Mid_Range3_D_HD_3ac44c17ba.jpg",
+    "caption": "ART Midrange 3D radar on a tripod overlooking an airfield",
+    "quote": "ART Midrange 3D is part of the fourth generation of ART award-winning high-resolution C-UAS and airspace awareness radar family.",
+    "notes": "Exact manufacturer page found in Google Images. Inspected its original model-labelled photograph showing a white radome on a red tripod overlooking a runway."
+  },
+  {
+    "manufacturer": "ART (Advanced Radar Technologies)",
+    "model": "ART Midrange CS",
+    "search_url": "https://www.google.com/search?udm=2&q=ART+Midrange+CS+radar",
+    "status": "matched",
+    "page_url": "https://www.advancedradartechnologies.com/products/art-midrange-cs",
+    "image_url": "https://cms.artradar.cloud/uploads/Art_Mid_Range_CS_HD_2a1711a12c.jpg",
+    "caption": "ART Midrange CS radar overlooking a beach",
+    "quote": "ART Midrange CS is a high-resolution coastal surveillance radar system",
+    "notes": "Google Images returns the exact manufacturer page. Inspected its original main photograph of a dark cylindrical radar housing and mount beside the sea; separate from the Midrange 3D radome photograph."
   }
 ]

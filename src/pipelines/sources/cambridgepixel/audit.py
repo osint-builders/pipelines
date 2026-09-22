@@ -76,11 +76,11 @@ def audit_snapshot(
         )
         if base.evidence[0].records[0]["description"] not in rendered:
             raise ValueError("Radar description missing from rendered evidence")
-    from pipelines.sources.cambridgepixel.imagery import reviews, validate_page
+    from pipelines.sources.cambridgepixel.imagery import validate_page
 
     for url in source.seeds[1:]:
         validate_page(url, responses[url], source.image_matches)
-    reviewed = reviews()
+    reviewed = source.image_reviews
     reviewed_ids = {identity(r["manufacturer"], r["model"]) for r in reviewed}
     if len(reviewed_ids) != len(reviewed) or not reviewed_ids.issubset(expected):
         raise ValueError(
@@ -93,6 +93,7 @@ def audit_snapshot(
         "image_review": {
             "reviewed": len(reviewed),
             "states": dict(Counter(row["status"] for row in reviewed)),
+            "ambiguous": sum(bool(row.get("ambiguous")) for row in reviewed),
             "remaining": len(expected.keys() - reviewed_ids),
         },
     }

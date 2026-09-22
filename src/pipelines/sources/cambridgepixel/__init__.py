@@ -222,13 +222,16 @@ class CambridgePixel:
     version = "2"
     minimum_entities = 350
     media_origins: tuple[str, ...] = ("https://cambridgepixel.com",)
-    media_workers = 2
+    media_workers = 1
     media_request_interval = 0.3
 
     def __init__(self) -> None:
-        from pipelines.sources.cambridgepixel.imagery import matched_reviews, origins
+        from pipelines.sources.cambridgepixel.imagery import origins, reviews
 
-        self.image_matches = matched_reviews()
+        self.image_reviews = reviews()
+        self.image_matches = [
+            row for row in self.image_reviews if row["status"] == "matched"
+        ]
         self.seeds = (SEED, *sorted({r["page_url"] for r in self.image_matches}))
         self.media_origins = (
             "https://cambridgepixel.com",

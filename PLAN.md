@@ -27,8 +27,12 @@ cause false table/schema disagreements; functional URL differences still fail.
 Catalog archive: `20260922T142532Z-932ca3c5`. Image reviews are stored beside the
 adapter in `image_reviews.json`; matched originals use the shared media archive,
 with separate captured source evidence. Browser DOM captures are explicitly labelled.
-The first original has been downloaded successfully. Validation: 72 focused tests
-and adapter type checks passed. Individual image review remains in progress.
+The first 20 models have been reviewed and audited: 16 originals saved, four
+unresolved, and one saved family illustration explicitly marked ambiguous.
+Individual review has continued through all six ART models (25 decisions).
+Validation: 76 focused tests, Ruff, and adapter type checks passed, including
+poster images, linked originals, image proxies, and ambiguous associations.
+All 393 records and 2,700 source facts pass the current capture audit.
 
 ## Code cleanup — complete
 

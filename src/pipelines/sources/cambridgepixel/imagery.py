@@ -1,7 +1,7 @@
 import json
 from html import escape
 from pathlib import Path
-from urllib.parse import urljoin, urlsplit
+from urllib.parse import parse_qs, urljoin, urlsplit
 
 from bs4 import BeautifulSoup
 
@@ -16,10 +16,6 @@ def reviews() -> list[dict]:
     )
 
 
-def matched_reviews() -> list[dict]:
-    return [row for row in reviews() if row["status"] == "matched"]
-
-
 def validate_page(url: str, body: bytes, matches: list[dict]) -> None:
     soup = BeautifulSoup(body, "html.parser")
     visible = " ".join(text(soup).split())
@@ -30,10 +26,20 @@ def validate_page(url: str, body: bytes, matches: list[dict]) -> None:
             raise ValueError(f"Reviewed radar evidence changed: {row['model']}")
         images = {
             urljoin(url, str(node.get(attribute, "")))
-            for node in soup.select("img")
-            for attribute in ("src", "data-src", "data-original")
+            for node in soup.select("img, video[poster]")
+            for attribute in ("src", "data-src", "data-original", "poster")
             if node.get(attribute)
         }
+        images.update(
+            urljoin(url, str(node["href"])) for node in soup.select("a[href]:has(img)")
+        )
+        for image in tuple(images):
+            parts = urlsplit(image)
+            if parts.path == "/_next/image":
+                images.update(
+                    urljoin(url, value)
+                    for value in parse_qs(parts.query).get("url", [])
+                )
         if row["image_url"] not in images:
             raise ValueError(f"Reviewed radar image changed: {row['model']}")
 
@@ -100,13 +106,16 @@ def discover(
                     MediaReference(
                         *owner,
                         caption=row["caption"],
-                        section="Reviewed model photograph",
-                        association="reviewed_model_match",
+                        section="Reviewed radar image",
+                        ambiguous=row.get("ambiguous", False),
+                        association="reviewed_family_context"
+                        if row.get("ambiguous")
+                        else "reviewed_model_match",
                     )
                 ],
                 page_url=url,
                 caption=row["caption"],
-                section="Reviewed model photograph",
+                section="Reviewed radar image",
             )
         )
     return result
