@@ -130,6 +130,7 @@ def add(
                 "PNG": "image/png",
                 "JPEG": "image/jpeg",
                 "WEBP": "image/webp",
+                "GIF": "image/gif",
             }[format],
         )
     return row
@@ -481,6 +482,59 @@ def test_capture_failure_and_unsupported_format_remain_explicit(
     assert report["outcomes"] == {"unsupported_image_format": 1}
     assert report["capture_outcomes"][0]["error"] == "http_404"
     validate(setup, members, metadata)
+
+
+@pytest.mark.parametrize("selected", [True, False])
+def test_static_gif_archive_remains_metadata_only_in_image_bundle(
+    setup: tuple[Path, list[dict], Path], selected: bool
+) -> None:
+    from pipelines.image_preprocess import preprocess
+
+    original = add(setup, "original.gif", format="GIF")
+    selection = setup[0] / "selection.json"
+    selection.write_bytes(
+        canonical(
+            {
+                "schema_version": 1,
+                "media_ids": [original["id"]] if selected else [],
+            }
+        )
+    )
+    members, metadata, report = build(setup, selection)
+    (row,) = json.loads(members["image/index.json"])
+    assert row["content_type"] == "image/gif"
+    assert row["sha256"] == original["sha256"]
+    assert row["exclusion_reason"] == "unsupported_image_format"
+    assert row["vector_index"] is row["preview"] is None
+    assert metadata["vectors"] == metadata["preview_bytes"] == 0
+    assert members["image/vectors.f16"] == b""
+    assert not any(name.startswith("image/previews/") for name in members)
+    assert original["sha256"] not in ImageEncoder.calls
+    assert report["outcomes"] == {"unsupported_image_format": 1}
+    validate(setup, members, metadata)
+    with MediaStore(setup[0], read_only=True) as store:
+        body = store.body(original["sha256"])
+    with pytest.raises(ValueError, match="JPEG or PNG"):
+        preprocess(body, Recipe())
+
+
+@pytest.mark.parametrize("change", ["reason", "vector", "preview"])
+def test_gif_bundle_cannot_enable_image_encoding(
+    setup: tuple[Path, list[dict], Path], change: str
+) -> None:
+    add(setup, "original.gif", format="GIF")
+    members, metadata, _ = build(setup)
+    rows = json.loads(members["image/index.json"])
+    if change == "reason":
+        rows[0]["exclusion_reason"] = "selection"
+    elif change == "vector":
+        rows[0]["vector_index"] = 0
+    else:
+        rows[0]["preview"] = {}
+    members["image/index.json"] = canonical(rows)
+    metadata["gallery_sha256"] = sha256(members["image/index.json"])
+    with pytest.raises(ValueError, match="GIF metadata"):
+        validate(setup, members, metadata)
 
 
 def test_diverse_views_and_preview_budget_are_explicit(

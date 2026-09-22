@@ -22,8 +22,14 @@ MEDIA_SCHEMA_VERSION = 1
 MAX_IMAGE_BYTES = 20 * 1024 * 1024
 MAX_IMAGE_PIXELS = 40_000_000
 NEAR_DUPLICATE_DISTANCE = 5
+GENERIC_IMAGE_CONTENT_TYPES = frozenset({"", "unknown", "application/octet-stream"})
 _STATES = {"pending", "saved", "failed", "excluded", "unassociated"}
-_MIMES = {"JPEG": "image/jpeg", "PNG": "image/png", "WEBP": "image/webp"}
+_MIMES = {
+    "JPEG": "image/jpeg",
+    "PNG": "image/png",
+    "WEBP": "image/webp",
+    "GIF": "image/gif",
+}
 
 
 class MediaValidationError(ValueError):
@@ -132,12 +138,12 @@ def _decode(body: bytes, content_type: str) -> dict:
             expected_mime = _MIMES.get(image.format or "")
             if expected_mime is None:
                 raise MediaValidationError(
-                    "Unsupported image format; expected JPEG, PNG, or WEBP",
+                    "Unsupported image format; expected JPEG, PNG, WEBP, or static GIF",
                     "unsupported_image_format",
                 )
-            if mime != expected_mime:
+            if mime not in _MIMES.values() and mime not in GENERIC_IMAGE_CONTENT_TYPES:
                 raise MediaValidationError(
-                    "Image MIME type does not match its decoded format",
+                    "Image MIME declaration is unsupported",
                     "image_mime_mismatch",
                 )
             if image.width * image.height > MAX_IMAGE_PIXELS:
@@ -472,6 +478,7 @@ class MediaStore:
         path: Path,
         *,
         content_type: str,
+        response_content_type: str | None = None,
         final_url: str = "",
         http_status: int = 200,
     ) -> dict:
@@ -503,6 +510,8 @@ class MediaStore:
             except (OSError, ValueError):
                 _write(target, body)
             value.update(metadata)
+            if response_content_type is not None:
+                value["response_content_type"] = response_content_type
             value.update(
                 state="saved",
                 captured_at=value["captured_at"] or datetime.now(UTC).isoformat(),

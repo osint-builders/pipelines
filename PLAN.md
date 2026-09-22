@@ -25,6 +25,14 @@ Capture `20260922T031929Z-df120f6c`: 42 catalog responses plus the category hier
 4,118 unique equipment records, 222 populated equipment types, 29,583 nested sections,
 and 166,232 source properties. All records declare imagery: 11,838 references to
 11,818 distinct URLs. Independent coverage: `build/odin/full-coverage-review.json`.
+Offline source audit passed: 207,362 retained facts, 392,630 content fragments,
+and every image reference (`build/odin/source-audit.json`). The complete raw response
+and rendered-evidence checksums also pass (`build/odin/artifact-checks.json`). The
+capture exposed and fixed a shared JSONL reader issue with literal Unicode separators.
+Media review identifies four records with only placeholder-labelled images and six
+source-association groups for later visual review (`build/odin/media-review.json`).
+Bulk downloads and the combined local text index are running; generic image MIME
+headers and static GIF originals are being handled through the shared media layer.
 
 Existing foundation: 11 source adapters, shared crawl/extract/audit commands, archived
 evidence, offline text search, and standalone CLI releases.

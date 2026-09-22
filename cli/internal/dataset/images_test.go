@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"image"
 	"image/color"
+	"image/gif"
 	"image/png"
 	"math"
 	"sort"
@@ -155,6 +156,66 @@ func TestImageSearchUsesBestViewAndEvidenceWithoutLoadingText(t *testing.T) {
 	filtered, err = d.SearchImages(vector, nil, "", Filter{Source: "absent"}, 1)
 	if err != nil || len(filtered) != 0 {
 		t.Fatal(filtered, err)
+	}
+}
+
+func TestArchivedGIFMetadataCannotEnterImageSearch(t *testing.T) {
+	var original bytes.Buffer
+	if err := gif.Encode(&original, image.NewNRGBA(image.Rect(0, 0, 3, 2)), nil); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := imagepreprocess.Preprocess(original.Bytes(), imagepreprocess.DefaultRecipe()); err == nil {
+		t.Fatal("GIF query image was accepted")
+	}
+	for _, change := range []string{"none", "reason", "vector", "preview"} {
+		t.Run(change, func(t *testing.T) {
+			f := newImageFixture(t)
+			mediaURL := "https://sample.test/media/original.gif"
+			mediaID := "sample:media:" + digestString([]byte(mediaURL))[:24]
+			f.editRecords(t, func(records []MediaRecord) []MediaRecord {
+				row := MediaRecord{
+					ID: mediaID, Source: "sample", URL: mediaURL,
+					SHA256: digestString(original.Bytes()), ContentType: "image/gif", Width: 3, Height: 2,
+					References: records[0].References, ExclusionReason: "unsupported_image_format",
+				}
+				switch change {
+				case "reason":
+					row.ExclusionReason = "selection"
+				case "vector":
+					index := 0
+					row.VectorIndex = &index
+				case "preview":
+					row.Preview = records[0].Preview
+				}
+				records = append(records, row)
+				sort.Slice(records, func(i, j int) bool { return records[i].ID < records[j].ID })
+				return records
+			})
+			d := f.open(t)
+			err := d.LoadImages()
+			if change != "none" {
+				if err == nil || !strings.Contains(err.Error(), "GIF metadata") {
+					t.Fatalf("invalid GIF metadata was accepted: %v", err)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			vector := make([]float32, 512)
+			vector[0] = 1
+			results, err := d.SearchImages(vector, nil, "", Filter{}, 2)
+			if err != nil || len(results) != 2 {
+				t.Fatal(results, err)
+			}
+			for _, result := range results {
+				for _, match := range result.Matches {
+					if match.MediaID == mediaID {
+						t.Fatal("excluded GIF contributed an image match")
+					}
+				}
+			}
+		})
 	}
 }
 

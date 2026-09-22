@@ -13,7 +13,7 @@ _PATH = re.compile(
     rf"/(?:dotcms/)?dA/{_ASSET_ID}/fileAsset/[^/]+"
     r"|/dotcms/images/[a-fA-F0-9]/[a-fA-F0-9]{2}/[^/]+"
 )
-_UNSUPPORTED = {"gif", "svg", "bmp", "tif", "tiff", "pdf", "avif", "ico"}
+_UNSUPPORTED = {"svg", "bmp", "tif", "tiff", "pdf", "avif", "ico"}
 
 
 def media_url(value: str) -> str | None:

@@ -247,12 +247,14 @@ def test_source_request_interval_is_observed(
 
 
 @pytest.mark.parametrize("validator", ["etag", "last_modified"])
+@pytest.mark.parametrize("mime", ["image/png", "unknown"])
 def test_interrupted_transfer_resumes_across_runs(
     tmp_path: Path,
     servers: Any,
     png: bytes,
     monkeypatch: pytest.MonkeyPatch,
     validator: str,
+    mime: str,
 ) -> None:
     monkeypatch.setattr(media_download, "MAX_ATTEMPTS", 1)
     count = 0
@@ -261,6 +263,7 @@ def test_interrupted_transfer_resumes_across_runs(
         if validator == "etag"
         else {"Last-Modified": "Wed, 01 Jan 2025 00:00:00 GMT"}
     )
+    response_headers["Content-Type"] = mime
 
     def serve(request: BaseHTTPRequestHandler) -> None:
         nonlocal count
@@ -292,6 +295,8 @@ def test_interrupted_transfer_resumes_across_runs(
     record = records(tmp_path)[0]
     assert record["state"] == "saved"
     assert record["http_status"] == 206
+    assert record["content_type"] == "image/png"
+    assert record["response_content_type"] == mime
     with MediaStore(tmp_path) as store:
         assert store.body(record["sha256"]) == png
 
@@ -489,7 +494,15 @@ def test_retry_after_is_honored_and_long_backoff_is_deferred(
 
 
 @pytest.mark.parametrize(
-    "kind", ["html", "fake_image", "wrong_mime", "truncated", "oversized"]
+    "kind",
+    [
+        "html",
+        "nonimage_header",
+        "fake_image",
+        "unsupported_mime",
+        "truncated",
+        "oversized",
+    ],
 )
 def test_nonimages_and_invalid_images_remain_visible_failures(
     tmp_path: Path, servers: Any, png: bytes, kind: str
@@ -503,9 +516,9 @@ def test_nonimages_and_invalid_images_remain_visible_failures(
     )
     headers = {
         "Content-Type": "text/html"
-        if kind == "html"
-        else "image/jpeg"
-        if kind == "wrong_mime"
+        if kind in {"html", "nonimage_header"}
+        else "image/svg+xml"
+        if kind == "unsupported_mime"
         else "image/png"
     }
     if kind == "oversized":
@@ -517,13 +530,153 @@ def test_nonimages_and_invalid_images_remain_visible_failures(
     assert record["state"] == "failed"
     assert record["error"] == (
         "not_image_content_type"
-        if kind == "html"
+        if kind in {"html", "nonimage_header"}
         else "image_too_large"
         if kind == "oversized"
         else "image_mime_mismatch"
-        if kind == "wrong_mime"
+        if kind == "unsupported_mime"
         else "invalid_image"
     )
+    assert len(server.requests) == 1
+    assert not list((tmp_path / "media" / "tmp").rglob("*.part"))
+
+
+@pytest.mark.parametrize(
+    "format,declared_mime,decoded_mime",
+    [
+        ("PNG", "image/jpeg", "image/png"),
+        ("JPEG", "image/png", "image/jpeg"),
+        ("WEBP", "image/gif", "image/webp"),
+        ("GIF", "image/webp", "image/gif"),
+    ],
+)
+def test_supported_mislabeled_images_preserve_original_bytes_and_both_mime_types(
+    tmp_path: Path, servers: Any, format: str, declared_mime: str, decoded_mime: str
+) -> None:
+    output = BytesIO()
+    Image.new("RGB", (16, 12), "blue").save(output, format=format)
+    body = output.getvalue()
+    server = servers(
+        lambda request: reply(request, body, headers={"Content-Type": declared_mime})
+    )
+    register(tmp_path, server.origin + "/image")
+    source = LocalSource(server.origin)
+    report = capture_media(source, tmp_path, "run")
+    record = report["records"][0]
+    assert record["state"] == "saved"
+    assert record["content_type"] == decoded_mime
+    assert record["response_content_type"] == declared_mime
+    assert record["sha256"] == hashlib.sha256(body).hexdigest()
+    with MediaStore(tmp_path, read_only=True) as store:
+        assert store.body(record["sha256"]) == body
+    assert capture_media(source, tmp_path, "run")["records"] == [record]
+    assert len(server.requests) == 1
+
+
+@pytest.mark.parametrize(
+    "mime", [None, "unknown", "application/octet-stream", "Unknown; charset=binary"]
+)
+def test_generic_or_missing_mime_captures_verified_original_jpeg(
+    tmp_path: Path, servers: Any, mime: str | None
+) -> None:
+    output = BytesIO()
+    Image.new("RGB", (16, 12), "blue").save(output, format="JPEG")
+    body = output.getvalue()
+
+    def serve(request: BaseHTTPRequestHandler) -> None:
+        request.send_response_only(200)
+        if mime is not None:
+            request.send_header("Content-Type", mime)
+        request.send_header("Content-Length", str(len(body)))
+        request.end_headers()
+        request.wfile.write(body)
+
+    server = servers(serve)
+    register(tmp_path, server.origin + "/image")
+    source = LocalSource(server.origin)
+    report = capture_media(source, tmp_path, "run")
+    record = report["records"][0]
+    assert record["state"] == "saved"
+    assert record["content_type"] == "image/jpeg"
+    assert record["response_content_type"] == (mime or "")
+    with MediaStore(tmp_path, read_only=True) as store:
+        assert store.body(record["sha256"]) == body
+    assert capture_media(source, tmp_path, "run")["records"] == [record]
+    assert len(server.requests) == 1
+
+
+@pytest.mark.parametrize("mime", ["", "unknown", "application/octet-stream"])
+def test_generic_mime_never_accepts_bogus_image_bytes(
+    tmp_path: Path, servers: Any, mime: str
+) -> None:
+    server = servers(
+        lambda request: reply(
+            request, b"<html>Not an image</html>", headers={"Content-Type": mime}
+        )
+    )
+    register(tmp_path, server.origin + "/image")
+    report = capture_media(LocalSource(server.origin), tmp_path, "run")
+    assert report["counts"]["failed"] == 1
+    assert report["records"][0]["error"] == "invalid_image"
+    assert len(server.requests) == 1
+    assert not (tmp_path / "media" / "objects").exists()
+    assert not list((tmp_path / "media" / "tmp").rglob("*.part"))
+
+
+@pytest.mark.parametrize("declared_length", [False, True])
+def test_generic_mime_reads_remain_bounded(
+    tmp_path: Path, servers: Any, monkeypatch: pytest.MonkeyPatch, declared_length: bool
+) -> None:
+    monkeypatch.setattr(media_download, "MAX_IMAGE_BYTES", 64)
+
+    def serve(request: BaseHTTPRequestHandler) -> None:
+        request.send_response_only(200)
+        request.send_header("Content-Type", "unknown")
+        if declared_length:
+            request.send_header("Content-Length", "128")
+        request.end_headers()
+        request.wfile.write(b"x" * 128)
+
+    server = servers(serve)
+    register(tmp_path, server.origin + "/image")
+    report = capture_media(LocalSource(server.origin), tmp_path, "run")
+    assert report["counts"]["failed"] == 1
+    assert report["records"][0]["error"] == "image_too_large"
+    assert len(server.requests) == 1
+    assert not (tmp_path / "media" / "objects").exists()
+    assert not list((tmp_path / "media" / "tmp").rglob("*.part"))
+
+
+@pytest.mark.parametrize("animated", [False, True])
+@pytest.mark.parametrize("declared_mime", ["image/gif", "image/jpeg"])
+def test_gif_originals_are_saved_only_when_static(
+    tmp_path: Path, servers: Any, animated: bool, declared_mime: str
+) -> None:
+    output = BytesIO()
+    frames = [Image.new("RGB", (16, 12), color) for color in ("red", "blue")]
+    frames[0].save(
+        output,
+        format="GIF",
+        save_all=animated,
+        append_images=frames[1:] if animated else [],
+    )
+    body = output.getvalue()
+    server = servers(
+        lambda request: reply(request, body, headers={"Content-Type": declared_mime})
+    )
+    register(tmp_path, server.origin + "/image")
+    report = capture_media(LocalSource(server.origin), tmp_path, "run")
+    record = report["records"][0]
+    if animated:
+        assert record["state"] == "failed"
+        assert record["error"] == "animated_image"
+        assert not (tmp_path / "media" / "objects").exists()
+    else:
+        assert record["state"] == "saved"
+        assert record["content_type"] == "image/gif"
+        assert record["response_content_type"] == declared_mime
+        with MediaStore(tmp_path, read_only=True) as store:
+            assert store.body(record["sha256"]) == body
     assert len(server.requests) == 1
     assert not list((tmp_path / "media" / "tmp").rglob("*.part"))
 
@@ -931,10 +1084,10 @@ def test_unsupported_decoded_format_has_actionable_failure_code(
     tmp_path: Path, servers: Any
 ) -> None:
     output = BytesIO()
-    Image.new("RGB", (4, 4)).save(output, format="GIF")
+    Image.new("RGB", (4, 4)).save(output, format="BMP")
     server = servers(
         lambda request: reply(
-            request, output.getvalue(), headers={"Content-Type": "image/gif"}
+            request, output.getvalue(), headers={"Content-Type": "image/bmp"}
         )
     )
     register(tmp_path, server.origin + "/image")

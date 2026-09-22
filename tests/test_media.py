@@ -261,7 +261,12 @@ def test_states_resume_and_empty_associations_are_explicit(tmp_path: Path) -> No
 
 @pytest.mark.parametrize(
     "format,mime",
-    [("PNG", "image/png"), ("JPEG", "image/jpeg"), ("WEBP", "image/webp")],
+    [
+        ("PNG", "image/png"),
+        ("JPEG", "image/jpeg"),
+        ("WEBP", "image/webp"),
+        ("GIF", "image/gif"),
+    ],
 )
 def test_decodes_supported_formats(tmp_path: Path, format: str, mime: str) -> None:
     path = image_file(tmp_path / "input", format=format)
@@ -277,9 +282,33 @@ def test_decodes_supported_formats(tmp_path: Path, format: str, mime: str) -> No
         )
         assert record["bytes"] == path.stat().st_size
         assert len(record["perceptual_hash"]) == 16
+        assert store.body(record["sha256"]) == path.read_bytes()
+        assert "response_content_type" not in record
 
 
-def test_rejects_mismatch_truncation_animation_and_limits(tmp_path: Path) -> None:
+@pytest.mark.parametrize("mime", ["", "unknown", "application/octet-stream"])
+def test_generic_content_type_uses_decoded_format(tmp_path: Path, mime: str) -> None:
+    path = image_file(tmp_path / "input", format="JPEG")
+    with MediaStore(tmp_path) as store:
+        store.register("fixture", "run-1", [candidate()])
+        record = store.save(
+            "fixture",
+            "run-1",
+            media_id("fixture", URL),
+            path,
+            content_type=mime,
+            response_content_type=mime,
+        )
+        assert record["content_type"] == "image/jpeg"
+        assert record["response_content_type"] == mime
+        assert store.body(record["sha256"]) == path.read_bytes()
+    with MediaStore(tmp_path, read_only=True) as store:
+        assert store.records("fixture", "run-1") == [record]
+
+
+def test_rejects_unsupported_mime_truncation_animation_and_limits(
+    tmp_path: Path,
+) -> None:
     path = image_file(tmp_path / "input.png")
     with MediaStore(tmp_path) as store:
         store.register("fixture", "run-1", [candidate()])
@@ -289,7 +318,7 @@ def test_rejects_mismatch_truncation_animation_and_limits(tmp_path: Path) -> Non
                 "run-1",
                 media_id("fixture", URL),
                 path,
-                content_type="image/jpeg",
+                content_type="image/svg+xml",
             )
         path.write_bytes(path.read_bytes()[:40])
         with pytest.raises(ValueError, match="Invalid or truncated"):

@@ -14,7 +14,12 @@ from pathlib import Path
 from urllib.parse import urljoin, urlsplit
 
 from pipelines.archive import atomic_json
-from pipelines.media import MAX_IMAGE_BYTES, MediaStore, _resolved_path
+from pipelines.media import (
+    GENERIC_IMAGE_CONTENT_TYPES,
+    MAX_IMAGE_BYTES,
+    MediaStore,
+    _resolved_path,
+)
 from pipelines.sources.base import AuthenticatedSource, Source
 
 MAX_ATTEMPTS = 3
@@ -281,10 +286,12 @@ def _download(
             if status in {401, 403, 429} or pacer.defer(failure):
                 pacer.stopped.set()
             raise failure
-        content_type = (
-            response_headers.get("Content-Type", "").split(";", 1)[0].strip().lower()
-        )
-        if not content_type.startswith("image/"):
+        response_content_type = response_headers.get("Content-Type", "")
+        content_type = response_content_type.split(";", 1)[0].strip().lower()
+        if (
+            not content_type.startswith("image/")
+            and content_type not in GENERIC_IMAGE_CONTENT_TYPES
+        ):
             raise _Failure("not_image_content_type", status=status)
         if response_headers.get("Content-Encoding", "identity").lower() not in {
             "",
@@ -330,6 +337,7 @@ def _download(
             "url": url,
             "final_url": final_url,
             "content_type": content_type,
+            "response_content_type": response_content_type,
             "expected_length": total,
             "validator": validator,
             "http_status": status,
@@ -418,6 +426,7 @@ def _capture_record(
                     media_id,
                     partial,
                     content_type=result["content_type"],
+                    response_content_type=result["response_content_type"],
                     final_url=result["final_url"],
                     http_status=result["http_status"],
                 )

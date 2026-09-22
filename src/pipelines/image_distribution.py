@@ -376,7 +376,9 @@ def build_image_members(
         row["_original"] = not eligible or any(
             item["role"] == "original" for item in eligible
         )
-        if chosen is not None and row["id"] not in chosen:
+        if row["content_type"] == "image/gif":
+            row["exclusion_reason"] = "unsupported_image_format"
+        elif chosen is not None and row["id"] not in chosen:
             row["exclusion_reason"] = "selection"
         elif not refs:
             row["exclusion_reason"] = "unassociated"
@@ -630,13 +632,22 @@ def validate_image_bundle(
             raise ValueError("Invalid image record identity or source")
         if (
             not re.fullmatch(r"[a-f0-9]{64}", row["sha256"])
-            or row["content_type"] not in {"image/jpeg", "image/png", "image/webp"}
+            or row["content_type"]
+            not in {"image/jpeg", "image/png", "image/webp", "image/gif"}
             or type(row["width"]) is not int
             or type(row["height"]) is not int
             or min(row["width"], row["height"]) < 1
             or row["width"] * row["height"] > MAX_IMAGE_PIXELS
         ):
             raise ValueError("Invalid original image metadata")
+        if row["content_type"] == "image/gif" and (
+            row["exclusion_reason"] != "unsupported_image_format"
+            or row["vector_index"] is not None
+            or row["preview"] is not None
+        ):
+            raise ValueError(
+                "GIF metadata requires an unsupported-format exclusion without a vector or preview"
+            )
         if row["original_url"] and urlsplit(row["original_url"]).scheme not in {
             "https",
             "http",

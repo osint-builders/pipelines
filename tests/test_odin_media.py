@@ -224,7 +224,7 @@ def test_unsupported_external_and_navigation_images_are_accounted_for() -> None:
     gallery = [
         {"url": "https://other.example/photo.jpg"},
         {"url": "/assets/odin-logo.svg"},
-        {"url": IMAGE + ".gif"},
+        {"url": IMAGE + ".svg"},
         {"url": IMAGE},
     ]
     result = list(
@@ -237,6 +237,17 @@ def test_unsupported_external_and_navigation_images_are_accounted_for() -> None:
         "",
     ]
     assert all(image.references for image in result)
+
+
+def test_gif_original_is_eligible_for_archival_validation() -> None:
+    gallery = [{"url": IMAGE + ".gif", "name": "Original photograph.gif"}]
+    result = list(
+        Odin().discover_media(URL, encoded(record(images=gallery)), [entity()])
+    )
+    assert len(result) == 1
+    assert result[0].url == IMAGE_URL + ".gif"
+    assert not result[0].exclusion_reason
+    assert result[0].references[0].entity_id == "odin:" + ID_A
 
 
 def test_shared_store_deduplicates_bytes_url_but_retains_both_owners(

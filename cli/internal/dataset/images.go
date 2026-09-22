@@ -271,8 +271,11 @@ func (d *Dataset) LoadImages() error {
 			!validDigest(record.SHA256) || record.Width < 1 || record.Height < 1 ||
 			record.Width > imagepreprocess.MaxImagePixels || record.Height > imagepreprocess.MaxImagePixels ||
 			int64(record.Width)*int64(record.Height) > imagepreprocess.MaxImagePixels ||
-			(record.ContentType != "image/jpeg" && record.ContentType != "image/png" && record.ContentType != "image/webp") {
+			(record.ContentType != "image/jpeg" && record.ContentType != "image/png" && record.ContentType != "image/webp" && record.ContentType != "image/gif") {
 			return errors.New("invalid original media metadata")
+		}
+		if record.ContentType == "image/gif" && (record.ExclusionReason != "unsupported_image_format" || record.VectorIndex != nil || record.Preview != nil) {
+			return errors.New("GIF metadata requires an unsupported-format exclusion without a vector or preview")
 		}
 		metadata := struct {
 			MIME          string
