@@ -32,6 +32,9 @@ def published(
     if request.param == "api":
         source, responses = MilitaryPeriscope(), captures()
     elif request.param == "collection":
+        monkeypatch.setattr(
+            "pipelines.sources.cambridgepixel.imagery.reviews", lambda: []
+        )
         source, responses = CambridgePixel(), {SEED: collection_page()}
     else:
         source, responses = SmallSource(), {URL: HTML}
@@ -68,6 +71,9 @@ def test_shared_audit_checks_html_api_and_collection_snapshots_offline(
     if source.id == "militaryperiscope":
         assert result["source_checks"]["complete_accessible_trial"] is True
         assert result["source_checks"]["content_fragments_checked"] > 0
+    elif source.id == "cambridgepixel":
+        assert result["source_checks"]["catalog_rows"] == 2
+        assert result["source_checks"]["checked_facts"] == 14
     else:
         assert result["source_checks"] == {}
 

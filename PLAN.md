@@ -7,6 +7,29 @@ specifications, and images, with every result linked to captured evidence.
 
 **Branch:** `main`.
 
+## Cambridge Pixel refresh — in progress
+
+Reconcile the supplied 388-row HTML table with the previous 385-record archive
+and the live 393-row catalog. Preserve every field and stable identities when
+manufacturer names change. Review Google Images results one radar at a time;
+attach only images supported by model-specific source evidence.
+
+- [x] Parse and reconcile every supplied row, including applications and references.
+- [x] Capture the updated catalog and verify complete offline extraction.
+- [ ] Review imagery for each model; retain search, original-page, and match evidence.
+- [ ] Download matched originals through the shared media archive and audit coverage.
+- [ ] Rebuild the local index, test the CLI, update README counts, and publish a new latest release.
+
+Working reports: `build/cambridgepixel/`. All 388 supplied models match the refreshed
+393-record catalog; five additions and one application-list change are accounted
+for. Seven renamed entries retain their existing IDs. Referral parameters no longer
+cause false table/schema disagreements; functional URL differences still fail.
+Catalog archive: `20260922T142532Z-932ca3c5`. Image reviews are stored beside the
+adapter in `image_reviews.json`; matched originals use the shared media archive,
+with separate captured source evidence. Browser DOM captures are explicitly labelled.
+The first original has been downloaded successfully. Validation: 72 focused tests
+and adapter type checks passed. Individual image review remains in progress.
+
 ## Code cleanup — complete
 
 Apply behavior-preserving changes in small tested commits on main. Existing release

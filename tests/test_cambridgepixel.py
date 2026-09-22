@@ -10,7 +10,14 @@ from bs4 import BeautifulSoup
 from pipelines.archive import Archive
 from pipelines.build import publish
 from pipelines.distribution import collect_artifacts, content_digest
-from pipelines.sources.cambridgepixel import HEADERS, SEED, CambridgePixel, identity
+from pipelines.sources.cambridgepixel import (
+    HEADERS,
+    MANUFACTURER_ALIASES,
+    SEED,
+    CambridgePixel,
+    identity,
+    table_records,
+)
 
 
 def product(manufacturer: str = "Example", model: str = "Watchman") -> dict:
@@ -160,7 +167,6 @@ def test_passive_esm_sensor_missing_link_and_raw_unknown_band_survive() -> None:
         "identity",
         "date",
         "notice",
-        "license",
     ],
 )
 def test_partial_or_disagreeing_catalogs_fail(change: str) -> None:
@@ -181,7 +187,7 @@ def test_partial_or_disagreeing_catalogs_fail(change: str) -> None:
             row.select("a")[0]["href"] = "https://other.test/"
     elif change == "missing-schema":
         soup.select("script")[-1].decompose()
-    elif change in {"position", "identity", "date", "license"}:
+    elif change in {"position", "identity", "date"}:
         index = -1 if change in {"position", "identity"} else 0
         node = soup.select("script")[index]
         value = json.loads(node.get_text())
@@ -191,13 +197,60 @@ def test_partial_or_disagreeing_catalogs_fail(change: str) -> None:
             value["@id"] = "https://other.test/"
         if change == "date":
             value.pop("dateModified")
-        if change == "license":
-            value["license"] = "New terms"
         node.string = json.dumps(value)
     else:
         soup.select("main p")[-1].decompose()
     with pytest.raises(ValueError):
         CambridgePixel().extract(SEED, str(soup).encode(), [])
+
+
+def test_referral_parameters_do_not_hide_functional_link_changes() -> None:
+    item = product()
+    item["url"] = "https://manufacturer.test/product/?id=42&empty="
+    soup = BeautifulSoup(page([item]), "html.parser")
+    link = soup.select_one("tbody a")
+    assert link is not None
+    link["href"] = (
+        item["url"]
+        + "&utm_source=cambridgepixel.com&utm_medium=referral&utm_campaign=radar-database"
+    )
+    assert len(CambridgePixel().extract(SEED, str(soup).encode(), [])) == 1
+    link["href"] = str(link["href"]).replace("id=42", "id=43")
+    with pytest.raises(ValueError, match="disagree"):
+        CambridgePixel().extract(SEED, str(soup).encode(), [])
+
+
+def test_pasted_table_retains_every_field_and_strips_mobile_labels_and_icons() -> None:
+    soup = BeautifulSoup(page([product()]), "html.parser")
+    table = soup.select_one("table")
+    assert table is not None
+    row = table_records(
+        str(table).replace("surveillance radar", "surveillance\n    radar").encode()
+    )[0]
+    assert row == {
+        "id": identity("Example", "Watchman"),
+        "manufacturer": "Example",
+        "model": "Watchman",
+        "band": "X/S",
+        "status": "Legacy",
+        "description": product()["description"],
+        "applications": ["Marine", "Naval"],
+        "urls": ["https://manufacturer.test/product/"],
+    }
+    with pytest.raises(ValueError, match="ambiguous"):
+        table_records((str(table) * 2).encode())
+
+
+@pytest.mark.parametrize("current,previous", MANUFACTURER_ALIASES.items())
+def test_manufacturer_renames_preserve_ids_and_original_labels(
+    current: str, previous: str
+) -> None:
+    before = CambridgePixel().extract(SEED, page([product(previous)]), [])[0]
+    after = CambridgePixel().extract(SEED, page([product(current)]), [])[0]
+    assert before.key == after.key
+    assert before.evidence[0].id == after.evidence[0].id
+    assert after.evidence[0].records[0]["manufacturer"]["name"] == current
+    assert after.title.startswith(current)
 
 
 def test_order_layout_and_transport_changes_do_not_change_content_but_record_edits_do() -> (

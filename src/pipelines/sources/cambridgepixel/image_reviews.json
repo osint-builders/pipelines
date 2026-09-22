@@ -1,0 +1,76 @@
+[
+  {
+    "manufacturer": "Accipiter",
+    "model": "AM1-10A",
+    "search_url": "https://www.google.com/search?udm=2&q=Accipiter+AM1-10A+radar",
+    "status": "unresolved",
+    "page_url": "https://www.accipiterradar.com/solutions/systems/",
+    "notes": "Google Images returned generic manufacturer systems and other Accipiter models. The manufacturer page does not identify AM1-10A. No photograph assigned."
+  },
+  {
+    "manufacturer": "Accipiter",
+    "model": "NM1-8A",
+    "search_url": "https://www.google.com/search?udm=2&q=Accipiter+NM1-8A+radar",
+    "status": "matched",
+    "page_url": "https://www.aeroexpo.online/prod/accipiter/product-187324-63275.html",
+    "image_url": "https://img.aeroexpo.online/images_ar/photo-mg/187324-15516891.jpg",
+    "capture_method": "browser-dom",
+    "caption": "Accipiter NM1-8A airport surveillance radar",
+    "quote": "The Accipiter® NM1-8A Avian Radar System is a software-definable, 2D surveillance radar specially designed to detect and track birds around airports.",
+    "notes": "Google Images links this exact model page. The product heading and image alt text identify NM1-8A. Original 500 by 500 photograph inspected: Accipiter-marked horizontal array on a mast beside an airport."
+  },
+  {
+    "manufacturer": "Accipiter",
+    "model": "NM1-B400",
+    "search_url": "https://www.google.com/search?udm=2&q=Accipiter+NM1-B400+radar",
+    "status": "matched",
+    "page_url": "https://www.aeroexpo.online/prod/accipiter/product-187324-63280.html",
+    "image_url": "https://img.aeroexpo.online/images_ar/photo-mg/187324-15516940.jpg",
+    "capture_method": "browser-dom",
+    "caption": "Accipiter NM1-B400 security radar with Blighter sensor",
+    "quote": "The Ku-band radar sensor is a Blighter B400 series electronically-scanning radar.",
+    "notes": "Google Images links the exact NM1-B400 product page and its labelled image. Original 500 by 500 photograph inspected: mast-mounted Blighter panels with camera above, overlooking a port."
+  },
+  {
+    "manufacturer": "Accipiter",
+    "model": "NM1-T1002",
+    "search_url": "https://www.google.com/search?udm=2&q=Accipiter+NM1-T1002+radar",
+    "status": "matched",
+    "page_url": "https://www.aeroexpo.online/prod/accipiter/product-187324-63282.html",
+    "image_url": "https://img.aeroexpo.online/images_ar/photo-mg/187324-15516944.jpg",
+    "capture_method": "browser-dom",
+    "caption": "Accipiter NM1-T1002 system using a Terma SCANTER sensor",
+    "quote": "The Accipiter® NM1-T1002 Security Radar System is a software-definable surveillance radar specially designed for detection and tracking of fast and slowly moving objects such as walkers, crawlers and small vehicles in and around high-sensitivity areas.",
+    "notes": "Google Images returns the exact model-labelled product photograph. Inspected original 300 by 300 image: Terma-marked radome above mast electronics. Source describes the sensor as Ku-band; Cambridge Pixel says X-band. This image association does not resolve that specification disagreement."
+  },
+  {
+    "manufacturer": "Accipiter",
+    "model": "SALUS Series",
+    "search_url": "https://www.google.com/search?udm=2&q=Accipiter+SALUS+Series+radar",
+    "status": "unresolved",
+    "page_url": "https://www.accipiterradar.com/solutions/systems/",
+    "notes": "Google Images returned manufacturer systems pages, other numbered Accipiter models, and company news. The inspected manufacturer systems page does not identify SALUS. No photograph assigned."
+  },
+  {
+    "manufacturer": "Aerostar (was Raven Aerostar)",
+    "model": "HiPointer 100 / 150",
+    "search_url": "https://www.google.com/search?udm=2&q=Aerostar+HiPointer+100+150+radar",
+    "status": "matched",
+    "page_url": "https://aerostar.com/products/radar-systems/hipointer-100",
+    "image_url": "https://s3-us-west-2.amazonaws.com/com-aerostar-cdn/general-uploads/Aerostar-HiPointer100-pic.png?mtime=20221129135012",
+    "caption": "Aerostar HiPointer 100 product image on the HiPointer 100/150 family page",
+    "quote": "HiPointer 100/150 are the warfighter’s radar perception tool of choice for a wide variety of missions.",
+    "notes": "Google Images identifies the manufacturer family page. The generic air/land/maritime banner was rejected. Inspected the separate HiPointer100-named product image: compact white Aerostar sensor and mounting bracket. Represents the 100 member of this combined 100/150 catalog record."
+  },
+  {
+    "manufacturer": "Aerostar (was Raven Aerostar)",
+    "model": "Vista F25",
+    "search_url": "https://www.google.com/search?udm=2&q=Aerostar+Vista+F25+radar",
+    "status": "matched",
+    "page_url": "https://aerostar.com/products/radar-systems/ssrs-f25",
+    "image_url": "https://s3-us-west-2.amazonaws.com/com-aerostar-cdn/general-uploads/_910x540_fit_center-center/f25-2.jpg?mtime=20170929112738",
+    "caption": "Aerostar Vista F25 aerostat installation with radar payload inset",
+    "quote": "The Vista F25 is a distinguished sensor utilized for its high performance and tactical size and weight.",
+    "notes": "Google Images links the exact manufacturer product page. Inspected the dedicated f25-2 image below the description: aerostat with inset showing its radar payload. The separate generic header image was not selected."
+  }
+]
