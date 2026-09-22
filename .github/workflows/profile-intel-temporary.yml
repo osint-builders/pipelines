@@ -2,6 +2,9 @@ name: Temporary Intel runtime profile
 
 on:
   workflow_dispatch:
+  push:
+    branches: [feature/multimodal-entity-search]
+    paths: [.github/workflows/profile-intel-temporary.yml]
 
 permissions:
   contents: read
