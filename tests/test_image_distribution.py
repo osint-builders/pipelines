@@ -222,8 +222,10 @@ def test_compact_preview_preserves_full_view_and_original_vectors(
     row = json.loads(members["image/index.json"])[0]
     preview = Image.open(BytesIO(members[row["preview"]["member"]]))
     assert preview.size == (320, 160)
-    assert preview.getpixel((2, 80))[0] > 200
-    assert preview.getpixel((317, 80))[1] > 100
+    left, right = preview.getpixel((2, 80)), preview.getpixel((317, 80))
+    assert isinstance(left, tuple) and isinstance(right, tuple)
+    assert left[0] > 200
+    assert right[1] > 100
     assert ImageEncoder.calls.count(captured["sha256"]) == 1
     original_vectors = members["image/vectors.f16"]
     original_recipe = report["preview_recipe"]
