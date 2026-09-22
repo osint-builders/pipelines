@@ -29,6 +29,97 @@ def manifest() -> dict:
     }
 
 
+@pytest.mark.parametrize("download", ["valid", "corrupt", "missing", "oversize"])
+def test_fetch_verifies_download_before_publishing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, download: str
+) -> None:
+    expected = b"test model"
+    locked = {
+        **manifest(),
+        "sha256": hashlib.sha256(expected).hexdigest(),
+        "bytes": len(expected),
+    }
+    lock = tmp_path / "lock.json"
+    lock.write_text(json.dumps(locked), encoding="utf-8")
+    output = tmp_path / "model"
+
+    def run(command: list[str], **kwargs: object) -> subprocess.CompletedProcess:
+        assert command[:7] == [
+            "gh",
+            "release",
+            "download",
+            "image-model-" + locked["sha256"],
+            "--repo",
+            "osint-builders/pipelines",
+            "--pattern",
+        ]
+        assert command[7] == "model.onnx"
+        assert kwargs["check"] is True and kwargs["timeout"] == 300
+        assert not (output / "model.onnx").exists()
+        directory = Path(command[command.index("--dir") + 1])
+        if download != "missing":
+            data = (
+                b"bad model!"
+                if download == "corrupt"
+                else expected + b"x"
+                if download == "oversize"
+                else expected
+            )
+            (directory / "model.onnx").write_bytes(data)
+        return subprocess.CompletedProcess(command, 0, "", "")
+
+    monkeypatch.setattr(checker.subprocess, "run", run)
+    if download == "valid":
+        result = checker.fetch(output, lock)
+        assert result["cache_hit"] is False
+        assert (output / "model.onnx").read_bytes() == expected
+        assert (output / "model.json").read_bytes() == lock.read_bytes()
+        assert set(path.name for path in output.iterdir()) == {
+            "model.onnx",
+            "model.json",
+        }
+    else:
+        with pytest.raises(ValueError, match="checksum|byte count"):
+            checker.fetch(output, lock)
+        assert list(output.iterdir()) == []
+
+
+def test_fetch_reuses_verified_cache_without_network(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    expected = b"cached model"
+    locked = {
+        **manifest(),
+        "sha256": hashlib.sha256(expected).hexdigest(),
+        "bytes": len(expected),
+    }
+    lock = tmp_path / "lock.json"
+    lock.write_text(json.dumps(locked), encoding="utf-8")
+    output = tmp_path / "model"
+    output.mkdir()
+    (output / "model.onnx").write_bytes(expected)
+
+    def no_network(*args: object, **kwargs: object) -> None:
+        raise AssertionError("Valid cache must not make a network request")
+
+    monkeypatch.setattr(checker.subprocess, "run", no_network)
+    assert checker.fetch(output, lock)["cache_hit"] is True
+    assert (output / "model.json").read_bytes() == lock.read_bytes()
+    (output / "model.onnx").write_bytes(b"incorrect")
+    with pytest.raises(ValueError, match="byte count"):
+        checker.fetch(output, lock)
+
+
+@pytest.mark.parametrize(
+    "filename", ["../model.onnx", "C:/model.onnx", "*.onnx", "model.onnx/child"]
+)
+def test_fetch_rejects_unsafe_locked_filename(tmp_path: Path, filename: str) -> None:
+    lock = tmp_path / "lock.json"
+    lock.write_text(json.dumps({**manifest(), "file": filename}), encoding="utf-8")
+    with pytest.raises(ValueError, match="filename"):
+        checker.fetch(tmp_path / "model", lock)
+
+
 def setup_references(tmp_path: Path) -> tuple[Path, Path]:
     manifest_path = tmp_path / "manifest.json"
     manifest_path.write_text(json.dumps(manifest()))

@@ -1,4 +1,4 @@
-"""Prepare Python ORT references and verify native Go image encoder parity."""
+"""Fetch locked model bytes, prepare Python references, and verify native parity."""
 
 import argparse
 import base64
@@ -11,6 +11,7 @@ import re
 import socket
 import subprocess
 import sys
+import tempfile
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -68,11 +69,84 @@ def _contract(manifest: dict) -> dict:
 
 def _manifest(path: Path, lock: Path) -> dict:
     manifest = _json(path)
-    if _contract(manifest) != _contract(_json(lock)):
-        raise ValueError("Exported model does not match the tracked image model lock")
+    expected = _contract(_json(lock))
+    changed = [
+        key for key, value in _contract(manifest).items() if value != expected[key]
+    ]
+    if changed:
+        raise ValueError(
+            "Model does not match the tracked image model lock: " + ", ".join(changed)
+        )
     if manifest["dimensions"] != 512:
         raise ValueError("The native parity suite requires 512-dimensional embeddings")
     return manifest
+
+
+def fetch(directory: Path, lock: Path = DEFAULT_LOCK) -> dict:
+    """Download the immutable release asset and publish only checksum-verified bytes."""
+    body = lock.read_bytes()
+    manifest = json.loads(body)
+    name, checksum, size = manifest["file"], manifest["sha256"], manifest["bytes"]
+    if (
+        not isinstance(name, str)
+        or re.fullmatch(r"[a-zA-Z0-9][a-zA-Z0-9._-]*\.onnx", name) is None
+        or not isinstance(checksum, str)
+        or re.fullmatch(r"[a-f0-9]{64}", checksum) is None
+        or type(size) is not int
+        or size <= 0
+    ):
+        raise ValueError("Invalid locked image model filename, checksum, or size")
+
+    def verified(path: Path) -> None:
+        if not path.is_file() or path.stat().st_size != size:
+            raise ValueError(
+                "Locked image model is missing or has an incorrect byte count"
+            )
+        with path.open("rb") as stream:
+            if hashlib.file_digest(stream, "sha256").hexdigest() != checksum:
+                raise ValueError("Locked image model checksum mismatch")
+
+    directory.mkdir(parents=True, exist_ok=True)
+    destination = directory / name
+    cache_hit = destination.exists()
+    if cache_hit:
+        verified(destination)
+    with tempfile.TemporaryDirectory(
+        prefix=".image-model-", dir=directory
+    ) as temporary:
+        staging = Path(temporary)
+        if not cache_hit:
+            subprocess.run(
+                [
+                    "gh",
+                    "release",
+                    "download",
+                    "image-model-" + checksum,
+                    "--repo",
+                    "osint-builders/pipelines",
+                    "--pattern",
+                    name,
+                    "--dir",
+                    str(staging),
+                ],
+                check=True,
+                capture_output=True,
+                text=True,
+                timeout=300,
+            )
+            downloaded = staging / name
+            verified(downloaded)
+            downloaded.replace(destination)
+        metadata = staging / Path(name).with_suffix(".json").name
+        metadata.write_bytes(body)
+        manifest_path = directory / metadata.name
+        metadata.replace(manifest_path)
+    return {
+        "model": str(destination),
+        "manifest": str(manifest_path),
+        "sha256": checksum,
+        "cache_hit": cache_hit,
+    }
 
 
 def _vector(value: object, dimensions: int) -> np.ndarray:
@@ -499,6 +573,9 @@ def verify(
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest="command", required=True)
+    download = commands.add_parser("fetch")
+    download.add_argument("--output", type=Path, required=True)
+    download.add_argument("--lock", type=Path, default=DEFAULT_LOCK)
     prepare = commands.add_parser("reference")
     check = commands.add_parser("verify")
     baseline = commands.add_parser("network-baseline")
@@ -518,7 +595,9 @@ def main() -> None:
         default="none",
     )
     args = parser.parse_args()
-    if args.command == "network-baseline":
+    if args.command == "fetch":
+        print(json.dumps(fetch(args.output, args.lock)))
+    elif args.command == "network-baseline":
         network_baseline(args.probe, args.output)
         print(json.dumps({"baseline": str(args.output), "reachable": True}))
     elif args.command == "reference":

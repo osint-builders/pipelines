@@ -50,12 +50,10 @@ jobs:
           python-version: '3.13'
           enable-cache: true
       - run: uv sync --frozen --extra image
-      - name: Install pinned CPU export environment
-        run: |
-          uv pip install --index-url https://download.pytorch.org/whl/cpu torch==2.14.0+cpu torchvision==0.29.0+cpu
-          uv pip install timm==1.0.29 safetensors==0.8.0 onnx==1.23.0
-      - name: Export checksum-pinned image tower
-        run: uv run --no-sync python tools/prepare_image_model.py mobileclip2-s0 --download --directory build/image-parity/model
+      - name: Fetch checksum-pinned image tower
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: uv run --no-sync python tools/check_image_encoder.py fetch --output build/image-parity/model
       - name: Produce Python ORT references and assert the tracked model lock
         run: uv run --no-sync python tools/check_image_encoder.py reference --manifest build/image-parity/model/mobileclip2-s0-fp16-storage.json --output build/image-parity/references
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

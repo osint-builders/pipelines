@@ -101,6 +101,7 @@ jobs:
           name: verified-dataset
           path: build/release/
       - run: python tools/check_bundle_hash.py build/release/dataset.zip
+      - run: mkdir -p build/release/validation
       - working-directory: cli
         run: go test -tags NODOWNLOAD ./...
       - run: uv run --no-sync python tools/build_cli.py --bundle build/release/dataset.zip --output "dist/$BINARY"

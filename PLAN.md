@@ -849,11 +849,45 @@ multimodal builds. The calibration integration passes 931 Python tests, full lin
 and type checks (including installed OCR/description extras), Go tests, and Go vet.
 Nine default-bundle JSON responses match the prior implementation exactly.
 
+The full M10 Windows candidate passes all 13 resource checks on the original Ryzen
+5950X reference machine, using one first process and 20 subsequent fresh processes
+per mode. Repeated JSON results are identical; filesystem caches were not cleared.
+
+| Command | First / repeated p95 | Peak working set |
+| --- | --- | --- |
+| Default text | 1.108 / 1.145 s | 557.22 MiB |
+| Image | 1.600 / 1.688 s | 384.70 MiB |
+| Image + text | 2.590 / 2.677 s | 747.73 MiB |
+| Text with observations | 2.210 / 2.233 s | 711.74 MiB |
+| Text with manufacturer filter | 1.752 / 1.794 s | 628.22 MiB |
+
+The single executable is 264.96 MiB; its ZIP is 242.11 MiB, within the 320/256 MiB
+limits. Default and observation text also pass M1's relative latency/memory limits.
+The public offline rebuild returns `changed: false`, reproduces the exact ZIP, encodes
+only three text and three image probes, and makes no network attempts. Reports and
+the local CLI are under ignored `build/m10/`; native validation is still running.
+The general CI run for `7715b51` passes. A fresh image export differed from the frozen
+model by 20 half-precision values despite identical graph/checkpoint metadata. Native
+parity now fetches the checksum-pinned model asset and verifies its exact bytes before
+running Python/Go probes; the lock, exporter, and embedded model remain unchanged.
+Actual download and cache reuse are checked. Linux ARM's native resource checks pass;
+its later report write exposed a workflow directory-ownership issue, fixed by creating
+the output directory before privileged network-isolated measurements.
+
+Review readiness is recorded in `build/m10/review-readiness.json` and linked from
+`build/m10/review.html`. The positive packets contain 102 provisional usable groups
+across 38 entities after conservative duplicate unions. Reserving independent gallery
+and development images leaves fewer than the required 100 evaluation groups.
+The negative packet contains 165 provisional groups (58 in-domain, 107 unrelated),
+with 66 images held; all source pointers/hashes are checked and no exact/dHash matches
+were found against the archived corpus or frozen seed. Development/evaluation splits,
+confusable examples, diagrams, and final labels remain unfinished.
+
 - [ ] Run the frozen evaluation suite for text, image, combined, OCR, filters, and entity relationships; report results by task and source.
 - [ ] Verify top-result accuracy, recall within the first five results, confusable variants, and no-match behavior meet M1's targets.
 - [ ] Calibrate no-match decisions on larger development sets: M7 text negatives return candidates for 4/4 global and 3/4 filtered queries; image/generated modes currently abstain even for positive queries.
 - [ ] Measure cold/warm latency, peak memory, and compressed executable size on all supported targets.
-- [ ] Bring text within the frozen budgets: M9 default p95 is 2.708 s against M1's relative limit of 2.380 s and uses 960.86 MiB against 949.30 MiB; filtered text is 3.424 s against 3 s absolute; observation text is 3.938 s and uses 1,144.79 MiB.
+- [x] Bring text within the frozen reference-machine budgets: M10 default p95 1.145 s / 557.22 MiB, filtered p95 1.794 s, and observation p95 2.233 s / 711.74 MiB.
 - [ ] Build and test one standalone executable per platform with required models, indices, evidence, and selected previews embedded.
 - [x] Improve gallery coverage within the preview budget: development-only preview comparison and round-robin allocation increase entity coverage from 1,101 to 3,102.
 - [ ] Validate deterministic dataset identities, cached rebuilds, checksums, source exports, and operation without network access.
