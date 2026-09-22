@@ -9,6 +9,7 @@ from pipelines.media import (
     MediaCandidate,
     MediaReference,
 )
+from pipelines.media_context import page_owners
 from pipelines.sources.commons import clean, introduction
 from pipelines.sources.html import text
 
@@ -102,18 +103,13 @@ def discover(url: str, body: bytes, entities: list[dict]) -> list[MediaCandidate
         raise ValueError("Commons file page is missing its original media URL")
     original = _url(url, str(original_link["href"]))
     caption = _caption(soup)
-    owners = {
-        (entity["id"], evidence["id"])
-        for entity in entities
-        for evidence in entity["evidence"]
-        if evidence["url"] == url
-    }
+    owners = page_owners(url, entities)
     ambiguous = len({entity for entity, _ in owners}) > 1
     references = [
         MediaReference(
             entity, evidence, caption, section="Description", ambiguous=ambiguous
         )
-        for entity, evidence in sorted(owners)
+        for entity, evidence in owners
     ]
     reason = _reason(original)
     mime = soup.select_one(".fullMedia .mime-type")

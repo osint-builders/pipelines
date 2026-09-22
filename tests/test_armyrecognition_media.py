@@ -41,3 +41,20 @@ def test_current_sections_include_hero_and_exclude_related_cards() -> None:
     assert rows[-1].exclusion_reason == "unsupported_image_format"
     assert "#" not in rows[-1].url
     assert list(ArmyRecognition().discover_media(URL, body, [])) == []
+
+
+def test_repeated_owner_does_not_make_an_image_ambiguous() -> None:
+    body = b'<main><div id="photos"><img src="/images/radar.jpg"></div></main>'
+    owners = [
+        *OWNER,
+        *OWNER,
+        {
+            "id": "armyrecognition:other",
+            "evidence": [{"id": "other", "url": URL + "/other"}],
+        },
+    ]
+    rows = list(ArmyRecognition().discover_media(URL, body, owners))
+    assert len(rows) == 1
+    assert len(rows[0].references) == 1
+    assert rows[0].references[0].entity_id == OWNER[0]["id"]
+    assert rows[0].references[0].ambiguous is False

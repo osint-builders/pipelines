@@ -6,6 +6,7 @@ from urllib.parse import unquote, urljoin, urlsplit
 from bs4 import Tag
 
 from pipelines.media import MAX_IMAGE_PIXELS, MediaCandidate, MediaReference
+from pipelines.media_context import page_owners
 from pipelines.sources.html import text
 
 _FORMATS = {".jpg", ".jpeg", ".png", ".webp"}
@@ -154,14 +155,7 @@ def _context_reason(image: Tag, content: Tag, section: str) -> str:
 def discover_images(
     url: str, content: Tag, entities: list[dict], hosts: set[str]
 ) -> list[MediaCandidate]:
-    owners = sorted(
-        {
-            (entity["id"], evidence["id"])
-            for entity in entities
-            for evidence in entity["evidence"]
-            if evidence["url"] == url
-        }
-    )
+    owners = page_owners(url, entities)
     if not owners:
         return []
     result: list[MediaCandidate] = []

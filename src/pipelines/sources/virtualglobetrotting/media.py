@@ -4,6 +4,7 @@ from urllib.parse import urljoin, urlsplit
 from bs4 import BeautifulSoup
 
 from pipelines.media import MediaCandidate, MediaReference
+from pipelines.media_context import page_owners
 from pipelines.sources.virtualglobetrotting import FEED
 
 ORIGINS = ("https://c1.vgtstatic.com", "https://c2.vgtstatic.com")
@@ -26,14 +27,13 @@ def discover(url: str, body: bytes, entities: list[dict]) -> list[MediaCandidate
     )
     if identity is None:
         raise ValueError("Missing VirtualGlobetrotting map identity for media")
-    owners = sorted(
-        {
-            (entity["id"], evidence["id"])
+    owners = page_owners(
+        url,
+        (
+            entity
             for entity in entities
-            for evidence in entity["evidence"]
-            if evidence["url"] == url
-            and entity["id"] == "virtualglobetrotting:" + identity[1]
-        }
+            if entity["id"] == "virtualglobetrotting:" + identity[1]
+        ),
     )
     rows = []
     for image in soup.select('img[src], meta[property="og:image"][content]'):

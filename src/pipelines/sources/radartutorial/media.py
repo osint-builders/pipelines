@@ -5,6 +5,7 @@ from urllib.parse import quote, urljoin, urlsplit, urlunsplit
 from bs4 import Tag
 
 from pipelines.media import MediaCandidate, MediaReference
+from pipelines.media_context import page_owners
 from pipelines.sources.html import text
 from pipelines.sources.radartutorial import parse_html
 
@@ -49,12 +50,7 @@ def _container(image: Tag) -> Tag:
 
 
 def candidates(url: str, body: bytes, entities: list[dict]) -> Iterable[MediaCandidate]:
-    owners = sorted(
-        (entity["id"], page["id"])
-        for entity in entities
-        for page in entity["evidence"]
-        if page["url"] == url
-    )
+    owners = page_owners(url, entities)
     if not owners:
         return
     soup = parse_html(body)

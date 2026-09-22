@@ -5,6 +5,7 @@ from urllib.parse import quote, urljoin, urlsplit, urlunsplit
 from bs4 import BeautifulSoup, Tag
 
 from pipelines.media import MediaCandidate, MediaReference
+from pipelines.media_context import page_owners
 from pipelines.sources.html import text
 
 _FORMATS = {".jpg", ".jpeg", ".png", ".webp"}
@@ -38,12 +39,7 @@ def _context(image: Tag) -> Tag | None:
 
 
 def candidates(url: str, body: bytes, entities: list[dict]) -> Iterable[MediaCandidate]:
-    owners = sorted(
-        (entity["id"], page["id"])
-        for entity in entities
-        for page in entity["evidence"]
-        if page["url"] == url
-    )
+    owners = page_owners(url, entities)
     if not owners:
         return
     soup = BeautifulSoup(body, "html.parser")

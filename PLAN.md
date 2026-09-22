@@ -14,7 +14,7 @@ artifacts and M10 benchmark inputs remain unchanged.
 
 - [x] Reuse content/evidence identity validation and remove the duplicate numeric validator; 163 focused tests and the released dataset verification passed.
 - [x] Consolidate shared Go bundle validation and evidence ownership; all Go tests and vet passed.
-- [ ] Unify repeated scraper media-owner lookup while retaining source-specific matching.
+- [x] Unify repeated scraper media-owner lookup while retaining source-specific matching; affected media and pipeline tests passed.
 - [ ] Consolidate repeated HTML link rewriting without changing source policies.
 - [ ] Run the complete checks and commit the finished cleanup.
 

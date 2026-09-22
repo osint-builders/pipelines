@@ -6,6 +6,7 @@ from urllib.parse import quote, unquote, urljoin, urlsplit
 from bs4 import BeautifulSoup
 
 from pipelines.media import MediaCandidate, MediaReference
+from pipelines.media_context import page_owners
 
 ORIGIN = "https://militaryperiscope.com"
 _PREFIX = "/wt/media/original_images/"
@@ -137,14 +138,7 @@ def candidates(url: str, body: bytes, entities: list[dict]) -> Iterable[MediaCan
         return
     if not isinstance(props, dict):
         raise ValueError("Invalid Military Periscope media page")
-    owners = sorted(
-        {
-            (entity["id"], page["id"])
-            for entity in entities
-            for page in entity["evidence"]
-            if page["url"] == url
-        }
-    )
+    owners = page_owners(url, entities)
     ambiguous = len({identity for identity, _ in owners}) > 1
     labels = props.get("readable_name") or {}
     for image, context in _images(props, (), labels):

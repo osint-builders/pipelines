@@ -1,3 +1,18 @@
+from collections.abc import Iterable
+
+
+def page_owners(url: str, entities: Iterable[dict]) -> list[tuple[str, str]]:
+    """Return unique entity/evidence pairs captured from this page."""
+    return sorted(
+        {
+            (entity["id"], evidence["id"])
+            for entity in entities
+            for evidence in entity["evidence"]
+            if evidence["url"] == url
+        }
+    )
+
+
 def eligible_reference(record: dict, reference: dict) -> bool:
     """Keep reference context only when its recorded occurrence permits it."""
     occurrences = record.get("occurrences", [])
