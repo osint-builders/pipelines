@@ -1,8 +1,11 @@
 from collections.abc import Iterable
 from pathlib import Path
-from typing import Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
 from pipelines.model import Entity
+
+if TYPE_CHECKING:
+    from pipelines.media import MediaCandidate
 
 
 class Source(Protocol):
@@ -46,4 +49,29 @@ class AuditedSource(Protocol):
 class AuthenticatedSource(Protocol):
     def request_headers(self, url: str) -> dict[str, str]:
         """Return HTTP headers for a source URL."""
+        ...
+
+
+@runtime_checkable
+class PostSource(Protocol):
+    def request_body(self, url: str) -> bytes | None:
+        """Return a POST body for a stable archive URL, or None for GET."""
+        ...
+
+
+@runtime_checkable
+class MediaSource(Protocol):
+    media_origins: tuple[str, ...]
+
+    def discover_media(
+        self, url: str, body: bytes, entities: list[dict]
+    ) -> Iterable["MediaCandidate"]:
+        """Describe media and its evidence links using an archived response."""
+        ...
+
+
+@runtime_checkable
+class MediaFallbackSource(Protocol):
+    def media_fallback_url(self, url: str, error: str) -> str | None:
+        """Return a same-origin alternative for an interrupted media transfer."""
         ...

@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "status": "development_frozen_before_retrieval",
+  "base_fixture": "tests/fixtures/multimodal.json",
+  "base_fixture_sha256": "2cee725a40fb09254d4db426c4524eda30d54e67240bfc9038d9d1a8479a25ee",
+  "source_content_sha256": "f82d70c7591e9e13c1a04ce11a256831a764e4f15761773e67a4604aab4bc4b6",
+  "authorship": "Text constraints authored from the archived source evidence for the six existing development image cases before executing combined retrieval with these texts. Image bytes, photograph groups, source filters and expected IDs are inherited unchanged from the base fixture.",
+  "limitations": [
+    "Development evidence only; these images were already used during earlier milestones and do not establish held-out quality.",
+    "Six query photographs depict five entities, including two views of the same attack aircraft; observations are correlated.",
+    "Texts describe source-backed families, roles or specifications and do not certify an exact pictured variant.",
+    "No negative cases or release-sized sample; ranked suggestions remain separate from accepted identification."
+  ],
+  "cases": [
+    {
+      "case_id": "image-militaryperiscope-124795",
+      "text": "Italian Brazilian front-line attack aircraft",
+      "evidence": {
+        "entity_id": "militaryperiscope:318028",
+        "evidence_id": "50a5f7af101fcac0729e9369",
+        "quote": "The AMX was a joint Italian-Brazilian program to develop a front-line attack aircraft"
+      }
+    },
+    {
+      "case_id": "image-militaryperiscope-124796",
+      "text": "single non-afterburning Spey turbofan attack aircraft",
+      "evidence": {
+        "entity_id": "militaryperiscope:318028",
+        "evidence_id": "50a5f7af101fcac0729e9369",
+        "quote": "The single, non-afterburning Rolls-Royce Spey turbofan"
+      }
+    },
+    {
+      "case_id": "image-militaryperiscope-125714",
+      "text": "medical evacuation helicopter two stretcher patients",
+      "evidence": {
+        "entity_id": "militaryperiscope:318794",
+        "evidence_id": "a2280fc96c077db0a140e1d8",
+        "quote": "In the medical evacuation role, the helicopter can carry two stretcher patients"
+      }
+    },
+    {
+      "case_id": "image-militaryperiscope-87087",
+      "text": "Spanish three-dimensional L band air surveillance radar",
+      "evidence": {
+        "entity_id": "militaryperiscope:332515",
+        "evidence_id": "ff682bc432816b358aa18368",
+        "quote": "a Spanish three-dimensional air surveillance radar that operates in the L band"
+      }
+    },
+    {
+      "case_id": "image-militaryperiscope-125910",
+      "text": "Chinese main battle tank 125-mm smoothbore gun",
+      "evidence": {
+        "entity_id": "militaryperiscope:406357",
+        "evidence_id": "684238748fdec1af27e65cc7",
+        "quote": "The main armament is a 125-mm smoothbore gun."
+      }
+    },
+    {
+      "case_id": "image-commons-77e98441df9f37ab8a02c2fb",
+      "text": "portable radar",
+      "evidence": {
+        "entity_id": "commons:54320786",
+        "evidence_id": "77e98441df9f37ab8a02c2fb",
+        "quote": "Portable radar 1L122E"
+      }
+    }
+  ]
+}

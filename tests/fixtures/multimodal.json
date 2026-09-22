@@ -1,0 +1,1165 @@
+{
+  "schema_version": 1,
+  "status": "seed_inputs_reviewed_m3",
+  "scope": "M1 seed restored and expanded during M3. Original splits and acceptance targets are unchanged. No visual encoder or image-query quality is measured; this sample cannot satisfy the release gates.",
+  "snapshots": {
+    "militaryperiscope": "20260921T150619Z-2e665ec1",
+    "commons": "20260921T154713Z-cbe866b2",
+    "radartutorial": "20260920T010304Z-272e47ad",
+    "cambridgepixel": "20260920T060525Z-8ae83066",
+    "deagel": "20260920T020600Z-64cbdffa"
+  },
+  "restore": {
+    "originals": "Prefer verified originals from the local media archive via archive_media_id when present. Otherwise GET capture_url (or url) into local_path; require HTTP 200 image content and matching SHA256. Do not substitute changed bytes after an upstream update.",
+    "derivatives": "Restore parent first, then crop_box_xyxy without scaling. Original captures are JPEG; derivatives are PNG. The recorded SHA256 values pin the local copies.",
+    "derivative_encoder": "Windows .NET System.Drawing.Bitmap.Clone(Rectangle(left, top, right-left, bottom-top), parent.PixelFormat), saved with System.Drawing.Imaging.ImageFormat.Png.",
+    "secrets": "No authentication material is stored in this fixture. Read source-scoped runtime credentials only if a future original request requires them."
+  },
+  "split_policy": {
+    "method": "Fixed explicit assignments by conservatively grouped underlying photograph; frozen before model selection.",
+    "gallery": "Only captured gallery assets may enter a benchmark image index. The same entity can occur in all splits, but its query photographs cannot.",
+    "exclusions": "Exclude every development/evaluation photo group and all cross-source copies, resized copies, crops and other derivatives from the image index, even after full media capture. Missing near-duplicate checks block a held-out quality claim.",
+    "development": "May tune retrieval and thresholds; never move its photos to evaluation.",
+    "evaluation": "Reserved for evaluation after choices are frozen. Multiple cases from one photograph are one independent sample, not extra observations.",
+    "pending_media": "Pending cases are excluded from scored metrics. All seed images are captured and inspected; Bofors and Dunay diagram cases still lack suitable independent gallery references.",
+    "cropping": "crop_box_xyxy uses original decoded pixel coordinates and exclusive right/bottom bounds; derivatives inherit the parent's split and photo group."
+  },
+  "review": {
+    "agent": "All 27 fixture images were visually inspected, including seven Commons originals restored during M3. Captions and entity associations were checked against archived evidence. No domain expert or user verification of these labels has occurred.",
+    "human_status": "pending",
+    "limitations": [
+      "Source labels identify record-level families; exact vehicle/aircraft variants are not independently established.",
+      "Some images retain readable model labels and depict multiple examples of the same family. Cropped controls remove publisher model-name overlays, not all natural markings.",
+      "Cross-source visual deduplication has not run; the eventual evaluation index must enforce photo-group exclusion before any unseen-view claim.",
+      "The 1L122E and 1L122-2E pairs use distinct exposures but share an exhibition context across development and evaluation. They do not establish independent capture-session coverage, and both variants can appear in one frame.",
+      "Bofors and Dunay diagram queries are captured but unscored until suitable independent gallery references exist. The Dunay drawing may derive from the KH-7 reconnaissance family; keep the full scene and its crops out of that case gallery until resolved.",
+      "No-match images are easy controls only; realistic unrelated equipment remains needed. The Al Zarrar/Type 96 contrast is a related tank-class distractor, not a demonstrated sibling-variant distinction."
+    ]
+  },
+  "media": [
+    {
+      "id": "militaryperiscope-124821",
+      "url": "https://militaryperiscope.com/wt/media/original_images/AMX2.jpg",
+      "evidence_id": "50a5f7af101fcac0729e9369",
+      "evidence_url": "https://militaryperiscope.com/weapons/aircraft/attack/1-amx-attack-aircraft/overview/",
+      "entity_ids": [
+        "militaryperiscope:318028"
+      ],
+      "title": "A-11 AMX",
+      "sha256": "89096e39dd15ca4c4aaca0741d3bf6929f4db0ee69fac8c9bec6f55b79051aa7",
+      "bytes": 83758,
+      "local_path": "build/m1/media/militaryperiscope-124821.jpg",
+      "width": 1000,
+      "height": 674,
+      "photo_group": "militaryperiscope-124821",
+      "split": "gallery",
+      "status": "captured",
+      "review_status": "agent_inspected",
+      "label_basis": "Publisher image block associated with this subject; agent inspected pixels. Family-level label, not a claim about an exact variant.",
+      "kind": "photograph"
+    },
+    {
+      "id": "militaryperiscope-124795",
+      "url": "https://militaryperiscope.com/wt/media/original_images/AMX_1.jpg",
+      "evidence_id": "50a5f7af101fcac0729e9369",
+      "evidence_url": "https://militaryperiscope.com/weapons/aircraft/attack/1-amx-attack-aircraft/overview/",
+      "entity_ids": [
+        "militaryperiscope:318028"
+      ],
+      "title": "AMX 1",
+      "sha256": "f7dcca9f9092853d2a566198a870d7bc74d32999d1747dda3325889ba48dd5c1",
+      "bytes": 134934,
+      "local_path": "build/m1/media/militaryperiscope-124795.jpg",
+      "width": 1000,
+      "height": 665,
+      "photo_group": "militaryperiscope-124795",
+      "split": "development",
+      "status": "captured",
+      "review_status": "agent_inspected",
+      "label_basis": "Publisher image block associated with this subject; agent inspected pixels. Family-level label, not a claim about an exact variant.",
+      "kind": "photograph"
+    },
+    {
+      "id": "militaryperiscope-124796",
+      "url": "https://militaryperiscope.com/wt/media/original_images/AMX_2.jpg",
+      "evidence_id": "50a5f7af101fcac0729e9369",
+      "evidence_url": "https://militaryperiscope.com/weapons/aircraft/attack/1-amx-attack-aircraft/overview/",
+      "entity_ids": [
+        "militaryperiscope:318028"
+      ],
+      "title": "AMX 2",
+      "sha256": "c1d152cfde72b01656ab08e1e784cc4b43baa778840ea139fab1767fb07e483a",
+      "bytes": 73249,
+      "local_path": "build/m1/media/militaryperiscope-124796.jpg",
+      "width": 1000,
+      "height": 429,
+      "photo_group": "militaryperiscope-124796",
+      "split": "development",
+      "status": "captured",
+      "review_status": "agent_inspected",
+      "label_basis": "Publisher image block associated with this subject; agent inspected pixels. Family-level label, not a claim about an exact variant.",
+      "kind": "photograph"
+    },
+    {
+      "id": "militaryperiscope-124797",
+      "url": "https://militaryperiscope.com/wt/media/original_images/AMX_3.jpg",
+      "evidence_id": "50a5f7af101fcac0729e9369",
+      "evidence_url": "https://militaryperiscope.com/weapons/aircraft/attack/1-amx-attack-aircraft/overview/",
+      "entity_ids": [
+        "militaryperiscope:318028"
+      ],
+      "title": "AMX 3",
+      "sha256": "9cbb70788966a4f7cc5b1033b5c68c59e7da51c19e39f328c2bfaf27693c0f4c",
+      "bytes": 72890,
+      "local_path": "build/m1/media/militaryperiscope-124797.jpg",
+      "width": 1000,
+      "height": 504,
+      "photo_group": "militaryperiscope-124797",
+      "split": "evaluation",
+      "status": "captured",
+      "review_status": "agent_inspected",
+      "label_basis": "Publisher image block associated with this subject; agent inspected pixels. Family-level label, not a claim about an exact variant.",
+      "kind": "photograph"
+    },
+    {
+      "id": "militaryperiscope-125713",
+      "url": "https://militaryperiscope.com/wt/media/original_images/H145_1_.jpg",
+      "evidence_id": "a2280fc96c077db0a140e1d8",
+      "evidence_url": "https://militaryperiscope.com/weapons/aircraft/rotary/h145/overview/",
+      "entity_ids": [
+        "militaryperiscope:318794"
+      ],
+      "title": "H145 1",
+      "sha256": "48fc4cab60540d1c0424a5787695cd61cb2db1da871ddb646bc04bf4e4143065",
+      "bytes": 74307,
+      "local_path": "build/m1/media/militaryperiscope-125713.jpg",
+      "width": 1000,
+      "height": 478,
+      "photo_group": "militaryperiscope-125713",
+      "split": "gallery",
+      "status": "captured",
+      "review_status": "agent_inspected",
+      "label_basis": "Publisher image block associated with this subject; agent inspected pixels. Family-level label, not a claim about an exact variant.",
+      "kind": "photograph"
+    },
+    {
+      "id": "militaryperiscope-125714",
+      "url": "https://militaryperiscope.com/wt/media/original_images/H145_2_.jpg",
+      "evidence_id": "a2280fc96c077db0a140e1d8",
+      "evidence_url": "https://militaryperiscope.com/weapons/aircraft/rotary/h145/overview/",
+      "entity_ids": [
+        "militaryperiscope:318794"
+      ],
+      "title": "H145 2",
+      "sha256": "94c3897ada48b5c3287c3175eff9bac02ceef8fe656191050e8c55e8898ce181",
+      "bytes": 165408,
+      "local_path": "build/m1/media/militaryperiscope-125714.jpg",
+      "width": 1000,
+      "height": 631,
+      "photo_group": "militaryperiscope-125714",
+      "split": "development",
+      "status": "captured",
+      "review_status": "agent_inspected",
+      "label_basis": "Publisher image block associated with this subject; agent inspected pixels. Family-level label, not a claim about an exact variant.",
+      "kind": "photograph"
+    },
+    {
+      "id": "militaryperiscope-125715",
+      "url": "https://militaryperiscope.com/wt/media/original_images/H145_3_.jpg",
+      "evidence_id": "a2280fc96c077db0a140e1d8",
+      "evidence_url": "https://militaryperiscope.com/weapons/aircraft/rotary/h145/overview/",
+      "entity_ids": [
+        "militaryperiscope:318794"
+      ],
+      "title": "H145 3",
+      "sha256": "61b1236deff91768b17816aed8af37228738a62cc1c4230e1677d9e2d0fcc3e9",
+      "bytes": 126142,
+      "local_path": "build/m1/media/militaryperiscope-125715.jpg",
+      "width": 1000,
+      "height": 312,
+      "photo_group": "militaryperiscope-125715",
+      "split": "evaluation",
+      "status": "captured",
+      "review_status": "agent_inspected",
+      "label_basis": "Publisher image block associated with this subject; agent inspected pixels. Family-level label, not a claim about an exact variant.",
+      "kind": "photograph"
+    },
+    {
+      "id": "militaryperiscope-81795",
+      "url": "https://militaryperiscope.com/wt/media/original_images/weapons_images_new/1543933118_rotary_w0008243_.jpg",
+      "evidence_id": "77e218fb34b71fbedc53d775",
+      "evidence_url": "https://militaryperiscope.com/weapons/aircraft/rotary/h175/overview/",
+      "entity_ids": [
+        "militaryperiscope:318834"
+      ],
+      "title": "EC 175",
+      "sha256": "7287c1e696124ff59609980c29053d4ee9aa17e82b58d0c5ab139dc695f68cb9",
+      "bytes": 137731,
+      "local_path": "build/m1/media/militaryperiscope-81795.jpg",
+      "width": 500,
+      "height": 977,
+      "photo_group": "militaryperiscope-81795",
+      "split": "gallery",
+      "status": "captured",
+      "review_status": "agent_inspected",
+      "label_basis": "Publisher image block associated with this subject; agent inspected pixels. Family-level label, not a claim about an exact variant. Three-photo collage treated as one indivisible group; all component photos must stay in this split.",
+      "kind": "photograph_composite"
+    },
+    {
+      "id": "militaryperiscope-87086",
+      "url": "https://militaryperiscope.com/wt/media/original_images/2019-12/Lanza1.jpg",
+      "evidence_id": "ff682bc432816b358aa18368",
+      "evidence_url": "https://militaryperiscope.com/weapons/electronics/ground-radars/lanza-air-surveillance-radar/overview/",
+      "entity_ids": [
+        "militaryperiscope:332515"
+      ],
+      "title": "Lanza",
+      "sha256": "60af7f3571062867c964cdd760c4010ead0e913b5988bf83bb4dccc34c1d345e",
+      "bytes": 128310,
+      "local_path": "build/m1/media/militaryperiscope-87086.jpg",
+      "width": 600,
+      "height": 492,
+      "photo_group": "militaryperiscope-87086",
+      "split": "gallery",
+      "status": "captured",
+      "review_status": "agent_inspected",
+      "label_basis": "Publisher image block associated with this subject; agent inspected pixels. Family-level label, not a claim about an exact variant.",
+      "kind": "photograph"
+    },
+    {
+      "id": "militaryperiscope-87087",
+      "url": "https://militaryperiscope.com/wt/media/original_images/2019-12/Lanza2.jpg",
+      "evidence_id": "ff682bc432816b358aa18368",
+      "evidence_url": "https://militaryperiscope.com/weapons/electronics/ground-radars/lanza-air-surveillance-radar/overview/",
+      "entity_ids": [
+        "militaryperiscope:332515"
+      ],
+      "title": "LTR-25",
+      "sha256": "4fe519545f8c7eae8d05382c5bdfe22374d59585a4231d69507122dde6968a86",
+      "bytes": 110668,
+      "local_path": "build/m1/media/militaryperiscope-87087.jpg",
+      "width": 600,
+      "height": 475,
+      "photo_group": "militaryperiscope-87087",
+      "split": "development",
+      "status": "captured",
+      "review_status": "agent_inspected",
+      "label_basis": "Publisher image block associated with this subject; agent inspected pixels. Family-level label, not a claim about an exact variant.",
+      "kind": "photograph"
+    },
+    {
+      "id": "militaryperiscope-87089",
+      "url": "https://militaryperiscope.com/wt/media/original_images/2019-12/Lanza4.jpg",
+      "evidence_id": "ff682bc432816b358aa18368",
+      "evidence_url": "https://militaryperiscope.com/weapons/electronics/ground-radars/lanza-air-surveillance-radar/overview/",
+      "entity_ids": [
+        "militaryperiscope:332515"
+      ],
+      "title": "LTR-20 stowed on truck",
+      "sha256": "c36d08f811d4030df8933b582117fff38d449adc0c2e82496aa11db97d69cd48",
+      "bytes": 95942,
+      "local_path": "build/m1/media/militaryperiscope-87089.jpg",
+      "width": 600,
+      "height": 410,
+      "photo_group": "militaryperiscope-87089",
+      "split": "evaluation",
+      "status": "captured",
+      "review_status": "agent_inspected",
+      "label_basis": "Publisher image block associated with this subject; agent inspected pixels. Family-level label, not a claim about an exact variant.",
+      "kind": "photograph"
+    },
+    {
+      "id": "militaryperiscope-87831",
+      "url": "https://militaryperiscope.com/wt/media/original_images/2020-08/AlZarrar1.jpg",
+      "evidence_id": "bd621f32abb3e88e63e4fb2e",
+      "evidence_url": "https://militaryperiscope.com/weapons/ground-combat-vehicles/tanks/al-zarrar-main-battle-tank/overview/",
+      "entity_ids": [
+        "militaryperiscope:333029"
+      ],
+      "title": "Al Zarrar front",
+      "sha256": "ad366c1887477519c4b6db5c2eb494ae035b4ec4bf4e279521f90b58e64ebe2e",
+      "bytes": 107528,
+      "local_path": "build/m1/media/militaryperiscope-87831.jpg",
+      "width": 600,
+      "height": 418,
+      "photo_group": "militaryperiscope-87831",
+      "split": "gallery",
+      "status": "captured",
+      "review_status": "agent_inspected",
+      "label_basis": "Publisher image block associated with this subject; agent inspected pixels. Family-level label, not a claim about an exact variant.",
+      "kind": "photograph"
+    },
+    {
+      "id": "militaryperiscope-87832",
+      "url": "https://militaryperiscope.com/wt/media/original_images/2020-08/AlZarrar2.jpg",
+      "evidence_id": "bd621f32abb3e88e63e4fb2e",
+      "evidence_url": "https://militaryperiscope.com/weapons/ground-combat-vehicles/tanks/al-zarrar-main-battle-tank/overview/",
+      "entity_ids": [
+        "militaryperiscope:333029"
+      ],
+      "title": "Al Zarrar front",
+      "sha256": "ec6f7c4d89eb8457a3a8261ca3ac3844cf97e8e226ceb86bff28908bda8ceef8",
+      "bytes": 97022,
+      "local_path": "build/m1/media/militaryperiscope-87832.jpg",
+      "width": 600,
+      "height": 401,
+      "photo_group": "militaryperiscope-87832",
+      "split": "evaluation",
+      "status": "captured",
+      "review_status": "agent_inspected",
+      "label_basis": "Publisher image block associated with this subject; agent inspected pixels. Family-level label, not a claim about an exact variant.",
+      "kind": "photograph"
+    },
+    {
+      "id": "militaryperiscope-128582",
+      "url": "https://militaryperiscope.com/wt/media/original_images/Type_96_Updated_image.jpg",
+      "evidence_id": "684238748fdec1af27e65cc7",
+      "evidence_url": "https://militaryperiscope.com/weapons/ground-combat-vehicles/tanks/type-96-main-battle-tank/overview/",
+      "entity_ids": [
+        "militaryperiscope:406357"
+      ],
+      "title": "Type 96 Updated image",
+      "sha256": "9197866ca49d37dc92eaca13872b7b9dd174cc973ae5afe13b856b2808011f7b",
+      "bytes": 163554,
+      "local_path": "build/m1/media/militaryperiscope-128582.jpg",
+      "width": 996,
+      "height": 606,
+      "photo_group": "militaryperiscope-128582",
+      "split": "evaluation",
+      "status": "captured",
+      "review_status": "agent_inspected",
+      "label_basis": "Publisher image block associated with this subject; agent inspected pixels. Family-level label, not a claim about an exact variant. Heavy dust occludes much of the vehicle; exact variant remains unverified.",
+      "kind": "photograph"
+    },
+    {
+      "id": "militaryperiscope-125909",
+      "url": "https://militaryperiscope.com/wt/media/original_images/Type_96_MBT_1_.jpg",
+      "evidence_id": "684238748fdec1af27e65cc7",
+      "evidence_url": "https://militaryperiscope.com/weapons/ground-combat-vehicles/tanks/type-96-main-battle-tank/overview/",
+      "entity_ids": [
+        "militaryperiscope:406357"
+      ],
+      "title": "Type 96 MBT 1",
+      "sha256": "88dcedae93018dc86e20371ef3f2f48c6ffd0f9f9d587979010521d4a28de94a",
+      "bytes": 291658,
+      "local_path": "build/m1/media/militaryperiscope-125909.jpg",
+      "width": 1000,
+      "height": 864,
+      "photo_group": "militaryperiscope-125909",
+      "split": "gallery",
+      "status": "captured",
+      "review_status": "agent_inspected",
+      "label_basis": "Publisher image block associated with this subject; agent inspected pixels. Family-level label, not a claim about an exact variant.",
+      "kind": "photograph"
+    },
+    {
+      "id": "militaryperiscope-125910",
+      "url": "https://militaryperiscope.com/wt/media/original_images/Type_96_MBT_2_.jpg",
+      "evidence_id": "684238748fdec1af27e65cc7",
+      "evidence_url": "https://militaryperiscope.com/weapons/ground-combat-vehicles/tanks/type-96-main-battle-tank/overview/",
+      "entity_ids": [
+        "militaryperiscope:406357"
+      ],
+      "title": "Type 96 MBT 2",
+      "sha256": "fbba16c6928a51353740c2ce346802c3ada38feaf29802416ed8c316c70f7d23",
+      "bytes": 242366,
+      "local_path": "build/m1/media/militaryperiscope-125910.jpg",
+      "width": 1000,
+      "height": 612,
+      "photo_group": "militaryperiscope-125910",
+      "split": "development",
+      "status": "captured",
+      "review_status": "agent_inspected",
+      "label_basis": "Publisher image block associated with this subject; agent inspected pixels. Family-level label, not a claim about an exact variant.",
+      "kind": "photograph"
+    },
+    {
+      "id": "militaryperiscope-82246",
+      "url": "https://militaryperiscope.com/wt/media/original_images/weapons_images_new/1543933286_navguns_w0004618_.jpg",
+      "evidence_id": "d5ed08512149e9e02d0012cd",
+      "evidence_url": "https://militaryperiscope.com/weapons/artillery/naval-guns/40-mm-bofors-mk-3/overview/",
+      "entity_ids": [
+        "militaryperiscope:319903"
+      ],
+      "title": "Mk 3 naval gun",
+      "sha256": "34e622aba2f1579cda598891ec161600c5fc8b22861b85d7c3f5a39b49aa7222",
+      "bytes": 105350,
+      "width": 676,
+      "height": 709,
+      "local_path": "build/m1/media/militaryperiscope-82246.jpg",
+      "photo_group": "militaryperiscope-82246",
+      "split": "evaluation",
+      "status": "captured",
+      "review_status": "agent_inspected",
+      "label_basis": "Publisher Mk3 gun image visibly contains dimensioned orthographic views and a cutaway. Composite stays wholly in evaluation; independent gallery image still needed.",
+      "kind": "diagram_composite"
+    },
+    {
+      "id": "amx-crop",
+      "url": "https://militaryperiscope.com/wt/media/original_images/AMX_3.jpg",
+      "evidence_id": "50a5f7af101fcac0729e9369",
+      "evidence_url": "https://militaryperiscope.com/weapons/aircraft/attack/1-amx-attack-aircraft/overview/",
+      "entity_ids": [
+        "militaryperiscope:318028"
+      ],
+      "title": "amx-crop",
+      "sha256": "bec0b1cb82e0699f26d301853e07a2272de6899838d195e12dbcba1cfc85c9c2",
+      "bytes": 181837,
+      "local_path": "build/m1/media/amx-crop.png",
+      "width": 770,
+      "height": 280,
+      "photo_group": "militaryperiscope-124797",
+      "split": "evaluation",
+      "status": "captured",
+      "review_status": "agent_inspected",
+      "label_basis": "Deterministic crop inspected by agent; retains the source-labeled subject and excludes the overlaid model label.",
+      "kind": "photograph_crop",
+      "crop_from": "militaryperiscope-124797",
+      "crop_box_xyxy": [
+        50,
+        0,
+        820,
+        280
+      ],
+      "recipe": "Integer pixel bounds [left, top, right, bottom), no resampling, PNG output. SHA256 pins stored bytes; alternative PNG encoders must preserve decoded pixels."
+    },
+    {
+      "id": "h145-crop",
+      "url": "https://militaryperiscope.com/wt/media/original_images/H145_3_.jpg",
+      "evidence_id": "a2280fc96c077db0a140e1d8",
+      "evidence_url": "https://militaryperiscope.com/weapons/aircraft/rotary/h145/overview/",
+      "entity_ids": [
+        "militaryperiscope:318794"
+      ],
+      "title": "h145-crop",
+      "sha256": "a2a506471722c920c0bf9e8ef5ff679881f566d59d06b5545ab6ff64875a31b9",
+      "bytes": 330610,
+      "local_path": "build/m1/media/h145-crop.png",
+      "width": 680,
+      "height": 210,
+      "photo_group": "militaryperiscope-125715",
+      "split": "evaluation",
+      "status": "captured",
+      "review_status": "agent_inspected",
+      "label_basis": "Deterministic crop inspected by agent; retains the source-labeled subject and excludes the overlaid model label.",
+      "kind": "photograph_crop",
+      "crop_from": "militaryperiscope-125715",
+      "crop_box_xyxy": [
+        300,
+        50,
+        980,
+        260
+      ],
+      "recipe": "Integer pixel bounds [left, top, right, bottom), no resampling, PNG output. SHA256 pins stored bytes; alternative PNG encoders must preserve decoded pixels."
+    },
+    {
+      "id": "sky-negative",
+      "url": "https://militaryperiscope.com/wt/media/original_images/AMX_3.jpg",
+      "evidence_id": "50a5f7af101fcac0729e9369",
+      "evidence_url": "https://militaryperiscope.com/weapons/aircraft/attack/1-amx-attack-aircraft/overview/",
+      "entity_ids": [],
+      "title": "sky-negative",
+      "sha256": "24c80212b13103271234956a1326ecbfa87a5e46a16510444a7fb2d6081f8f3e",
+      "bytes": 9773,
+      "local_path": "build/m1/media/sky-negative.png",
+      "width": 300,
+      "height": 170,
+      "photo_group": "militaryperiscope-124797",
+      "split": "evaluation",
+      "status": "captured",
+      "review_status": "agent_inspected",
+      "label_basis": "Deterministic crop inspected by agent; contains only sky, no equipment or overlaid model label. Easy negative control; not a representative hard negative.",
+      "kind": "photograph_crop",
+      "crop_from": "militaryperiscope-124797",
+      "crop_box_xyxy": [
+        0,
+        260,
+        300,
+        430
+      ],
+      "recipe": "Integer pixel bounds [left, top, right, bottom), no resampling, PNG output. SHA256 pins stored bytes; alternative PNG encoders must preserve decoded pixels."
+    },
+    {
+      "id": "commons-9e5b95b511993464c594f495",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/a/aa/Almaz-Antey_1L122-2E_at_MAKS-2009.jpg",
+      "evidence_id": "9e5b95b511993464c594f495",
+      "evidence_url": "https://commons.wikimedia.org/wiki/File:Almaz-Antey_1L122-2E_at_MAKS-2009.jpg",
+      "entity_ids": [
+        "commons:54320747"
+      ],
+      "title": "Almaz-Antey 1L122-2E at MAKS-2009.jpg",
+      "photo_group": "commons-9e5b95b511993464c594f495",
+      "split": "gallery",
+      "status": "captured",
+      "review_status": "agent_inspected",
+      "label_basis": "Both archived captions identify 1L122-2E and both frames show the tracked platform carrying the rectangular array. Visible vehicle placards support this source label.",
+      "kind": "photograph",
+      "sha256": "e12fb588369c877ab6e776194f40a6fd51c6bbdea360de86940a7b44562e982d",
+      "bytes": 2019608,
+      "width": 2816,
+      "height": 2112,
+      "local_path": "build/m1/media/commons-9e5b95b511993464c594f495.jpg",
+      "archive_media_id": "commons:media:c767539030f5a2d50a93b323",
+      "capture_url": "https://upload.wikimedia.org/wikipedia/commons/a/aa/Almaz-Antey_1L122-2E_at_MAKS-2009.jpg?utm_source=commons.wikimedia.org&utm_campaign=index&utm_content=original"
+    },
+    {
+      "id": "commons-460c826d0ae0d9c0e38a07bc",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/b/b4/MAKS-2009-213.jpg",
+      "evidence_id": "460c826d0ae0d9c0e38a07bc",
+      "evidence_url": "https://commons.wikimedia.org/wiki/File:MAKS-2009-213.jpg",
+      "entity_ids": [
+        "commons:54320747"
+      ],
+      "title": "MAKS-2009-213.jpg",
+      "photo_group": "commons-460c826d0ae0d9c0e38a07bc",
+      "split": "evaluation",
+      "status": "captured",
+      "review_status": "agent_inspected",
+      "label_basis": "Both archived captions identify 1L122-2E and both frames show the tracked platform carrying the rectangular array. Visible vehicle placards support this source label.",
+      "kind": "photograph",
+      "sha256": "95629e855906c150ca9730b69814405d5b3871f8c6386413fffb3977cd9c870e",
+      "bytes": 1700996,
+      "width": 2250,
+      "height": 1500,
+      "local_path": "build/m1/media/commons-460c826d0ae0d9c0e38a07bc.jpg",
+      "archive_media_id": "commons:media:c6f14cc32abf3ef78b6b841f",
+      "capture_url": "https://upload.wikimedia.org/wikipedia/commons/b/b4/MAKS-2009-213.jpg?utm_source=commons.wikimedia.org&utm_campaign=index&utm_content=original"
+    },
+    {
+      "id": "commons-e185589e0b985cd5c71eeed3",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/9/93/MAKS-2009-210.jpg",
+      "evidence_id": "e185589e0b985cd5c71eeed3",
+      "evidence_url": "https://commons.wikimedia.org/wiki/File:MAKS-2009-210.jpg",
+      "entity_ids": [
+        "commons:54320786"
+      ],
+      "title": "MAKS-2009-210.jpg",
+      "photo_group": "commons-e185589e0b985cd5c71eeed3",
+      "split": "gallery",
+      "status": "captured",
+      "review_status": "agent_inspected",
+      "label_basis": "Both archived captions explicitly identify portable radar 1L122E and both images show that foreground tripod assembly. Its portable mounting distinguishes it from the tracked 1L122-2E confusable target in the existing source categories.",
+      "kind": "photograph",
+      "sha256": "f5a6c76b100a9c027717a4f6c1d440c99122e34883b091d3e52814cfa8704973",
+      "bytes": 2024422,
+      "width": 2250,
+      "height": 1500,
+      "local_path": "build/m1/media/commons-e185589e0b985cd5c71eeed3.jpg",
+      "archive_media_id": "commons:media:aad1736ab57fd299d5815c89",
+      "capture_url": "https://upload.wikimedia.org/wikipedia/commons/9/93/MAKS-2009-210.jpg?utm_source=commons.wikimedia.org&utm_campaign=index&utm_content=original"
+    },
+    {
+      "id": "commons-77e98441df9f37ab8a02c2fb",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/7/78/MAKS-2009-211.jpg",
+      "evidence_id": "77e98441df9f37ab8a02c2fb",
+      "evidence_url": "https://commons.wikimedia.org/wiki/File:MAKS-2009-211.jpg",
+      "entity_ids": [
+        "commons:54320786"
+      ],
+      "title": "MAKS-2009-211.jpg",
+      "photo_group": "commons-77e98441df9f37ab8a02c2fb",
+      "split": "development",
+      "status": "captured",
+      "review_status": "agent_inspected",
+      "label_basis": "Both archived captions explicitly identify portable radar 1L122E and both images show that foreground tripod assembly. Its portable mounting distinguishes it from the tracked 1L122-2E confusable target in the existing source categories.",
+      "kind": "photograph",
+      "sha256": "9f875455e8417d595748079920191faeb52ff696434a250dbf0b7ecaf90ecdab",
+      "bytes": 2567191,
+      "width": 2250,
+      "height": 1500,
+      "local_path": "build/m1/media/commons-77e98441df9f37ab8a02c2fb.jpg",
+      "archive_media_id": "commons:media:0bc85ce675c62698557770d3",
+      "capture_url": "https://upload.wikimedia.org/wikipedia/commons/7/78/MAKS-2009-211.jpg?utm_source=commons.wikimedia.org&utm_campaign=index&utm_content=original"
+    },
+    {
+      "id": "commons-e5861bb23b36732c197cf0ab",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/3/34/96L6E_at_the_MAKS-2011_%2801%29.jpg",
+      "evidence_id": "e5861bb23b36732c197cf0ab",
+      "evidence_url": "https://commons.wikimedia.org/wiki/File:96L6E_at_the_MAKS-2011_(01).jpg",
+      "entity_ids": [
+        "commons:49483718"
+      ],
+      "title": "96L6E at the MAKS-2011 (01).jpg",
+      "photo_group": "commons-e5861bb23b36732c197cf0ab",
+      "split": "gallery",
+      "status": "captured",
+      "review_status": "agent_inspected",
+      "label_basis": "Both archived captions identify 96L6E; visible array support, raised sensor assembly and wheeled platform are consistent with that label. The evidence labels type rather than the same physical vehicle.",
+      "kind": "photograph",
+      "sha256": "ec139a93f6900e762f82b8dcca0a6693593a5bd4f824e6ca60e524b7b35a9922",
+      "bytes": 1136176,
+      "width": 3970,
+      "height": 2670,
+      "local_path": "build/m1/media/commons-e5861bb23b36732c197cf0ab.jpg",
+      "archive_media_id": "commons:media:03251793a5f6ac1b9abdfa17",
+      "capture_url": "https://upload.wikimedia.org/wikipedia/commons/3/34/96L6E_at_the_MAKS-2011_%2801%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=index&utm_content=original"
+    },
+    {
+      "id": "commons-c6da92f5b27a91502667344e",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/9/99/%D0%92%D1%81%D0%B5%D0%B2%D1%8B%D1%81%D0%BE%D1%82%D0%BD%D1%8B%D0%B9_%D0%BE%D0%B1%D0%BD%D0%B0%D1%80%D1%83%D0%B6%D0%B8%D1%82%D0%B5%D0%BB%D1%8C_96%D0%9B6%D0%95_-_%D0%9F%D0%B0%D1%80%D0%BA%D0%B0_%D0%9F%D0%B0%D1%82%D1%80%D0%B8%D0%BE%D1%82_01.jpg",
+      "evidence_id": "c6da92f5b27a91502667344e",
+      "evidence_url": "https://commons.wikimedia.org/wiki/File:%D0%92%D1%81%D0%B5%D0%B2%D1%8B%D1%81%D0%BE%D1%82%D0%BD%D1%8B%D0%B9_%D0%BE%D0%B1%D0%BD%D0%B0%D1%80%D1%83%D0%B6%D0%B8%D1%82%D0%B5%D0%BB%D1%8C_96%D0%9B6%D0%95_-_%D0%9F%D0%B0%D1%80%D0%BA%D0%B0_%D0%9F%D0%B0%D1%82%D1%80%D0%B8%D0%BE%D1%82_01.jpg",
+      "entity_ids": [
+        "commons:49483718"
+      ],
+      "title": "Всевысотный обнаружитель 96Л6Е - Парка Патриот 01.jpg",
+      "photo_group": "commons-c6da92f5b27a91502667344e",
+      "split": "evaluation",
+      "status": "captured",
+      "review_status": "agent_inspected",
+      "label_basis": "Both archived captions identify 96L6E; visible array support, raised sensor assembly and wheeled platform are consistent with that label. The evidence labels type rather than the same physical vehicle.",
+      "kind": "photograph",
+      "sha256": "949369a71f782922da4bd3f1c719c2a72c9e0f85602e750b0123945b5ba80f69",
+      "bytes": 2241069,
+      "width": 2250,
+      "height": 1500,
+      "local_path": "build/m1/media/commons-c6da92f5b27a91502667344e.jpg",
+      "archive_media_id": "commons:media:ac02515f6bdfd56fe588ba8a",
+      "capture_url": "https://upload.wikimedia.org/wikipedia/commons/9/99/%D0%92%D1%81%D0%B5%D0%B2%D1%8B%D1%81%D0%BE%D1%82%D0%BD%D1%8B%D0%B9_%D0%BE%D0%B1%D0%BD%D0%B0%D1%80%D1%83%D0%B6%D0%B8%D1%82%D0%B5%D0%BB%D1%8C_96%D0%9B6%D0%95_-_%D0%9F%D0%B0%D1%80%D0%BA%D0%B0_%D0%9F%D0%B0%D1%82%D1%80%D0%B8%D0%BE%D1%82_01.jpg?utm_source=commons.wikimedia.org&utm_campaign=index&utm_content=original"
+    },
+    {
+      "id": "commons-e708785bdbe07bee182dea25",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/1/16/Dunay-3_radar_US_drawing.JPEG",
+      "evidence_id": "e708785bdbe07bee182dea25",
+      "evidence_url": "https://commons.wikimedia.org/wiki/File:Dunay-3_radar_US_drawing.JPEG",
+      "entity_ids": [
+        "commons:18438063"
+      ],
+      "title": "Dunay-3 radar US drawing.JPEG",
+      "photo_group": "commons-e708785bdbe07bee182dea25",
+      "split": "evaluation",
+      "status": "captured",
+      "review_status": "agent_inspected",
+      "label_basis": "Archived caption identifies US military drawing DD-ST-86-06623 of Dunay-3. Agent inspected its oblique aerial view of two installations; the source imagery used by the illustrator is unknown.",
+      "kind": "diagram",
+      "sha256": "4a96fd1d1214a3ea54b48416ad07e18fbfa4492fb73d9ee467e17ad37b53fcb6",
+      "bytes": 4183388,
+      "width": 2440,
+      "height": 1780,
+      "local_path": "build/m1/media/commons-e708785bdbe07bee182dea25.jpg",
+      "archive_media_id": "commons:media:f70ab6da7266249a5c1494ca",
+      "capture_url": "https://upload.wikimedia.org/wikipedia/commons/1/16/Dunay-3_radar_US_drawing.JPEG?utm_source=commons.wikimedia.org&utm_campaign=index&utm_content=original"
+    }
+  ],
+  "cases": [
+    {
+      "id": "text-amx-exact",
+      "task": "exact_designation",
+      "split": "development",
+      "status": "ready",
+      "query": {
+        "text": "A-1 AMX attack aircraft",
+        "mode": "hybrid"
+      },
+      "expected_ids": [
+        "militaryperiscope:318028"
+      ],
+      "label_basis": "Exact archived subject title. Unfiltered query; other AMX vehicles are not the aircraft."
+    },
+    {
+      "id": "text-1l122-exact",
+      "task": "exact_designation",
+      "split": "evaluation",
+      "status": "ready",
+      "query": {
+        "text": "1L122-2E",
+        "source": "commons",
+        "mode": "hybrid"
+      },
+      "expected_ids": [
+        "commons:54320747"
+      ],
+      "label_basis": "Exact archived category identity.",
+      "confusable_ids": [
+        "commons:54320786"
+      ]
+    },
+    {
+      "id": "text-1l122-confusable",
+      "task": "confusable_variant",
+      "split": "development",
+      "status": "ready",
+      "query": {
+        "text": "1L122E radar",
+        "source": "commons",
+        "mode": "hybrid"
+      },
+      "expected_ids": [
+        "commons:54320786"
+      ],
+      "label_basis": "Archived Commons categories distinguish 1L122E from 1L122-2E; exact source-qualified record labels, no identity merge.",
+      "confusable_ids": [
+        "commons:54320747"
+      ]
+    },
+    {
+      "id": "text-amx-description",
+      "task": "descriptive",
+      "split": "evaluation",
+      "status": "ready",
+      "query": {
+        "text": "Italian Brazilian attack aircraft designed for low level flight",
+        "mode": "hybrid"
+      },
+      "expected_ids": [
+        "militaryperiscope:318028"
+      ],
+      "label_basis": "Archived description identifies a joint Italian-Brazilian attack-aircraft program and high-speed low-level flight."
+    },
+    {
+      "id": "text-h145-description",
+      "task": "descriptive",
+      "split": "development",
+      "status": "ready",
+      "query": {
+        "text": "BK-117 C-2 helicopter with increased cabin volume for rescue and medical evacuation",
+        "mode": "hybrid"
+      },
+      "expected_ids": [
+        "militaryperiscope:318794"
+      ],
+      "label_basis": "Archived H145 description names BK-117 C-2, cabin growth and mission roles."
+    },
+    {
+      "id": "text-lanza-specification",
+      "task": "specification",
+      "split": "evaluation",
+      "status": "ready",
+      "query": {
+        "text": "L band radar with 40 horizontal linear antenna elements stacked vertically",
+        "source": "militaryperiscope",
+        "mode": "hybrid"
+      },
+      "expected_ids": [
+        "militaryperiscope:332515"
+      ],
+      "label_basis": "Archived Lanza description explicitly states band and 40-element antenna geometry."
+    },
+    {
+      "id": "text-amx-specification",
+      "task": "specification",
+      "split": "development",
+      "status": "ready",
+      "query": {
+        "text": "Attack aircraft wing sweep 27.5 degrees and aspect ratio 3.75",
+        "source": "militaryperiscope",
+        "mode": "hybrid"
+      },
+      "expected_ids": [
+        "militaryperiscope:318028"
+      ],
+      "label_basis": "Both numbers occur in the archived wing description."
+    },
+    {
+      "id": "text-ltr25-global",
+      "task": "exact_designation",
+      "split": "evaluation",
+      "status": "ready",
+      "query": {
+        "text": "Indra Lanza LTR-25",
+        "mode": "hybrid"
+      },
+      "expected_ids": [
+        "cambridgepixel:4e04dadc01e79038dd26b3ba",
+        "radartutorial:ce60bbb5e34b5b602d98a3be"
+      ],
+      "label_basis": "Both archived titles explicitly name LTR-25. Candidate result set for this query only; source identities remain separate.",
+      "confusable_ids": [
+        "radartutorial:98133214f514e6ec2b410cb1"
+      ]
+    },
+    {
+      "id": "text-type96-global",
+      "task": "exact_designation",
+      "split": "evaluation",
+      "status": "ready",
+      "query": {
+        "text": "Norinco Type 96A main battle tank",
+        "mode": "hybrid"
+      },
+      "expected_ids": [
+        "deagel:a000324-001",
+        "militaryperiscope:406357"
+      ],
+      "label_basis": "Deagel names Type 96A; the Military Periscope family page explicitly describes Type 96A. Accept either supported record, without merging identities.",
+      "confusable_ids": [
+        "deagel:a000156-001",
+        "deagel:a000156-002"
+      ]
+    },
+    {
+      "id": "text-no-match",
+      "task": "no_match",
+      "split": "evaluation",
+      "status": "ready",
+      "query": {
+        "text": "ZXQ-000 fictional teleportation radar",
+        "mode": "hybrid"
+      },
+      "expected_ids": [],
+      "label_basis": "Deliberately invented designation and impossible capability; easy negative control, not a realistic false-match estimate."
+    },
+    {
+      "id": "image-militaryperiscope-124795",
+      "task": "photograph",
+      "split": "development",
+      "status": "ready",
+      "query": {
+        "image_id": "militaryperiscope-124795",
+        "source": "militaryperiscope"
+      },
+      "expected_ids": [
+        "militaryperiscope:318028"
+      ],
+      "label_basis": "Publisher image block associated with this subject; agent inspected pixels. Family-level label, not a claim about an exact variant.",
+      "reference_media_ids": [
+        "militaryperiscope-124821"
+      ]
+    },
+    {
+      "id": "image-militaryperiscope-124796",
+      "task": "unseen_view",
+      "split": "development",
+      "status": "ready",
+      "query": {
+        "image_id": "militaryperiscope-124796",
+        "source": "militaryperiscope"
+      },
+      "expected_ids": [
+        "militaryperiscope:318028"
+      ],
+      "label_basis": "Publisher image block associated with this subject; agent inspected pixels. Family-level label, not a claim about an exact variant.",
+      "reference_media_ids": [
+        "militaryperiscope-124821"
+      ]
+    },
+    {
+      "id": "image-militaryperiscope-124797",
+      "task": "unseen_view",
+      "split": "evaluation",
+      "status": "ready",
+      "query": {
+        "image_id": "militaryperiscope-124797",
+        "source": "militaryperiscope"
+      },
+      "expected_ids": [
+        "militaryperiscope:318028"
+      ],
+      "label_basis": "Publisher image block associated with this subject; agent inspected pixels. Family-level label, not a claim about an exact variant.",
+      "reference_media_ids": [
+        "militaryperiscope-124821"
+      ]
+    },
+    {
+      "id": "image-militaryperiscope-125714",
+      "task": "photograph",
+      "split": "development",
+      "status": "ready",
+      "query": {
+        "image_id": "militaryperiscope-125714",
+        "source": "militaryperiscope"
+      },
+      "expected_ids": [
+        "militaryperiscope:318794"
+      ],
+      "label_basis": "Publisher image block associated with this subject; agent inspected pixels. Family-level label, not a claim about an exact variant.",
+      "reference_media_ids": [
+        "militaryperiscope-125713"
+      ]
+    },
+    {
+      "id": "image-militaryperiscope-125715",
+      "task": "unseen_view",
+      "split": "evaluation",
+      "status": "ready",
+      "query": {
+        "image_id": "militaryperiscope-125715",
+        "source": "militaryperiscope"
+      },
+      "expected_ids": [
+        "militaryperiscope:318794"
+      ],
+      "label_basis": "Publisher image block associated with this subject; agent inspected pixels. Family-level label, not a claim about an exact variant.",
+      "reference_media_ids": [
+        "militaryperiscope-125713"
+      ]
+    },
+    {
+      "id": "image-militaryperiscope-87087",
+      "task": "photograph",
+      "split": "development",
+      "status": "ready",
+      "query": {
+        "image_id": "militaryperiscope-87087",
+        "source": "militaryperiscope"
+      },
+      "expected_ids": [
+        "militaryperiscope:332515"
+      ],
+      "label_basis": "Publisher image block associated with this subject; agent inspected pixels. Family-level label, not a claim about an exact variant.",
+      "reference_media_ids": [
+        "militaryperiscope-87086"
+      ]
+    },
+    {
+      "id": "image-militaryperiscope-87089",
+      "task": "unseen_view",
+      "split": "evaluation",
+      "status": "ready",
+      "query": {
+        "image_id": "militaryperiscope-87089",
+        "source": "militaryperiscope"
+      },
+      "expected_ids": [
+        "militaryperiscope:332515"
+      ],
+      "label_basis": "Publisher image block associated with this subject; agent inspected pixels. Family-level label, not a claim about an exact variant.",
+      "reference_media_ids": [
+        "militaryperiscope-87086"
+      ]
+    },
+    {
+      "id": "image-militaryperiscope-125910",
+      "task": "photograph",
+      "split": "development",
+      "status": "ready",
+      "query": {
+        "image_id": "militaryperiscope-125910",
+        "source": "militaryperiscope"
+      },
+      "expected_ids": [
+        "militaryperiscope:406357"
+      ],
+      "label_basis": "Publisher image block associated with this subject; agent inspected pixels. Family-level label, not a claim about an exact variant.",
+      "reference_media_ids": [
+        "militaryperiscope-125909"
+      ]
+    },
+    {
+      "id": "image-militaryperiscope-128582",
+      "task": "unseen_view",
+      "split": "evaluation",
+      "status": "ready",
+      "query": {
+        "image_id": "militaryperiscope-128582",
+        "source": "militaryperiscope"
+      },
+      "expected_ids": [
+        "militaryperiscope:406357"
+      ],
+      "label_basis": "Publisher image block associated with this subject; agent inspected pixels. Family-level label, not a claim about an exact variant. Heavy dust occludes much of the vehicle; exact variant remains unverified.",
+      "reference_media_ids": [
+        "militaryperiscope-125909"
+      ]
+    },
+    {
+      "id": "image-militaryperiscope-87832",
+      "task": "photograph",
+      "split": "evaluation",
+      "status": "ready",
+      "query": {
+        "image_id": "militaryperiscope-87832",
+        "source": "militaryperiscope"
+      },
+      "expected_ids": [
+        "militaryperiscope:333029"
+      ],
+      "label_basis": "Publisher image block associated with this subject; agent inspected pixels. Family-level label, not a claim about an exact variant.",
+      "confusable_ids": [
+        "militaryperiscope:406357"
+      ],
+      "reference_media_ids": [
+        "militaryperiscope-87831"
+      ]
+    },
+    {
+      "id": "image-amx-crop",
+      "task": "crop",
+      "split": "evaluation",
+      "status": "ready",
+      "query": {
+        "image_id": "amx-crop",
+        "source": "militaryperiscope"
+      },
+      "expected_ids": [
+        "militaryperiscope:318028"
+      ],
+      "label_basis": "Deterministic crop inspected by agent; retains the source-labeled subject and excludes the overlaid model label.",
+      "reference_media_ids": [
+        "militaryperiscope-124821"
+      ]
+    },
+    {
+      "id": "image-h145-crop",
+      "task": "crop",
+      "split": "evaluation",
+      "status": "ready",
+      "query": {
+        "image_id": "h145-crop",
+        "source": "militaryperiscope"
+      },
+      "expected_ids": [
+        "militaryperiscope:318794"
+      ],
+      "label_basis": "Deterministic crop inspected by agent; retains the source-labeled subject and excludes the overlaid model label.",
+      "reference_media_ids": [
+        "militaryperiscope-125713"
+      ]
+    },
+    {
+      "id": "mixed-amx",
+      "task": "image_text",
+      "split": "evaluation",
+      "status": "ready",
+      "query": {
+        "image_id": "amx-crop",
+        "text": "Italian Brazilian attack aircraft",
+        "source": "militaryperiscope"
+      },
+      "expected_ids": [
+        "militaryperiscope:318028"
+      ],
+      "label_basis": "Same held-out photograph as AMX crop; additional text follows archived description.",
+      "reference_media_ids": [
+        "militaryperiscope-124821"
+      ]
+    },
+    {
+      "id": "mixed-lanza",
+      "task": "image_text",
+      "split": "evaluation",
+      "status": "ready",
+      "query": {
+        "image_id": "militaryperiscope-87089",
+        "text": "Lanza radar stowed on a truck",
+        "source": "militaryperiscope"
+      },
+      "expected_ids": [
+        "militaryperiscope:332515"
+      ],
+      "label_basis": "Publisher caption names LTR-20 stowed on truck; expected result is its containing Lanza family, not an asserted standalone LTR-20 identity.",
+      "reference_media_ids": [
+        "militaryperiscope-87086"
+      ]
+    },
+    {
+      "id": "image-no-match",
+      "task": "no_match",
+      "split": "evaluation",
+      "status": "ready",
+      "query": {
+        "image_id": "sky-negative",
+        "source": "militaryperiscope"
+      },
+      "expected_ids": [],
+      "label_basis": "Sky-only crop inspected visually. Shares evaluation photo group with its parent; this easy control does not cover realistic unseen equipment."
+    },
+    {
+      "id": "image-bofors-diagram",
+      "task": "diagram",
+      "split": "evaluation",
+      "status": "pending_independent_gallery",
+      "query": {
+        "image_id": "militaryperiscope-82246",
+        "source": "militaryperiscope"
+      },
+      "expected_ids": [
+        "militaryperiscope:319903"
+      ],
+      "label_basis": "Agent inspected the captured, source-labeled diagram. M3 found no independent gallery image in this record; scoring remains pending. The composite itself and its crops must never enter the benchmark gallery."
+    },
+    {
+      "id": "image-commons-460c826d0ae0d9c0e38a07bc",
+      "task": "confusable_variant",
+      "split": "evaluation",
+      "status": "ready",
+      "query": {
+        "image_id": "commons-460c826d0ae0d9c0e38a07bc",
+        "source": "commons"
+      },
+      "expected_ids": [
+        "commons:54320747"
+      ],
+      "label_basis": "Both archived captions identify 1L122-2E and both frames show the tracked platform carrying the rectangular array. Visible vehicle placards support this source label.",
+      "confusable_ids": [
+        "commons:54320786"
+      ],
+      "reference_media_ids": [
+        "commons-9e5b95b511993464c594f495"
+      ],
+      "independence_basis": "The images show different sides and perspectives of the vehicle, different visible faces of the tilted panel, different background arrangements and different visitors. Neither frame is a crop, resize or alternate encoding of the other.",
+      "limitations": [
+        "The gallery contains many prominent people and the neighboring portable 1L122E tripod array, so a whole-frame embedding may focus on the confusable target or exhibition context.",
+        "The query includes neighboring radar exhibits; whole-frame matching must retain that ambiguity instead of treating every visible radar as the labeled entity.",
+        "Both images depict the same exhibition; independent exposures do not provide independent capture-session coverage.",
+        "The 1L122E development pair shares this exhibition context with the 1L122-2E evaluation pair. They are distinct underlying photos, but session/context correlation remains."
+      ]
+    },
+    {
+      "id": "image-commons-77e98441df9f37ab8a02c2fb",
+      "task": "confusable_variant",
+      "split": "development",
+      "status": "ready",
+      "query": {
+        "image_id": "commons-77e98441df9f37ab8a02c2fb",
+        "source": "commons"
+      },
+      "expected_ids": [
+        "commons:54320786"
+      ],
+      "label_basis": "Both archived captions explicitly identify portable radar 1L122E and both images show that foreground tripod assembly. Its portable mounting distinguishes it from the tracked 1L122-2E confusable target in the existing source categories.",
+      "confusable_ids": [
+        "commons:54320747"
+      ],
+      "reference_media_ids": [
+        "commons-e185589e0b985cd5c71eeed3"
+      ],
+      "independence_basis": "Different viewpoint shows the opposite face of the foreground tripod assembly. Background arrangement, people and relative object perspectives differ; the images are not a crop, resize or alternate encoding of one photograph.",
+      "limitations": [
+        "Photographs come from the same exhibition and photographer, so they are independent exposures but not independent capture sessions.",
+        "Large background radar vehicles may confuse whole-frame retrieval; the foreground tripod is the intended label.",
+        "This review does not certify a serial-number identity or any equipment specification."
+      ]
+    },
+    {
+      "id": "image-commons-diagram",
+      "task": "diagram",
+      "split": "evaluation",
+      "status": "pending_independent_gallery",
+      "query": {
+        "image_id": "commons-e708785bdbe07bee182dea25",
+        "source": "commons"
+      },
+      "expected_ids": [
+        "commons:18438063"
+      ],
+      "label_basis": "Archived caption identifies US military drawing DD-ST-86-06623 of Dunay-3. Agent inspected its oblique aerial view of two installations; the source imagery used by the illustrator is unknown.",
+      "limitations": [
+        "The captured Dunay drawing is reviewed and usable as the existing diagram query, but this bounded review did not establish an independent, visually comparable gallery reference. Keep the seed pending_independent_gallery. The KH-7 scene is relevant but its independence from the drawing source is unknown; the reviewed independent ground photographs show an interior or bare ruined facade.",
+        "Exclude the KH-7 full scene and its transmitter/receiver crops from this case gallery while their independence from the drawing is unknown."
+      ]
+    },
+    {
+      "id": "image-commons-c6da92f5b27a91502667344e",
+      "task": "unseen_view",
+      "split": "evaluation",
+      "query": {
+        "image_id": "commons-c6da92f5b27a91502667344e",
+        "source": "commons"
+      },
+      "expected_ids": [
+        "commons:49483718"
+      ],
+      "reference_media_ids": [
+        "commons-e5861bb23b36732c197cf0ab"
+      ],
+      "status": "ready",
+      "label_basis": "Both archived captions identify 96L6E; visible array support, raised sensor assembly and wheeled platform are consistent with that label. The evidence labels type rather than the same physical vehicle.",
+      "independence_basis": "Substantially different camera elevation, surroundings, framing and background exhibits prove separate exposures. It is not a derivative crop of the gallery photograph.",
+      "limitations": [
+        "Query is a partial equipment view with the antenna clipped at the top.",
+        "Identity remains tied to the archived source label; no independent equipment-specification claim is made."
+      ]
+    }
+  ]
+}

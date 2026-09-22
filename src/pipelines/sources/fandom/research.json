@@ -1,0 +1,15 @@
+{
+  "fields": {
+    "Country of origin": "origin_country",
+    "Frequency": "frequency",
+    "Height": "height",
+    "Introduced": "service_entry",
+    "Manufacturer": "manufacturer",
+    "National origin": "origin_country",
+    "Number built": "quantity",
+    "Power": "power",
+    "Pulse Repetition Frequency": "pulse_repetition_frequency",
+    "Range": "range"
+  },
+  "relations": []
+}

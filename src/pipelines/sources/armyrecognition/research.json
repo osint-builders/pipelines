@@ -1,0 +1,32 @@
+{
+  "fields": {
+    "Country users": "operator_country",
+    "Crew": "crew",
+    "Designer Country": "designer_country",
+    "Range Radar": "detection_range",
+    "Range Truck": "ferry_range",
+    "Range detection": "detection_range",
+    "Speed Truck": "speed"
+  },
+  "relations": [
+    {
+      "source_id": "armyrecognition:3bff31b536d17c06a088d107",
+      "target_id": "radartutorial:3c7e9748616bc6d9f9581529",
+      "type": "related_system",
+      "basis": "reviewed_source_evidence",
+      "rationale": "Army Recognition describes the 30N6 radar operating in conjunction with 76N6 Clam Shell. The retained 76N6 article separately identifies that acquisition radar; compatible roles do not establish equivalence.",
+      "evidence": [
+        {
+          "entity_id": "armyrecognition:3bff31b536d17c06a088d107",
+          "evidence_id": "3bff31b536d17c06a088d107",
+          "quote": "in conjunction with the 36D6 NATO code \"Thin Shield\" or 76N6 NATO code 'Clam Shell' radars."
+        },
+        {
+          "entity_id": "radartutorial:3c7e9748616bc6d9f9581529",
+          "evidence_id": "3c7e9748616bc6d9f9581529",
+          "quote": "The Acquisition Radar 76N6 (NATO-Designator “Clam Shell”)"
+        }
+      ]
+    }
+  ]
+}

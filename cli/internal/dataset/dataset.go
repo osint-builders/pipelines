@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"io/fs"
 	"math"
 	"sort"
@@ -23,16 +24,21 @@ type Model struct {
 	Dimensions int    `json:"dimensions"`
 }
 type Manifest struct {
-	FormatVersion int               `json:"format_version"`
-	DatasetID     string            `json:"dataset_id"`
-	ContentSHA256 string            `json:"content_sha256"`
-	RecipeSHA256  string            `json:"recipe_sha256"`
-	Entities      int               `json:"entities"`
-	EvidencePages int               `json:"evidence_pages"`
-	Chunks        int               `json:"chunks"`
-	Model         Model             `json:"model"`
-	Sources       []string          `json:"sources"`
-	Files         map[string]string `json:"files"`
+	FormatVersion int                  `json:"format_version"`
+	DatasetID     string               `json:"dataset_id"`
+	ContentSHA256 string               `json:"content_sha256"`
+	RecipeSHA256  string               `json:"recipe_sha256"`
+	Entities      int                  `json:"entities"`
+	EvidencePages int                  `json:"evidence_pages"`
+	Chunks        int                  `json:"chunks"`
+	Model         Model                `json:"model"`
+	Sources       []string             `json:"sources"`
+	Files         map[string]string    `json:"files"`
+	Image         *ImageManifest       `json:"image,omitempty"`
+	Observations  *ObservationManifest `json:"observations,omitempty"`
+	Search        *SearchPolicy        `json:"search,omitempty"`
+	Research      *ResearchManifest    `json:"research,omitempty"`
+	Calibration   *CalibrationManifest `json:"calibration,omitempty"`
 }
 type Entity struct {
 	ID         string   `json:"id"`
@@ -50,13 +56,19 @@ type Chunk struct {
 }
 type Result struct {
 	Entity
-	Score      float64 `json:"score"`
-	Cosine     float64 `json:"cosine"`
-	NameMatch  bool    `json:"name_match"`
-	Snippet    string  `json:"snippet"`
-	EvidenceID string  `json:"evidence_id"`
+	Score      float64      `json:"score"`
+	Cosine     float64      `json:"cosine"`
+	NameMatch  bool         `json:"name_match"`
+	Snippet    string       `json:"snippet"`
+	EvidenceID string       `json:"evidence_id"`
+	Ranking    *TextRanking `json:"ranking,omitempty"`
+	matches    []Match
 }
-type Filter struct{ Source, Kind, Category string }
+type Filter struct {
+	Source, Kind, Category string
+	Where                  []string
+	prepared               *researchFilter
+}
 type Dataset struct {
 	sourceResponses map[string][]byte
 	Files           *zip.Reader
@@ -65,14 +77,33 @@ type Dataset struct {
 	chunks          []Chunk
 	vectors         []float32
 	byID            map[string]int
+	members         map[string]*zip.File
+	images          *imageData
+	evidenceURLs    map[int]map[string]string
+	observations    *observationData
+	lexical         [2]*textIndex
+	research        *researchData
+	calibration     *calibrationArtifact
 }
 
 func Open(data []byte) (*Dataset, error) {
-	files, err := zip.NewReader(bytes.NewReader(data), int64(len(data)))
+	return OpenReader(bytes.NewReader(data), int64(len(data)))
+}
+
+// OpenReader keeps the immutable archive in its original backing storage.
+// The caller must keep reader available for the lifetime of the dataset.
+func OpenReader(reader io.ReaderAt, size int64) (*Dataset, error) {
+	files, err := zip.NewReader(reader, size)
 	if err != nil {
 		return nil, err
 	}
-	d := &Dataset{Files: files, byID: map[string]int{}}
+	d := &Dataset{Files: files, byID: map[string]int{}, members: map[string]*zip.File{}}
+	for _, file := range files.File {
+		if !fs.ValidPath(file.Name) || strings.Contains(file.Name, "\\") || d.members[file.Name] != nil {
+			return nil, errors.New("invalid or duplicate bundle member")
+		}
+		d.members[file.Name] = file
+	}
 	raw, err := fs.ReadFile(files, "manifest.json")
 	if err != nil {
 		return nil, err
@@ -80,8 +111,27 @@ func Open(data []byte) (*Dataset, error) {
 	if err = json.Unmarshal(raw, &d.Manifest); err != nil {
 		return nil, err
 	}
-	if d.Manifest.FormatVersion != 2 || d.Manifest.Model.Dimensions != 384 {
+	manifestFields, err := rawObject(raw)
+	if err != nil {
+		return nil, err
+	}
+	if search, ok := manifestFields["search"]; ok {
+		fields, err := rawObject(search)
+		if err != nil || !hasFields(fields, "version", "k1", "b", "rank_constant", "lexical_weight", "semantic_weight", "captions") {
+			return nil, errors.New("invalid text search policy fields")
+		}
+		for _, value := range fields {
+			if bytes.Equal(value, []byte("null")) {
+				return nil, errors.New("null text search policy value")
+			}
+		}
+	}
+	if (d.Manifest.FormatVersion < 2 || d.Manifest.FormatVersion > 5) || d.Manifest.Model.Dimensions != 384 {
 		return nil, errors.New("unsupported dataset format or embedding dimensions")
+	}
+	if (d.Manifest.FormatVersion >= 3) != (d.Manifest.Image != nil) ||
+		(d.Manifest.FormatVersion >= 4) != (d.Manifest.Observations != nil) {
+		return nil, errors.New("dataset format does not match image extension")
 	}
 	if len(d.Manifest.DatasetID) != 64 {
 		return nil, errors.New("invalid dataset ID")
@@ -108,6 +158,15 @@ func Open(data []byte) (*Dataset, error) {
 			return nil, errors.New("duplicate entity ID")
 		}
 		d.byID[entity.ID] = i
+	}
+	if err := d.validateSearchPolicy(); err != nil {
+		return nil, err
+	}
+	if err := d.validateResearchManifest(manifestFields); err != nil {
+		return nil, err
+	}
+	if err := d.loadCalibration(manifestFields); err != nil {
+		return nil, err
 	}
 	return d, nil
 }
@@ -141,6 +200,9 @@ func (d *Dataset) Read(name string) ([]byte, error) {
 }
 
 func (d *Dataset) Verify() error {
+	if err := d.verifyCalibration(); err != nil {
+		return err
+	}
 	for name := range d.Manifest.Files {
 		if _, err := d.Read(name); err != nil {
 			return err
@@ -156,12 +218,15 @@ func (d *Dataset) Verify() error {
 		if err != nil {
 			return err
 		}
-		var record struct{ Evidence []struct{ ID string } }
+		var record struct{ Evidence []struct{ ID, URL string } }
 		if err := json.Unmarshal(raw, &record); err != nil {
 			return err
 		}
 		pages[i] = map[string]bool{}
 		for _, page := range record.Evidence {
+			if !validImageURL(page.URL) {
+				return errors.New("invalid source evidence URL")
+			}
 			pages[i][page.ID] = true
 			allPages[entity.Source+":"+page.ID] = true
 		}
@@ -179,7 +244,28 @@ func (d *Dataset) Verify() error {
 			return errors.New("chunk references unrelated evidence")
 		}
 	}
-	return nil
+	if d.HasImages() {
+		if err := d.verifyImages(); err != nil {
+			return err
+		}
+	}
+	if d.Manifest.Search != nil {
+		index, err := d.loadTextIndex(false)
+		if err != nil {
+			return err
+		}
+		for _, doc := range index.documents {
+			if doc.Field == "caption" && !pages[doc.Entity][doc.EvidenceID] {
+				return errors.New("caption references unrelated evidence")
+			}
+		}
+	}
+	if d.HasObservations() {
+		if err := d.LoadObservations(); err != nil {
+			return err
+		}
+	}
+	return d.verifyResearch()
 }
 
 func (d *Dataset) LoadVectors() error {
@@ -280,6 +366,9 @@ func nameMatch(query string, aliases []string) bool {
 }
 
 func (f Filter) matches(e Entity) bool {
+	if f.prepared != nil && !f.prepared.eligible[e.ID] {
+		return false
+	}
 	if f.Source != "" && f.Source != e.Source || f.Kind != "" && f.Kind != e.Kind {
 		return false
 	}
@@ -295,11 +384,31 @@ func (f Filter) matches(e Entity) bool {
 }
 
 func (d *Dataset) Search(vector []float32, query string, hybrid bool, filter Filter, limit int, exclude string) ([]Result, error) {
-	if len(vector) != d.Manifest.Model.Dimensions {
-		return nil, errors.New("query vector dimension mismatch")
-	}
 	if limit < 1 || limit > 100 {
 		return nil, errors.New("limit must be between 1 and 100")
+	}
+	return d.search(vector, query, hybrid, filter, limit, exclude)
+}
+
+func (d *Dataset) search(vector []float32, query string, hybrid bool, filter Filter, limit int, exclude string) ([]Result, error) {
+	var err error
+	filter, err = d.PrepareFilter(filter)
+	if err != nil {
+		return nil, err
+	}
+	if hybrid && d.Manifest.Search != nil {
+		results, err := d.search(vector, query, false, filter, len(d.Entities), exclude)
+		if err != nil {
+			return nil, err
+		}
+		results, err = d.rankText(results, nil, query, false)
+		if len(results) > limit {
+			results = results[:limit]
+		}
+		return results, err
+	}
+	if len(vector) != d.Manifest.Model.Dimensions {
+		return nil, errors.New("query vector dimension mismatch")
 	}
 	var norm float64
 	for _, v := range vector {

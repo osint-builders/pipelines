@@ -1,0 +1,147 @@
+name: Image encoder parity
+
+on:
+  push:
+    paths:
+      - '.github/workflows/image-encoder.yml'
+      - 'src/pipelines/image*'
+      - 'tools/prepare_image_model.py'
+      - 'tools/check_image_encoder.py'
+      - 'cli/internal/imageembedding/**'
+      - 'cli/internal/imagepreprocess/**'
+      - 'cli/cmd/imageprobe/**'
+      - 'cli/go.mod'
+      - 'cli/go.sum'
+      - 'tests/fixtures/image_preprocess.json'
+      - 'tests/fixtures/image_jpeg_decode.json'
+      - 'tests/test_image*'
+      - 'tests/test_check_image_encoder.py'
+      - 'pyproject.toml'
+      - 'uv.lock'
+  pull_request:
+    paths:
+      - '.github/workflows/image-encoder.yml'
+      - 'src/pipelines/image*'
+      - 'tools/prepare_image_model.py'
+      - 'tools/check_image_encoder.py'
+      - 'cli/internal/imageembedding/**'
+      - 'cli/internal/imagepreprocess/**'
+      - 'cli/cmd/imageprobe/**'
+      - 'cli/go.mod'
+      - 'cli/go.sum'
+      - 'tests/fixtures/image_preprocess.json'
+      - 'tests/fixtures/image_jpeg_decode.json'
+      - 'tests/test_image*'
+      - 'tests/test_check_image_encoder.py'
+      - 'pyproject.toml'
+      - 'uv.lock'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  reference:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+        with:
+          version: '0.11.21'
+          python-version: '3.13'
+          enable-cache: true
+      - run: uv sync --frozen --extra image
+      - name: Fetch checksum-pinned image tower
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: uv run --no-sync python tools/check_image_encoder.py fetch --output build/image-parity/model
+      - name: Produce Python ORT references and assert the tracked model lock
+        run: uv run --no-sync python tools/check_image_encoder.py reference --manifest build/image-parity/model/mobileclip2-s0-fp16-storage.json --output build/image-parity/references
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: image-encoder-reference
+          path: |
+            build/image-parity/model/mobileclip2-s0-fp16-storage.onnx
+            build/image-parity/model/mobileclip2-s0-fp16-storage.json
+            build/image-parity/references/
+          if-no-files-found: error
+          retention-days: 7
+
+  native:
+    needs: reference
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, ubuntu-24.04-arm, windows-latest, macos-15-intel, macos-15]
+    runs-on: ${{ matrix.os }}
+    env:
+      CGO_ENABLED: '0'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+        with:
+          version: '0.11.21'
+          python-version: '3.13'
+          enable-cache: true
+      - run: uv sync --frozen --extra image --no-install-package onnxruntime
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
+        with:
+          go-version-file: cli/go.mod
+          cache-dependency-path: cli/go.sum
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: image-encoder-reference
+          path: build/image-parity
+      - name: Build native probe without CGO
+        working-directory: cli
+        run: go build -tags NODOWNLOAD -trimpath -o ../build/image-parity/imageprobe${{ runner.os == 'Windows' && '.exe' || '' }} ./cmd/imageprobe
+      - name: Verify native Linux execution in an isolated network namespace
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          sudo unshare --net -- "$PWD/.venv/bin/python" tools/check_image_encoder.py verify \
+            --manifest build/image-parity/model/mobileclip2-s0-fp16-storage.json \
+            --reference build/image-parity/references --probe build/image-parity/imageprobe \
+            --network-isolation linux-netns --output build/image-parity/native-report.json
+      - name: Establish the same-binary TCP canary baseline
+        if: runner.os != 'Linux'
+        run: uv run --no-sync python tools/check_image_encoder.py network-baseline --probe build/image-parity/imageprobe${{ runner.os == 'Windows' && '.exe' || '' }} --output build/image-parity/network-baseline.json
+      - name: Verify native macOS execution with networking denied
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          /usr/bin/sandbox-exec -p '(version 1)(allow default)(deny network*)' \
+            "$PWD/.venv/bin/python" tools/check_image_encoder.py verify \
+            --manifest build/image-parity/model/mobileclip2-s0-fp16-storage.json \
+            --reference build/image-parity/references --probe build/image-parity/imageprobe \
+            --network-isolation macos-sandbox --network-baseline build/image-parity/network-baseline.json \
+            --output build/image-parity/native-report.json
+      - name: Verify native Windows execution with outbound traffic blocked
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $probePath = (Resolve-Path -LiteralPath 'build/image-parity/imageprobe.exe').Path
+          $ruleName = 'pipelines-image-parity-' + [guid]::NewGuid().ToString('N')
+          $profiles = @(Get-NetFirewallProfile | Select-Object Name, Enabled)
+          try {
+            Set-NetFirewallProfile -Profile Domain,Private,Public -Enabled True
+            New-NetFirewallRule -Name $ruleName -DisplayName $ruleName -Direction Outbound -Action Block -Program $probePath -Profile Any -Protocol Any -Enabled True | Out-Null
+            & ./.venv/Scripts/python.exe tools/check_image_encoder.py verify --manifest build/image-parity/model/mobileclip2-s0-fp16-storage.json --reference build/image-parity/references --probe $probePath --network-isolation windows-firewall --network-baseline build/image-parity/network-baseline.json --firewall-rule $ruleName --output build/image-parity/native-report.json
+            if ($LASTEXITCODE -ne 0) { throw 'Native offline image parity failed' }
+          } finally {
+            Remove-NetFirewallRule -Name $ruleName -ErrorAction SilentlyContinue
+            foreach ($profile in $profiles) {
+              Set-NetFirewallProfile -Profile $profile.Name -Enabled $profile.Enabled
+            }
+          }
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: image-encoder-parity-${{ matrix.os }}
+          path: build/image-parity/native-report.json
+          if-no-files-found: error
+          retention-days: 14

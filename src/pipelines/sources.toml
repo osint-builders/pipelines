@@ -30,3 +30,6 @@ adapter = "pipelines.sources.cambridgepixel:CambridgePixel"
 
 [militaryperiscope]
 adapter = "pipelines.sources.militaryperiscope:MilitaryPeriscope"
+
+[odin]
+adapter = "pipelines.sources.odin:Odin"

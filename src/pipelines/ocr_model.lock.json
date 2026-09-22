@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "id": "rapidocr/pp-ocrv6-det-v5-cyrillic",
+  "revision": "RapidOCR-v3.9.2",
+  "engine": "rapidocr",
+  "default_config_sha256": "06623941e188461a0bc263fe16175cb5e5f6f6b01f4387e546d3a741569fc021",
+  "languages": ["latin", "cyrillic"],
+  "models": {
+    "det": {
+      "file": "PP-OCRv6_det_small.onnx",
+      "url": "https://www.modelscope.cn/models/RapidAI/RapidOCR/resolve/v3.9.2/onnx/PP-OCRv6/det/PP-OCRv6_det_small.onnx",
+      "bytes": 9929594,
+      "sha256": "090f04abcd9d9a7498bc4ebf677e4cb9bdce1fe4197ddb7e529f1ef44e1ff94f"
+    },
+    "cls": {
+      "file": "ch_ppocr_mobile_v2.0_cls_mobile.onnx",
+      "url": "https://www.modelscope.cn/models/RapidAI/RapidOCR/resolve/v3.9.2/onnx/PP-OCRv4/cls/ch_ppocr_mobile_v2.0_cls_mobile.onnx",
+      "bytes": 585532,
+      "sha256": "e47acedf663230f8863ff1ab0e64dd2d82b838fceb5957146dab185a89d6215c"
+    },
+    "rec": {
+      "file": "cyrillic_PP-OCRv5_rec_mobile.onnx",
+      "url": "https://www.modelscope.cn/models/RapidAI/RapidOCR/resolve/v3.9.2/onnx/PP-OCRv5/rec/cyrillic_PP-OCRv5_rec_mobile.onnx",
+      "bytes": 8074092,
+      "sha256": "90f761b4bfcce0c8c561c0cb5c887b0971d3ec01c32164bdf7374a35b0982711"
+    }
+  },
+  "dependencies": {
+    "rapidocr": "3.9.2",
+    "onnxruntime": "1.30.0",
+    "opencv-python": "4.13.0.92",
+    "numpy": "2.5.3",
+    "pillow": "12.3.0",
+    "pyclipper": "1.4.0",
+    "shapely": "2.1.2",
+    "omegaconf": "2.3.1"
+  },
+  "settings": {
+    "minimum_confidence": 0.85,
+    "maximum_regions": 256,
+    "maximum_text_chars": 16384,
+    "working_max_side": 2000,
+    "intra_op_threads": 4,
+    "inter_op_threads": 1
+  }
+}

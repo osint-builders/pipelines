@@ -192,6 +192,26 @@ def test_archive_offline_extract_retains_entity_and_full_evidence(
     assert not (snapshot / "index.sqlite").exists()
 
 
+@pytest.mark.parametrize("separator", ["\u0085", "\u2028", "\u2029"])
+@pytest.mark.parametrize("final_newline", [False, True])
+def test_snapshot_keeps_unicode_separators_inside_json_values(
+    tmp_path: Path, separator: str, final_newline: bool
+) -> None:
+    source, archive, source_dir = archived(tmp_path)
+    snapshot = publish(source, archive, source_dir)
+    archive.close()
+    path = snapshot / "entities.jsonl"
+    entity = json.loads(path.read_text(encoding="utf-8"))
+    raw = f"First source value{separator}Second source value"
+    entity["facts"][0]["raw"] = raw
+    path.write_text(
+        json.dumps(entity, ensure_ascii=False) + ("\n" if final_newline else ""),
+        encoding="utf-8",
+    )
+    assert separator in path.read_text(encoding="utf-8")
+    assert load_snapshot(source_dir)[1][0]["facts"][0]["raw"] == raw
+
+
 def test_failed_publication_preserves_current_and_previous_snapshot(
     tmp_path: Path,
 ) -> None:

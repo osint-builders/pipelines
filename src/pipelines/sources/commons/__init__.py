@@ -4,6 +4,7 @@ from collections import defaultdict
 from collections.abc import Iterable
 from copy import copy
 from pathlib import Path
+from typing import TYPE_CHECKING
 from urllib.parse import parse_qsl, quote, unquote, urlencode, urljoin, urlsplit
 
 from bs4 import BeautifulSoup, Tag
@@ -12,6 +13,9 @@ from markdownify import markdownify
 from pipelines.model import Entity, EntityKind, Evidence, Fact
 from pipelines.sources.html import text
 from pipelines.sources.mediawiki import config
+
+if TYPE_CHECKING:
+    from pipelines.media import MediaCandidate
 
 ORIGIN = "https://commons.wikimedia.org"
 ROOT_CATEGORY = "Category:Military_radars_of_Russia"
@@ -63,6 +67,19 @@ class Commons:
     version = "1"
     seeds: tuple[str, ...] = (ORIGIN + "/wiki/" + ROOT_CATEGORY,)
     minimum_entities = 120
+    media_origins: tuple[str, ...] = (
+        "https://upload.wikimedia.org",
+        "https://thumb.wikimedia.org",
+    )
+    media_request_interval = 1.0
+    media_workers = 4
+
+    def discover_media(
+        self, url: str, body: bytes, entities: list[dict]
+    ) -> Iterable["MediaCandidate"]:
+        from pipelines.sources.commons.media import discover
+
+        return discover(url, body, entities)
 
     def __init__(self) -> None:
         self.catalog: dict[str, dict[str, str]] = json.loads(

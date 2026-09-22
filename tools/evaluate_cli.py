@@ -4,10 +4,28 @@ import argparse
 import json
 import subprocess
 import time
+from collections.abc import Callable
 from pathlib import Path
 
 
-def evaluate(binary: Path, cases: Path) -> dict:
+def search_args(case: dict) -> list[str]:
+    args = [
+        "search",
+        "--source",
+        case["source"],
+        "--mode",
+        case["mode"],
+        "--limit",
+        "20",
+    ]
+    if case.get("kind"):
+        args.extend(["--kind", case["kind"]])
+    return [*args, case["query"]]
+
+
+def evaluate(
+    binary: Path, cases: Path, *, runner: Callable[..., dict] | None = None
+) -> dict:
     def run(*args: str) -> dict:
         return json.loads(
             subprocess.run(
@@ -18,7 +36,8 @@ def evaluate(binary: Path, cases: Path) -> dict:
             ).stdout
         )
 
-    info = run("info")
+    execute = runner or run
+    info = execute("info")
     results = []
     skipped = []
     for case in json.loads(cases.read_text(encoding="utf-8")):
@@ -26,18 +45,7 @@ def evaluate(binary: Path, cases: Path) -> dict:
             skipped.append(case)
             continue
         start = time.perf_counter()
-        args = [
-            "search",
-            "--source",
-            case["source"],
-            "--mode",
-            case["mode"],
-            "--limit",
-            "20",
-        ]
-        if case.get("kind"):
-            args.extend(["--kind", case["kind"]])
-        response = run(*args, case["query"])
+        response = execute(*search_args(case))
         items = response["results"]
         if any(item["source"] != case["source"] for item in items):
             raise ValueError("Source filter leaked an unrelated entity")

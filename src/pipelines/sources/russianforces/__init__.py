@@ -1,7 +1,9 @@
 import json
 import re
+from collections.abc import Iterable
 from dataclasses import replace
 from pathlib import Path
+from typing import TYPE_CHECKING
 from urllib.parse import unquote, urljoin, urlsplit, urlunsplit
 from xml.etree import ElementTree
 
@@ -11,6 +13,9 @@ from markdownify import markdownify
 from pipelines.model import Entity, EntityKind, Evidence, Fact
 from pipelines.sources.feeds import previous_urls
 from pipelines.sources.html import text
+
+if TYPE_CHECKING:
+    from pipelines.media import MediaCandidate
 
 ORIGIN = "https://russianforces.org"
 FEED = ORIGIN + "/atom.xml"
@@ -43,6 +48,16 @@ class RussianForces:
     version = "1"
     seeds: tuple[str, ...] = (FEED,)
     minimum_entities = 30
+    media_origins = (ORIGIN,)
+    media_workers = 2
+    media_request_interval = 0.3
+
+    def discover_media(
+        self, url: str, body: bytes, entities: list[dict]
+    ) -> Iterable["MediaCandidate"]:
+        from pipelines.sources.russianforces.media import candidates
+
+        return candidates(url, body, entities)
 
     def normalize(self, url: str) -> str | None:
         parts = urlsplit(url)

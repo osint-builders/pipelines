@@ -1,0 +1,331 @@
+{
+  "schema_version": 1,
+  "frozen_at": "2026-09-21T17:55:15.213212+00:00",
+  "frozen_before": "Before new-query retrieval results or detailed model-output inspection; engine pilot summaries were visible to the query author.",
+  "scope": "M6 manual text queries from existing development/evaluation photographs. Restricted nine-image gallery plus full4337-entity text corpus. Ranking comparison only; new generated results remain uncalibrated. Original frozen M1 fixtures unchanged.",
+  "gallery_fixture": "tests/fixtures/multimodal.json",
+  "gallery_fixture_sha256": "2cee725a40fb09254d4db426c4524eda30d54e67240bfc9038d9d1a8479a25ee",
+  "limitations": [
+    "Small provisional seed with correlated queries per photograph.",
+    "Expected sets permit visually indistinguishable tank families and generic wheeled radar views; exact variant identity is not established.",
+    "OCR text may be absent from independent gallery views; failures remain in scored outcomes.",
+    "Unrelated negatives are easy controls, not sufficient realistic equipment distractors or calibration data.",
+    "No human/domain-expert label verification.",
+    "Queries were authored from images rather than generated captions, but the author had seen high-level OCR engine pilot summaries; this is a provisional evaluation seed, not a blinded benchmark."
+  ],
+  "cases": [
+    {
+      "id": "dev-amx-visual",
+      "split": "development",
+      "task": "description",
+      "query": "grey jet cockpit with a refuelling probe and an air intake behind the pilot",
+      "image_id": "militaryperiscope-124795",
+      "image_sha256": "f7dcca9f9092853d2a566198a870d7bc74d32999d1747dda3325889ba48dd5c1",
+      "photo_group": "militaryperiscope-124795",
+      "expected_ids": [
+        "militaryperiscope:318028"
+      ],
+      "source": "militaryperiscope",
+      "label_origin": "manual reading of source-associated photograph, before model outputs"
+    },
+    {
+      "id": "dev-amx-marking",
+      "split": "development",
+      "task": "ocr",
+      "query": "SALVATAGGIO RESCUE",
+      "image_id": "militaryperiscope-124795",
+      "image_sha256": "f7dcca9f9092853d2a566198a870d7bc74d32999d1747dda3325889ba48dd5c1",
+      "photo_group": "militaryperiscope-124795",
+      "expected_ids": [
+        "militaryperiscope:318028"
+      ],
+      "source": "militaryperiscope",
+      "label_origin": "manual reading of source-associated photograph, before model outputs"
+    },
+    {
+      "id": "dev-h145-visual",
+      "split": "development",
+      "task": "description",
+      "query": "yellow rescue helicopter with landing skids and an enclosed tail rotor",
+      "image_id": "militaryperiscope-125714",
+      "image_sha256": "94c3897ada48b5c3287c3175eff9bac02ceef8fe656191050e8c55e8898ce181",
+      "photo_group": "militaryperiscope-125714",
+      "expected_ids": [
+        "militaryperiscope:318794"
+      ],
+      "source": "militaryperiscope",
+      "label_origin": "manual reading of source-associated photograph, before model outputs"
+    },
+    {
+      "id": "dev-h145-marking",
+      "split": "development",
+      "task": "ocr",
+      "query": "LN-OOS",
+      "image_id": "militaryperiscope-125714",
+      "image_sha256": "94c3897ada48b5c3287c3175eff9bac02ceef8fe656191050e8c55e8898ce181",
+      "photo_group": "militaryperiscope-125714",
+      "expected_ids": [
+        "militaryperiscope:318794"
+      ],
+      "source": "militaryperiscope",
+      "label_origin": "manual reading of source-associated photograph, before model outputs"
+    },
+    {
+      "id": "dev-lanza-visual",
+      "split": "development",
+      "task": "description",
+      "query": "large rectangular slatted radar panel above a wheeled trailer with support legs",
+      "image_id": "militaryperiscope-87087",
+      "image_sha256": "4fe519545f8c7eae8d05382c5bdfe22374d59585a4231d69507122dde6968a86",
+      "photo_group": "militaryperiscope-87087",
+      "expected_ids": [
+        "militaryperiscope:332515"
+      ],
+      "source": "militaryperiscope",
+      "label_origin": "manual reading of source-associated photograph, before model outputs"
+    },
+    {
+      "id": "dev-lanza-marking",
+      "split": "development",
+      "task": "ocr",
+      "query": "LTR-25",
+      "image_id": "militaryperiscope-87087",
+      "image_sha256": "4fe519545f8c7eae8d05382c5bdfe22374d59585a4231d69507122dde6968a86",
+      "photo_group": "militaryperiscope-87087",
+      "expected_ids": [
+        "militaryperiscope:332515"
+      ],
+      "source": "militaryperiscope",
+      "label_origin": "manual reading of source-associated photograph, before model outputs"
+    },
+    {
+      "id": "dev-tripod-visual",
+      "split": "development",
+      "task": "description",
+      "query": "portable green rectangular radar on a tripod beside an open laptop",
+      "image_id": "commons-77e98441df9f37ab8a02c2fb",
+      "image_sha256": "9f875455e8417d595748079920191faeb52ff696434a250dbf0b7ecaf90ecdab",
+      "photo_group": "commons-77e98441df9f37ab8a02c2fb",
+      "expected_ids": [
+        "commons:54320786"
+      ],
+      "source": "commons",
+      "label_origin": "manual reading of source-associated photograph, before model outputs"
+    },
+    {
+      "id": "eval-amx-visual",
+      "split": "evaluation",
+      "task": "description",
+      "query": "grey swept-wing jets flying in formation with fuel tanks under their wings",
+      "image_id": "militaryperiscope-124797",
+      "image_sha256": "9cbb70788966a4f7cc5b1033b5c68c59e7da51c19e39f328c2bfaf27693c0f4c",
+      "photo_group": "militaryperiscope-124797",
+      "expected_ids": [
+        "militaryperiscope:318028"
+      ],
+      "source": "militaryperiscope",
+      "label_origin": "manual reading of source-associated photograph, before model outputs"
+    },
+    {
+      "id": "eval-amx-marking",
+      "split": "evaluation",
+      "task": "ocr",
+      "query": "AMX ACOL",
+      "image_id": "militaryperiscope-124797",
+      "image_sha256": "9cbb70788966a4f7cc5b1033b5c68c59e7da51c19e39f328c2bfaf27693c0f4c",
+      "photo_group": "militaryperiscope-124797",
+      "expected_ids": [
+        "militaryperiscope:318028"
+      ],
+      "source": "militaryperiscope",
+      "label_origin": "manual reading of source-associated photograph, before model outputs"
+    },
+    {
+      "id": "eval-h145-visual",
+      "split": "evaluation",
+      "task": "description",
+      "query": "dark helicopters with enclosed tail rotors lined up on a concrete apron",
+      "image_id": "militaryperiscope-125715",
+      "image_sha256": "61b1236deff91768b17816aed8af37228738a62cc1c4230e1677d9e2d0fcc3e9",
+      "photo_group": "militaryperiscope-125715",
+      "expected_ids": [
+        "militaryperiscope:318794"
+      ],
+      "source": "militaryperiscope",
+      "label_origin": "manual reading of source-associated photograph, before model outputs"
+    },
+    {
+      "id": "eval-h145-marking",
+      "split": "evaluation",
+      "task": "ocr",
+      "query": "H145M",
+      "image_id": "militaryperiscope-125715",
+      "image_sha256": "61b1236deff91768b17816aed8af37228738a62cc1c4230e1677d9e2d0fcc3e9",
+      "photo_group": "militaryperiscope-125715",
+      "expected_ids": [
+        "militaryperiscope:318794"
+      ],
+      "source": "militaryperiscope",
+      "label_origin": "manual reading of source-associated photograph, before model outputs"
+    },
+    {
+      "id": "eval-lanza-visual",
+      "split": "evaluation",
+      "task": "description",
+      "query": "pixel camouflage three-axle truck carrying a wide flat rectangular radar panel",
+      "image_id": "militaryperiscope-87089",
+      "image_sha256": "c36d08f811d4030df8933b582117fff38d449adc0c2e82496aa11db97d69cd48",
+      "photo_group": "militaryperiscope-87089",
+      "expected_ids": [
+        "militaryperiscope:332515"
+      ],
+      "source": "militaryperiscope",
+      "label_origin": "manual reading of source-associated photograph, before model outputs"
+    },
+    {
+      "id": "eval-lanza-marking",
+      "split": "evaluation",
+      "task": "ocr",
+      "query": "LTR-20",
+      "image_id": "militaryperiscope-87089",
+      "image_sha256": "c36d08f811d4030df8933b582117fff38d449adc0c2e82496aa11db97d69cd48",
+      "photo_group": "militaryperiscope-87089",
+      "expected_ids": [
+        "militaryperiscope:332515"
+      ],
+      "source": "militaryperiscope",
+      "label_origin": "manual reading of source-associated photograph, before model outputs"
+    },
+    {
+      "id": "eval-alzarrar-visual",
+      "split": "evaluation",
+      "task": "description",
+      "query": "tracked tank viewed from the front with a long cannon and round headlights",
+      "image_id": "militaryperiscope-87832",
+      "image_sha256": "ec6f7c4d89eb8457a3a8261ca3ac3844cf97e8e226ceb86bff28908bda8ceef8",
+      "photo_group": "militaryperiscope-87832",
+      "expected_ids": [
+        "militaryperiscope:333029",
+        "militaryperiscope:406357"
+      ],
+      "source": "militaryperiscope",
+      "label_origin": "manual reading of source-associated photograph, before model outputs"
+    },
+    {
+      "id": "eval-type96-visual",
+      "split": "evaluation",
+      "task": "description",
+      "query": "green tracked tank with a long gun driving through a cloud of dust",
+      "image_id": "militaryperiscope-128582",
+      "image_sha256": "9197866ca49d37dc92eaca13872b7b9dd174cc973ae5afe13b856b2808011f7b",
+      "photo_group": "militaryperiscope-128582",
+      "expected_ids": [
+        "militaryperiscope:333029",
+        "militaryperiscope:406357"
+      ],
+      "source": "militaryperiscope",
+      "label_origin": "manual reading of source-associated photograph, before model outputs"
+    },
+    {
+      "id": "eval-tracked-radar-visual",
+      "split": "evaluation",
+      "task": "description",
+      "query": "olive green tracked carrier with a large tilted rectangular radar panel",
+      "image_id": "commons-460c826d0ae0d9c0e38a07bc",
+      "image_sha256": "95629e855906c150ca9730b69814405d5b3871f8c6386413fffb3977cd9c870e",
+      "photo_group": "commons-460c826d0ae0d9c0e38a07bc",
+      "expected_ids": [
+        "commons:54320747"
+      ],
+      "source": "commons",
+      "label_origin": "manual reading of source-associated photograph, before model outputs"
+    },
+    {
+      "id": "eval-wheeled-radar-visual",
+      "split": "evaluation",
+      "task": "description",
+      "query": "green radar truck with large off-road wheels and stabilizer jacks",
+      "image_id": "commons-c6da92f5b27a91502667344e",
+      "image_sha256": "949369a71f782922da4bd3f1c719c2a72c9e0f85602e750b0123945b5ba80f69",
+      "photo_group": "commons-c6da92f5b27a91502667344e",
+      "expected_ids": [
+        "commons:49483718",
+        "militaryperiscope:332515"
+      ],
+      "source": "commons",
+      "label_origin": "manual reading of source-associated photograph, before model outputs"
+    },
+    {
+      "id": "development-negative-1",
+      "split": "development",
+      "task": "negative",
+      "query": "purple ceramic teapot with floral patterns",
+      "image_id": null,
+      "image_sha256": null,
+      "photo_group": "development-negative-1",
+      "expected_ids": [],
+      "source": "",
+      "label_origin": "out-of-gallery object; gallery contains only the nine frozen equipment subjects"
+    },
+    {
+      "id": "development-negative-2",
+      "split": "development",
+      "task": "negative",
+      "query": "cardboard toy rocket with cartoon eyes",
+      "image_id": null,
+      "image_sha256": null,
+      "photo_group": "development-negative-2",
+      "expected_ids": [],
+      "source": "",
+      "label_origin": "out-of-gallery object; gallery contains only the nine frozen equipment subjects"
+    },
+    {
+      "id": "evaluation-negative-1",
+      "split": "evaluation",
+      "task": "negative",
+      "query": "pink inflatable unicorn floating in a swimming pool",
+      "image_id": null,
+      "image_sha256": null,
+      "photo_group": "evaluation-negative-1",
+      "expected_ids": [],
+      "source": "",
+      "label_origin": "out-of-gallery object; gallery contains only the nine frozen equipment subjects"
+    },
+    {
+      "id": "evaluation-negative-2",
+      "split": "evaluation",
+      "task": "negative",
+      "query": "wooden sailing ship with striped cloth sails",
+      "image_id": null,
+      "image_sha256": null,
+      "photo_group": "evaluation-negative-2",
+      "expected_ids": [],
+      "source": "",
+      "label_origin": "out-of-gallery object; gallery contains only the nine frozen equipment subjects"
+    },
+    {
+      "id": "evaluation-negative-3",
+      "split": "evaluation",
+      "task": "negative",
+      "query": "glass microscope slide with stained cells",
+      "image_id": null,
+      "image_sha256": null,
+      "photo_group": "evaluation-negative-3",
+      "expected_ids": [],
+      "source": "",
+      "label_origin": "out-of-gallery object; gallery contains only the nine frozen equipment subjects"
+    },
+    {
+      "id": "evaluation-negative-4",
+      "split": "evaluation",
+      "task": "negative",
+      "query": "quilted red handbag with gold chain handles",
+      "image_id": null,
+      "image_sha256": null,
+      "photo_group": "evaluation-negative-4",
+      "expected_ids": [],
+      "source": "",
+      "label_origin": "out-of-gallery object; gallery contains only the nine frozen equipment subjects"
+    }
+  ]
+}

@@ -1,0 +1,127 @@
+{
+  "schema_version": 1,
+  "status": "frozen_after_m1_user_verification",
+  "scope": "Acceptance contract for the first multimodal release; targets are not measurements or shipped features.",
+  "baseline": {
+    "dataset_id": "572bc6071b705821d35d2b12264efdc6e7e29545dc23def6fd62b2c58db68802",
+    "entities": 4337,
+    "sources": 11,
+    "text_cases": "tests/fixtures/retrieval.json",
+    "multimodal_cases": "tests/fixtures/multimodal.json",
+    "measurement_report": "build/m1/baseline.json",
+    "native_measurement_target": "windows-amd64",
+    "native_reference_cpu": "AMD Ryzen 9 5950X",
+    "other_native_targets": ["linux-amd64", "linux-arm64", "darwin-amd64", "darwin-arm64"],
+    "other_native_measurements": "unmeasured; cross-compilation and archive size do not establish native performance"
+  },
+  "tasks": {
+    "exact_designation": "Find a named entity or reviewed alias, including punctuation and spelling variants.",
+    "descriptive": "Find an entity from its role or visible characteristics without its designation.",
+    "specification": "Find an entity using documented capabilities, quantities, and units.",
+    "photograph": "Find the pictured entity from a photograph absent from the gallery.",
+    "image_text": "Find the pictured entity with a short textual constraint.",
+    "unseen_view": "Recognize an indexed entity in an independently captured view.",
+    "crop": "Recognize a partial view without treating a cropped gallery photograph as unseen.",
+    "diagram": "Retrieve source-backed entities from annotated drawings or diagrams.",
+    "confusable_variant": "Distinguish close variants only when the query supplies distinguishing evidence.",
+    "no_match": "Abstain for an absent entity, including plausible in-domain equipment and unrelated images."
+  },
+  "evaluation": {
+    "split_unit": "underlying photograph; resized, recompressed, mirrored, and cropped derivatives share one photo_group and split",
+    "gallery_rule": "No evaluation or development query photo_group, or its derivatives, may enter the benchmark gallery/index. Enforce this exclusion after full source capture, not just in fixture labels. Independently photographed gallery views of the same entity may enter.",
+    "freeze_before_selection": ["query bytes and hashes", "photo groups", "splits", "expected and confusable IDs", "label rationale", "dataset and gallery hashes"],
+    "labels": "Use source-backed IDs and reviewed evidence; ambiguous images allow multiple justified IDs or abstention, never an invented exact variant.",
+    "thresholds": "Fit abstention and fusion parameters on development cases only; freeze before evaluation.",
+    "pilot": "Report counts and observed metrics only. The small M1 fixture is a review seed, not evidence that release quality gates pass.",
+    "release_minimums": {
+      "text_queries_per_task": 100,
+      "independent_positive_photo_groups_per_image_modality": 100,
+      "distinct_positive_entities_per_image_modality": 30,
+      "confusable_queries": 60,
+      "negative_queries_per_modality": 100,
+      "negative_in_domain_fraction": 0.5,
+      "positive_queries_per_pilot_source": 20,
+      "queries_per_unseen_view_crop_diagram_slice": 20
+    },
+    "report_by": ["query task", "source", "global versus source-filtered", "modality", "confusable variant", "image slice"],
+    "report_requirements": "Show numerator, denominator, excluded/pending cases, and 95% Wilson intervals. Do not count unreviewed or missing images as passing. Report unfiltered global search separately; source filters must not hide distractors.",
+    "metrics": {
+      "top1": "Fraction of positive queries marked candidates whose first result belongs to expected_ids; divide by all positive queries, so abstentions count as misses.",
+      "recall_at_5": "Fraction of positive queries marked candidates with any expected_id in the first five distinct entities; divide by all positive queries, so abstentions count as misses.",
+      "wrong_variant_top1": "Fraction of confusable queries whose first accepted result is in confusable_ids.",
+      "false_acceptance": "Fraction of negative queries marked candidates instead of no_supported_match; ranked suggestions under no_supported_match are not accepted matches."
+    }
+  },
+  "quality_targets": {
+    "status": "frozen M1 targets; evaluate at release sample sizes, not the small pilot",
+    "exact_designation": {"top1_min": 0.95, "recall_at_5_min": 0.99},
+    "descriptive": {"top1_min": 0.75, "recall_at_5_min": 0.9},
+    "specification": {"top1_min": 0.75, "recall_at_5_min": 0.9},
+    "photograph": {"top1_min": 0.8, "recall_at_5_min": 0.9},
+    "image_text": {"top1_min": 0.85, "recall_at_5_min": 0.95},
+    "unseen_view_crop_diagram_each": {"recall_at_5_min": 0.8},
+    "confusable_variant": {"wrong_variant_top1_max": 0.1, "recall_at_5_min": 0.85},
+    "no_match_per_modality": {"false_acceptance_max": 0.05, "false_acceptance_wilson95_upper_max": 0.1},
+    "text_regression": "All 73 existing required cases retain their expected rank bound. On all 116 frozen cases, recall@5 and mean reciprocal rank must not fall below M1; missing baseline sources are failures, not skips.",
+    "combined_regression": "On the same evaluation photographs, image-plus-text recall@5 must be at least image-only recall@5.",
+    "integrity": {"duplicate_entity_results_max": 0, "filter_leaks_max": 0, "broken_evidence_or_media_references_max": 0}
+  },
+  "resource_targets": {
+    "status": "frozen M1 budgets; no image or combined performance measurements exist in M1",
+    "comparison_scope": "Frozen 4337-entity text corpus plus at most 10000 indexed image views; same hardware, text dataset, query set, runtime settings, and background load for regression comparisons. Record both executable hashes and each media-gallery hash.",
+    "latency_seconds": {
+      "text": {"first_process_max": 5, "repeated_process_p95_max": 3},
+      "image": {"first_process_max": 8, "repeated_process_p95_max": 5},
+      "image_text": {"first_process_max": 10, "repeated_process_p95_max": 7}
+    },
+    "latency_definition": "Wall time from process launch through complete output, including model loading, image decoding, and search. First observed launch is not OS-cache-cleared cold start; repeated launches are not an in-process warm service.",
+    "latency_samples": {"first_process_per_mode": 1, "repeated_process_per_mode_min": 20},
+    "text_repeated_process_p95_baseline_multiplier_max": 1.2,
+    "peak_resident_memory_mib_max": 2048,
+    "text_peak_resident_memory_baseline_multiplier_max": 1.2,
+    "memory_definition": "Per-process OS peak resident working set; do not substitute Python wrapper memory or private virtual bytes.",
+    "compressed_release_mib_max": 256,
+    "standalone_executable_mib_max": 320,
+    "embedded_previews_mib_max": 32,
+    "size_definition": "MiB = 1048576 bytes; each supported platform must pass. Original media remains outside the executable.",
+    "release_validation": "Measure native latency and memory on all five targets before release; select and record each target's hardware before model comparison. Until then only Windows reference results are established."
+  },
+  "first_release_contract": {
+    "status": "planned, not implemented",
+    "queries": {
+      "text": "pipelines search [--mode hybrid|vector] [filters] [--limit N] TEXT",
+      "image": "pipelines search --image PATH [filters] [--limit N]",
+      "image_text": "pipelines search --image PATH [filters] [--limit N] TEXT"
+    },
+    "image_input": "One local JPEG or PNG; reject unreadable, corrupt, or unsupported input with a JSON error on stderr and nonzero exit. No URL fetching during search.",
+    "image_limits": {"encoded_mib_max": 20, "decoded_megapixels_max": 40},
+    "flags": "Flags precede the positional text. Keep --source, --kind, --category and --limit 1..100 (default 10); --mode applies to text-only search, and an explicit --mode with --image is rejected.",
+    "text_result_fields_preserved": ["id", "title", "url", "source", "kind", "categories", "aliases", "score", "cosine", "name_match", "snippet", "evidence_id"],
+    "envelope_additions": {
+      "query_type": ["text", "image", "image_text"],
+      "match_status": ["candidates", "no_supported_match"],
+      "query_image_sha256": "Present for image inputs; never embed the user's query image or local path."
+    },
+    "result_additions": {
+      "matches": "Evidence contributions with channel, score, evidence_id, canonical source URL, and media_id for visual evidence; include model/recipe identity for generated observations.",
+      "channels": ["text", "image", "ocr", "description"],
+      "score": "Preserve score=cosine for text-only --mode vector. Hybrid and image modes use an entity ranking score; scores are ranking signals, not probabilities of identity.",
+      "cosine": "Keep the existing text cosine meaning; use null for image-only results. Image cosine belongs to the image contribution.",
+      "name_match": "False when there is no text query."
+    },
+    "ranking": "One result per source-qualified entity. Keep model spaces separate and fuse rankings, never unrelated vectors. Aggregate diverse views without rewarding duplicate counts.",
+    "no_match": "Always return match_status. no_supported_match may retain ranked suggestions for inspection and text compatibility; these are explicitly not accepted identifications. Calibrate each modality on development positives and negatives.",
+    "offline": "Embed required query models and vectors. Search, get, similar, info, and verify make no network requests; heavy OCR and description models run only during construction.",
+    "deferred": ["Direct text-to-image retrieval using a paired visual text encoder", "multiple query images", "camera or video input"]
+  },
+  "media_and_compatibility": {
+    "discovery": "Adapters describe candidates through one shared media interface. Site-specific discovery and supporting files stay in that source's package.",
+    "storage": "Shared resumable downloader retains verified originals by content hash in the durable local archive. Atomic partial downloads and decode/resize intermediates use temporary storage.",
+    "provenance": "Preserve original URLs, captions, source responses, capture times, entity/evidence associations, and processing/model revisions. Generated observations remain distinct from source statements.",
+    "distribution": "Embed selected compact previews within the size budget and expose whether a matching preview is present; original bytes stay in the local archive for reprocessing and inspection.",
+    "stable_ids": "Preserve every existing SOURCE:ID and evidence ID. Deduplicating image bytes never merges entity identities.",
+    "commands": "Existing text search, similar, get formats json/markdown/html/source, info, version, and verify continue to work. Original source exports remain byte-identical.",
+    "bundles": "New code can read existing format-2 text bundles and snapshots; absent media is valid. Unsupported newer formats fail clearly. Old binaries are not expected to read new bundle formats.",
+    "verification_gate": "M1 verified by the user. Advance one milestone at a time, requiring user verification before starting the next."
+  }
+}

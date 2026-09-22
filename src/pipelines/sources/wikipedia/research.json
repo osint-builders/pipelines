@@ -1,0 +1,17 @@
+{
+  "fields": {
+    "Country of origin": "origin_country",
+    "First flight": "first_flight",
+    "Frequency": "frequency",
+    "Introduced": "service_entry",
+    "Introduction date": "service_entry",
+    "Manufacturer": "manufacturer",
+    "National origin": "origin_country",
+    "No. built": "quantity",
+    "Number built": "quantity",
+    "PRF": "pulse_repetition_frequency",
+    "Power": "power",
+    "Range": "range"
+  },
+  "relations": []
+}

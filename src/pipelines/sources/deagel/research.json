@@ -1,0 +1,84 @@
+{
+  "fields": {
+    "Contractor": "contractor",
+    "Contractors": "contractor",
+    "First Flight": "first_flight",
+    "Initial Operational Capability (IOC)": "service_entry",
+    "Origin": "origin_country",
+    "Specifications: Combat Weight": "mass",
+    "Specifications: Crew": "crew",
+    "Specifications: Cruise Speed": "speed",
+    "Specifications: Empty Weight": "mass",
+    "Specifications: Height": "height",
+    "Specifications: Length": "length",
+    "Specifications: Max Detection Range": "detection_range",
+    "Specifications: Max Range": "range",
+    "Specifications: Max Weight": "mass",
+    "Specifications: Operational Weight": "mass",
+    "Specifications: Power": "power",
+    "Specifications: Top Speed": "speed",
+    "Specifications: Weight": "mass",
+    "Specifications: Width": "width",
+    "Status": "development_status",
+    "Total Production": "quantity"
+  },
+  "relations": [
+    {
+      "source_id": "deagel:a000371-002",
+      "target_id": "deagel:a000371-001",
+      "type": "variant_of",
+      "basis": "reviewed_source_evidence",
+      "rationale": "Deagel describes S-400M as a prospective upgraded S-400 variant with an unofficial designation. The relation retains that qualification and does not claim fielding or operational status.",
+      "evidence": [
+        {
+          "entity_id": "deagel:a000371-002",
+          "evidence_id": "5d9dc8dbc704b13e245e90be",
+          "quote": "The S-400M (unofficial designation) is a prospective upgraded variant of the S-400 air defense system expected to include longer range engagement capabilities against airborne targets and hypersonic missiles."
+        },
+        {
+          "entity_id": "deagel:a000371-001",
+          "evidence_id": "5d9dc8dbc704b13e245e90be",
+          "quote": "The S-400 entered service with the Russian Armed Forces on April 28, 2007, replacing the S-300 air defense system."
+        }
+      ]
+    },
+    {
+      "source_id": "deagel:a003154-001",
+      "target_id": "deagel:a000371-001",
+      "type": "component_of",
+      "basis": "reviewed_source_evidence",
+      "rationale": "The radar article explicitly states it is part of S-400, and the S-400 Gear table links the exact Deagel variant record. Counts are source claims, not relationship cardinality.",
+      "evidence": [
+        {
+          "entity_id": "deagel:a003154-001",
+          "evidence_id": "c247aedb097e28ea9b7c249d",
+          "quote": "The 91N6 radar system was developed by Almaz-Antey Concern as part of the S-400 air defense system entering into service on April 28, 2007."
+        },
+        {
+          "entity_id": "deagel:a000371-001",
+          "evidence_id": "5d9dc8dbc704b13e245e90be",
+          "quote": "| [91N6](https://www.deagel.com/Armies/91N6/a003154#001) | 1 |"
+        }
+      ]
+    },
+    {
+      "source_id": "deagel:a003155-001",
+      "target_id": "deagel:a000371-001",
+      "type": "component_of",
+      "basis": "reviewed_source_evidence",
+      "rationale": "The radar article explicitly states it is part of S-400, and the S-400 Gear table links the exact Deagel variant record. Counts are source claims, not relationship cardinality.",
+      "evidence": [
+        {
+          "entity_id": "deagel:a003155-001",
+          "evidence_id": "bba6c3ce5d02ae0761d49667",
+          "quote": "The 92N6 radar system was developed by Almaz-Antey Concern as part of the S-400 air defense system entering into service on April 28, 2007."
+        },
+        {
+          "entity_id": "deagel:a000371-001",
+          "evidence_id": "5d9dc8dbc704b13e245e90be",
+          "quote": "| [92N6](https://www.deagel.com/Armies/92N6/a003155#001) | 4 |"
+        }
+      ]
+    }
+  ]
+}

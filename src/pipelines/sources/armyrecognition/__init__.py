@@ -1,6 +1,8 @@
 import json
 import re
+from collections.abc import Iterable
 from pathlib import Path
+from typing import TYPE_CHECKING
 from urllib.parse import parse_qsl, urljoin, urlsplit, urlunsplit
 
 from bs4 import BeautifulSoup, Comment, Tag
@@ -8,6 +10,9 @@ from markdownify import markdownify
 
 from pipelines.model import Entity, EntityKind, Evidence, Fact, evidence_id
 from pipelines.sources.html import text
+
+if TYPE_CHECKING:
+    from pipelines.media import MediaCandidate
 
 ORIGIN = "https://www.armyrecognition.com"
 CATALOG = "/military-products/army/radars/air-defense-radars"
@@ -91,6 +96,16 @@ class ArmyRecognition:
     seeds: tuple[str, ...] = (SEED,)
     minimum_entities = 11
     subjects = SUBJECTS
+    media_origins = (ORIGIN,)
+    media_workers = 2
+    media_request_interval = 0.3
+
+    def discover_media(
+        self, url: str, body: bytes, entities: list[dict]
+    ) -> Iterable["MediaCandidate"]:
+        from pipelines.sources.armyrecognition.media import candidates
+
+        return candidates(url, body, entities)
 
     def normalize(self, url: str) -> str | None:
         parts = urlsplit(url)

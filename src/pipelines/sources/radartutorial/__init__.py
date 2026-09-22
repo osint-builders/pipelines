@@ -1,5 +1,7 @@
 import re
+from collections.abc import Iterable
 from copy import copy
+from typing import TYPE_CHECKING
 from urllib.parse import quote, unquote, urljoin, urlsplit, urlunsplit
 
 from bs4 import BeautifulSoup, Tag
@@ -7,6 +9,9 @@ from markdownify import markdownify
 
 from pipelines.model import Entity, EntityKind, Evidence, Fact, evidence_id
 from pipelines.sources.html import text
+
+if TYPE_CHECKING:
+    from pipelines.media import MediaCandidate
 
 ORIGIN = "https://www.radartutorial.eu"
 
@@ -63,6 +68,17 @@ class Radartutorial:
     id = "radartutorial"
     version = "1"
     minimum_entities = 1500
+    media_origins = (ORIGIN,)
+    media_workers = 2
+    media_request_interval = 0.3
+
+    def discover_media(
+        self, url: str, body: bytes, entities: list[dict]
+    ) -> Iterable["MediaCandidate"]:
+        from pipelines.sources.radartutorial.media import candidates
+
+        return candidates(url, body, entities)
+
     seeds: tuple[str, ...] = (
         f"{ORIGIN}/sitemap.en.xml",
         f"{ORIGIN}/index.en.html",

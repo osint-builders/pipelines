@@ -128,6 +128,127 @@ def prepare_assets(directory: Path) -> list[str]:
     return [*names, "SHA256SUMS"]
 
 
+def pack_quality_evidence(report: dict, output: Path) -> None:
+    from quality_gates import checked_artifact
+
+    with zipfile.ZipFile(output, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+        for name, reference in sorted(report["evidence"].items()):
+            if not re.fullmatch(r"[a-z_]+", name):
+                raise ValueError("Invalid quality evidence name")
+            if name not in {"binary", "bundle"}:
+                info = zipfile.ZipInfo(name, date_time=(1980, 1, 1, 0, 0, 0))
+                archive.writestr(
+                    info,
+                    checked_artifact(reference).read_bytes(),
+                    compress_type=zipfile.ZIP_DEFLATED,
+                    compresslevel=9,
+                )
+
+
+def validate_release(directory: Path, bundle: Path, validation: Path) -> None:
+    from measure_release import CONTRACT, reference_checks, resource_checks
+    from quality_gates import REQUIRED_RELEASE_CHECKS, validate_report
+
+    manifest = verify_bundle(bundle)
+    if json.loads((directory / "dataset-manifest.json").read_bytes()) != manifest:
+        raise ValueError("Release manifest does not match the verified bundle")
+    bundle_hash = hashlib.sha256(bundle.read_bytes()).hexdigest()
+    contract = json.loads(CONTRACT.read_bytes())
+    contract_hash = hashlib.sha256(CONTRACT.read_bytes()).hexdigest()
+
+    def read_report(path: Path) -> dict:
+        report = json.loads(path.read_bytes())
+        if (
+            report.get("schema_version") != 1
+            or report.get("dataset_id") != manifest["dataset_id"]
+            or report.get("bundle_sha256") != bundle_hash
+        ):
+            raise ValueError(f"Release validation identity mismatch: {path.name}")
+        return report
+
+    def require_checks(report: dict, required: tuple[str, ...]) -> None:
+        rows = report.get("checks", [])
+        names = [row.get("name") for row in rows]
+        if (
+            len(set(names)) != len(names)
+            or not set(required).issubset(names)
+            or any(row.get("passed") is not True for row in rows)
+        ):
+            raise ValueError("Release validation has missing or failed checks")
+
+    quality = read_report(validation / "quality.json")
+    require_checks(quality, REQUIRED_RELEASE_CHECKS)
+    if quality.get("release_quality_established") is not True:
+        raise ValueError("Release quality is not established")
+    if quality.get("contract_sha256") != contract_hash:
+        raise ValueError("Release quality uses a different acceptance contract")
+    binary_hashes = {}
+    for _, _, name in BINARY_TARGETS:
+        binary = directory / name
+        binary_hashes[hashlib.sha256(binary.read_bytes()).hexdigest()] = binary
+    if quality.get("binary_sha256") not in binary_hashes:
+        raise ValueError("Quality report does not describe a release executable")
+    replacements = {"binary": binary_hashes[quality["binary_sha256"]], "bundle": bundle}
+    with tempfile.TemporaryDirectory() as temporary:
+        packed = validation / "quality-evidence.zip"
+        if packed.is_file():
+            with zipfile.ZipFile(packed) as evidence_archive:
+                expected = set(quality["evidence"]) - {"binary", "bundle"}
+                if set(evidence_archive.namelist()) != expected or len(
+                    evidence_archive.namelist()
+                ) != len(expected):
+                    raise ValueError(
+                        "Quality evidence archive has missing or duplicate artifacts"
+                    )
+                for name in expected:
+                    if not re.fullmatch(r"[a-z_]+", name):
+                        raise ValueError("Invalid quality evidence name")
+                    path = Path(temporary) / name
+                    path.write_bytes(evidence_archive.read(name))
+                    replacements[name] = path
+        validate_report(quality, replacements)
+    for system, architecture, name in BINARY_TARGETS:
+        target = f"{system}-{architecture}"
+        report = read_report(validation / f"{target}.json")
+        binary = directory / name
+        binary_hash = hashlib.sha256(binary.read_bytes()).hexdigest()
+        archive = directory / archive_name(system, name)
+        if (
+            report.get("target") != target
+            or report.get("binary_sha256") != binary_hash
+            or report.get("binary", {}).get("bytes") != binary.stat().st_size
+            or report.get("contract_sha256") != contract_hash
+            or report.get("resource_gates_passed") is not True
+            or report.get("archive", {}).get("sha256")
+            != hashlib.sha256(archive.read_bytes()).hexdigest()
+            or report["archive"].get("bytes") != archive.stat().st_size
+            or report.get("preview_bytes")
+            != manifest.get("image", {}).get("preview_bytes")
+            or not archive_matches(archive, binary, system)
+        ):
+            raise ValueError(f"Native release validation mismatch: {target}")
+        computed = resource_checks(report, contract)
+        require_checks(report, tuple(computed))
+        if not all(computed.values()):
+            raise ValueError(f"Native resource gates failed: {target}")
+    reference = read_report(validation / "reference.json")
+    if (
+        reference.get("binary_sha256")
+        != hashlib.sha256(
+            (directory / "pipelines-windows-amd64.exe").read_bytes()
+        ).hexdigest()
+        or reference.get("contract_sha256") != contract_hash
+    ):
+        raise ValueError("Reference report does not describe a release executable")
+    computed = {
+        **resource_checks(reference, contract),
+        **reference_checks(reference, reference.get("baseline", {}), contract),
+    }
+    require_checks(reference, tuple(computed))
+    if not all(computed.values()):
+        raise ValueError("Reference resource regression gates failed")
+
+
 def gh(*arguments: str) -> str:
     return subprocess.run(
         ["gh", *arguments], check=True, capture_output=True, text=True, encoding="utf-8"
@@ -135,7 +256,21 @@ def gh(*arguments: str) -> str:
 
 
 def changed(current: dict, previous: dict | None) -> bool:
-    return previous is None or current["content_sha256"] != previous["content_sha256"]
+    return previous is None or current["dataset_id"] != previous.get("dataset_id")
+
+
+def input_tag(manifest: dict) -> str:
+    return "data-" + manifest["dataset_id"]
+
+
+def matches_input_tag(tag: str, manifest: dict) -> bool:
+    if tag == input_tag(manifest):
+        return True
+    # Preserve staged text inputs created before dataset-based release identities.
+    legacy = manifest["format_version"] == 2 and not any(
+        key in manifest for key in ("image", "observations", "search", "research")
+    )
+    return legacy and tag == "data-" + manifest["content_sha256"]
 
 
 def latest_manifest(repo: str, directory: Path) -> dict | None:
@@ -166,7 +301,7 @@ def latest_manifest(repo: str, directory: Path) -> dict | None:
 
 def gate(repo: str, tag: str, output: Path) -> dict:
     if not re.fullmatch(r"data-[0-9a-f]{64}", tag):
-        raise ValueError("Input tag must be data- followed by the full content SHA-256")
+        raise ValueError("Input tag must be data- followed by the full dataset ID")
     output.mkdir(parents=True, exist_ok=True)
     gh(
         "release",
@@ -182,8 +317,8 @@ def gate(repo: str, tag: str, output: Path) -> dict:
     )
     bundle = output / "dataset.zip"
     manifest = verify_bundle(bundle)
-    if tag != "data-" + manifest["content_sha256"]:
-        raise ValueError("Input tag does not match content fingerprint")
+    if not matches_input_tag(tag, manifest):
+        raise ValueError("Input tag does not match dataset identity")
     with tempfile.TemporaryDirectory() as temporary:
         previous = latest_manifest(repo, Path(temporary))
     result = {
@@ -201,13 +336,13 @@ def gate(repo: str, tag: str, output: Path) -> dict:
     return result
 
 
-def stage(repo: str, bundle: Path) -> None:
+def stage(repo: str, bundle: Path, validation: Path | None = None) -> None:
     manifest = verify_bundle(bundle)
-    tag = "data-" + manifest["content_sha256"]
+    tag = input_tag(manifest)
     with tempfile.TemporaryDirectory() as temporary:
         previous = latest_manifest(repo, Path(temporary))
     if not changed(manifest, previous):
-        print("Content unchanged; no upload or release requested.")
+        print("Dataset unchanged; no upload or release requested.")
         return
     existing = subprocess.run(
         ["gh", "release", "view", tag, "--repo", repo], capture_output=True
@@ -220,17 +355,32 @@ def stage(repo: str, bundle: Path) -> None:
     with tempfile.TemporaryDirectory() as temporary:
         upload = Path(temporary) / "dataset.zip"
         shutil.copyfile(bundle, upload)
+        assets = [str(upload)]
+        if validation is not None:
+            for name in ("quality.json", "reference.json"):
+                report = validation / name
+                identity = json.loads(report.read_bytes())
+                if identity.get("dataset_id") != manifest["dataset_id"]:
+                    raise ValueError(f"Staged validation dataset mismatch: {name}")
+                copied = Path(temporary) / name
+                shutil.copyfile(report, copied)
+                assets.append(str(copied))
+            evidence = Path(temporary) / "quality-evidence.zip"
+            pack_quality_evidence(
+                json.loads((validation / "quality.json").read_bytes()), evidence
+            )
+            assets.append(str(evidence))
         gh(
             "release",
             "create",
             tag,
-            str(upload),
+            *assets,
             "--repo",
             repo,
             "--prerelease",
             "--latest=false",
             "--title",
-            f"Dataset input {manifest['content_sha256'][:16]}",
+            f"Dataset input {manifest['dataset_id'][:16]}",
             "--notes",
             "",
         )
@@ -251,13 +401,18 @@ def publish(
     tag: str,
     *,
     target: str | None = None,
+    bundle: Path | None = None,
+    validation: Path | None = None,
 ) -> None:
     manifest = json.loads((directory / "dataset-manifest.json").read_text())
     if tag != "cli-" + manifest["dataset_id"]:
         raise ValueError("Release tag does not match dataset")
+    if bundle is None or validation is None:
+        raise ValueError("Publication requires --bundle and --validation reports")
+    validate_release(directory, bundle, validation)
     with tempfile.TemporaryDirectory() as temporary:
         if not changed(manifest, latest_manifest(repo, Path(temporary))):
-            print("Content already published; skipping.")
+            print("Dataset already published; skipping.")
             return
     asset_names = prepare_assets(directory)
     assets = [str(directory / name) for name in asset_names]
@@ -318,27 +473,41 @@ def publish(
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("command", choices=["stage", "gate", "publish"])
-    parser.add_argument("--repo", required=True)
+    parser.add_argument("command", choices=["stage", "gate", "validate", "publish"])
+    parser.add_argument("--repo")
     parser.add_argument("--bundle", type=Path)
     parser.add_argument("--tag")
     parser.add_argument("--directory", type=Path, default=Path("build/release"))
     parser.add_argument("--target", help="Commit SHA for a manually built release")
+    parser.add_argument(
+        "--validation",
+        type=Path,
+        help="Directory of dataset-bound quality and native resource reports",
+    )
     args = parser.parse_args()
-    if not re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", args.repo):
+    if args.command != "validate" and not re.fullmatch(
+        r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", args.repo or ""
+    ):
         parser.error("Invalid repository")
     if args.command == "stage":
         if args.bundle is None:
             parser.error("stage requires --bundle")
-        stage(args.repo, args.bundle)
+        stage(args.repo, args.bundle, args.validation)
     elif args.command == "gate":
         print(json.dumps(gate(args.repo, args.tag or "", args.directory)))
+    elif args.command == "validate":
+        if args.bundle is None or args.validation is None:
+            parser.error("validate requires --bundle and --validation")
+        validate_release(args.directory, args.bundle, args.validation)
+        print(json.dumps({"publication_ready": True}))
     else:
         publish(
             args.repo,
             args.directory,
             args.tag or "",
             target=args.target,
+            bundle=args.bundle,
+            validation=args.validation,
         )
 
 

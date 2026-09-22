@@ -1,3 +1,5 @@
+import hashlib
+import json
 import subprocess
 import sys
 import threading
@@ -59,6 +61,14 @@ class BrokenDiscovery(FixtureSource):
 class SupplementalFixture(FixtureSource):
     def discovery_seeds(self, directory: Path) -> list[str]:
         return [self.origin + "/radar.en.html"]
+
+
+class PostFixture(FixtureSource):
+    def request_body(self, url: str) -> bytes | None:
+        return json.dumps({"page": urlsplit(url).path}).encode()
+
+    def request_headers(self, url: str) -> dict[str, str]:
+        return {"Content-Type": "application/json"}
 
 
 def test_discovery_failure_during_resume_cannot_publish(tmp_path: Path) -> None:
@@ -155,10 +165,81 @@ def test_real_crawl_obeys_robots_and_resumes_after_failure(tmp_path: Path) -> No
         thread.join()
 
 
+def test_post_catalog_pages_use_shared_archive_and_replay(tmp_path: Path) -> None:
+    requests: list[tuple[str, bytes]] = []
+
+    class Handler(BaseHTTPRequestHandler):
+        def do_GET(self) -> None:
+            assert self.path == "/robots.txt"
+            self.send_response(200)
+            self.end_headers()
+            self.wfile.write(b"User-agent: *\nDisallow:\n")
+
+        def do_POST(self) -> None:
+            body = self.rfile.read(int(self.headers["Content-Length"]))
+            requests.append((self.path, body))
+            assert self.headers["Content-Type"] == "application/json"
+            assert json.loads(body) == {"page": self.path}
+            body = (
+                b'<div class="content"><h2>Equipment</h2><p>Complete catalog records.</p><a href="radar.en.html">Radar</a></div>'
+                if self.path == "/index.en.html"
+                else b'<div class="content"><h2>Fixture radar</h2><p>Complete equipment details and specifications.</p></div>'
+            )
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html")
+            self.send_header("Set-Cookie", "private-session=not-archived")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+        @override
+        def log_message(self, format: str, *args: object) -> None:
+            pass
+
+    server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    origin = f"http://127.0.0.1:{server.server_port}"
+    try:
+        result = subprocess.run(
+            [sys.executable, __file__, origin, str(tmp_path), "post"],
+            capture_output=True,
+            text=True,
+            timeout=60,
+        )
+        assert result.returncode == 0, result.stdout + result.stderr
+        assert len(requests) == 2
+        manifest, before = load_snapshot(tmp_path / "fixture")
+        source = PostFixture(origin)
+        archive = Archive(tmp_path / "fixture/archives" / manifest["archive"])
+        try:
+            for page in archive.pages("saved"):
+                headers = json.loads(page["headers"])
+                assert headers["request-method"] == "POST"
+                request_body = source.request_body(page["url"])
+                assert request_body is not None
+                assert (
+                    headers["request-body-sha256"]
+                    == hashlib.sha256(request_body).hexdigest()
+                )
+                assert "set-cookie" not in {key.lower() for key in headers}
+        finally:
+            archive.close()
+        build(source, tmp_path, archive_id=manifest["archive"])
+        assert load_snapshot(tmp_path / "fixture")[1] == before
+        assert len(requests) == 2
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join()
+
+
 if __name__ == "__main__":
     source = (
         BrokenDiscovery(sys.argv[1])
         if len(sys.argv) > 3 and sys.argv[3] == "broken"
+        else PostFixture(sys.argv[1])
+        if len(sys.argv) > 3 and sys.argv[3] == "post"
         else SupplementalFixture(sys.argv[1])
     )
     build(source, Path(sys.argv[2]))

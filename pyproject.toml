@@ -15,9 +15,20 @@ build = [
   "beautifulsoup4>=4.13,<5",
   "filelock>=3.20,<4",
   "markdownify>=1.2,<2",
+  "pillow>=12.3,<13",
   "scrapy>=2.19,<3",
 ]
 vector = ["filelock>=3.20,<4", "numpy>=2.3,<3", "onnxruntime>=1.24,<2", "tokenizers>=0.22,<1"]
+image = ["filelock>=3.20,<4", "numpy>=2.3,<3", "onnxruntime>=1.24,<2", "pillow>=12.3,<13"]
+ocr = [
+  "filelock>=3.20,<4", "rapidocr==3.9.2", "onnxruntime==1.30.0",
+  "opencv-python==4.13.0.92", "numpy==2.5.3", "pillow==12.3.0",
+  "pyclipper==1.4.0", "shapely==2.1.2", "omegaconf==2.3.1",
+]
+description = [
+  "filelock>=3.20,<4", "torch==2.14.0", "torchvision==0.29.0",
+  "transformers==5.17.0", "safetensors==0.8.0", "pillow==12.3.0",
+]
 
 [dependency-groups]
 dev = ["pytest>=9.1,<10", "mypy>=2.3,<3", "ruff>=0.16,<0.17"]

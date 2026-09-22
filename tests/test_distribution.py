@@ -1,12 +1,19 @@
 import json
 import zipfile
+from copy import deepcopy
+from io import BytesIO
 from pathlib import Path
 
 import pytest
 from test_pipeline import HTML, archived
 
 from pipelines.build import publish
-from pipelines.distribution import collect_artifacts, content_digest, write_bundle
+from pipelines.distribution import (
+    collect_artifacts,
+    content_digest,
+    validate_calibration_bundle,
+    write_bundle,
+)
 
 
 def test_export_preserves_full_content_and_stable_source_id(tmp_path: Path) -> None:
@@ -69,3 +76,77 @@ def test_bundle_is_deterministic_and_preserves_binary_payload(tmp_path: Path) ->
     assert first.read_bytes() == second.read_bytes()
     with zipfile.ZipFile(first) as archive:
         assert archive.read("html/page.html") == members["html/page.html"]
+
+
+def test_runtime_binary_members_need_no_zip_inflation(tmp_path: Path) -> None:
+    members = {
+        "model/model.onnx": b"graph" * 100,
+        "image/image.onnx": b"image graph" * 100,
+        "vectors.f32": b"vectors" * 100,
+        "image/vectors.f16": b"image vectors" * 100,
+        "observations/vectors.f32": b"observation vectors" * 100,
+        "entities/source/entity.json": b'{"title":"radar"}',
+    }
+    output = tmp_path / "runtime.zip"
+    write_bundle(output, members)
+    with zipfile.ZipFile(output) as archive:
+        for name, body in members.items():
+            assert archive.read(name) == body
+            expected = (
+                zipfile.ZIP_DEFLATED if name.endswith(".json") else zipfile.ZIP_STORED
+            )
+            assert archive.getinfo(name).compress_type == expected
+
+
+@pytest.mark.parametrize(
+    "mutation",
+    ["format", "checksum", "count", "boolean_schema", "retrieval", "missing"],
+)
+def test_calibration_extension_rejects_stale_or_incomplete_metadata(
+    mutation: str,
+) -> None:
+    from pipelines.calibration import canonical, digest
+
+    fixture = json.loads(Path("tests/fixtures/calibration.json").read_bytes())
+    manifest = deepcopy(fixture["binding"]["manifest"])
+    artifact = fixture["golden"][0]["artifact"]
+    body = canonical(artifact)
+    manifest["format_version"] = 5
+    manifest["files"]["calibration.json"] = digest(body)
+    manifest["calibration"] = {
+        "member": "calibration.json",
+        "sha256": digest(body),
+        "schema_version": 1,
+        "profiles": len(artifact["profiles"]),
+        "retrieval_sha256": artifact["retrieval_sha256"],
+    }
+    data = BytesIO()
+    with zipfile.ZipFile(data, "w") as archive:
+        archive.writestr("calibration.json", body)
+    with zipfile.ZipFile(data) as archive:
+        validate_calibration_bundle(archive, manifest)
+        if mutation == "format":
+            manifest["format_version"] = 4
+        elif mutation == "checksum":
+            manifest["calibration"]["sha256"] = "0" * 64
+        elif mutation == "count":
+            manifest["calibration"]["profiles"] += 1
+        elif mutation == "boolean_schema":
+            manifest["calibration"]["schema_version"] = True
+        elif mutation == "retrieval":
+            manifest["search"]["lexical_weight"] += 0.5
+        else:
+            manifest.pop("calibration")
+        with pytest.raises(ValueError):
+            validate_calibration_bundle(archive, manifest)
+
+
+def test_legacy_bundle_rejects_null_calibration_declaration() -> None:
+    data = BytesIO()
+    with zipfile.ZipFile(data, "w"):
+        pass
+    with zipfile.ZipFile(data) as archive:
+        with pytest.raises(ValueError, match="format 5"):
+            validate_calibration_bundle(
+                archive, {"format_version": 4, "files": {}, "calibration": None}
+            )

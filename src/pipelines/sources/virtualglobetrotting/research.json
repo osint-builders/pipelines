@@ -1,0 +1,8 @@
+{
+  "fields": {
+    "Country": "site_country",
+    "Modified": "updated_date",
+    "Published": "publication_date"
+  },
+  "relations": []
+}
