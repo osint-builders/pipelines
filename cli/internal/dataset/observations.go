@@ -6,12 +6,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"math"
 	"regexp"
 	"sort"
 	"strings"
-	"unicode/utf8"
 )
 
 type ObservationManifest struct {
@@ -90,42 +88,6 @@ type observationData struct {
 
 func (d *Dataset) HasObservations() bool { return d.Manifest.Observations != nil }
 
-// Raw values preserve the producer's canonical UTF-8 strings and numeric lexemes.
-// In particular, confidence 1.0 must not become 1 when verifying its identity.
-func rawObject(body []byte) (map[string]json.RawMessage, error) {
-	decoder := json.NewDecoder(bytes.NewReader(body))
-	start, err := decoder.Token()
-	if err != nil || start != json.Delim('{') {
-		return nil, errors.New("expected a JSON object")
-	}
-	values := map[string]json.RawMessage{}
-	for decoder.More() {
-		token, err := decoder.Token()
-		if err != nil {
-			return nil, err
-		}
-		key, ok := token.(string)
-		if !ok {
-			return nil, errors.New("invalid JSON object key")
-		}
-		if _, exists := values[key]; exists {
-			return nil, errors.New("duplicate JSON object key")
-		}
-		var value json.RawMessage
-		if err := decoder.Decode(&value); err != nil {
-			return nil, err
-		}
-		values[key] = value
-	}
-	if _, err := decoder.Token(); err != nil {
-		return nil, err
-	}
-	if _, err := decoder.Token(); err != io.EOF {
-		return nil, errors.New("trailing JSON content")
-	}
-	return values, nil
-}
-
 func observationIdentity(raw map[string]json.RawMessage) (string, error) {
 	var body bytes.Buffer
 	body.WriteByte('{')
@@ -146,24 +108,8 @@ func observationIdentity(raw map[string]json.RawMessage) (string, error) {
 	return digestString(body.Bytes()), nil
 }
 
-func boundedText(text string, maximum int) bool {
-	return utf8.ValidString(text) && strings.TrimSpace(text) != "" && utf8.RuneCountInString(text) <= maximum
-}
-
 func validConfidence(value *float64) bool {
 	return value == nil || (!math.IsNaN(*value) && !math.IsInf(*value, 0) && *value >= 0 && *value <= 1)
-}
-
-func hasFields(fields map[string]json.RawMessage, names ...string) bool {
-	if len(fields) != len(names) {
-		return false
-	}
-	for _, name := range names {
-		if _, ok := fields[name]; !ok {
-			return false
-		}
-	}
-	return true
 }
 
 func (d *Dataset) LoadObservations() error {
@@ -193,7 +139,7 @@ func (d *Dataset) LoadObservations() error {
 	}
 	members := map[string][]byte{}
 	for member, maximum := range allowed {
-		body, err := d.readImage(member, maximum)
+		body, err := d.readBounded(member, maximum)
 		if err != nil {
 			return err
 		}
@@ -593,7 +539,7 @@ func (d *Dataset) observedText(vector []float32, query string, hybrid bool, filt
 			best[ref.EntityID] = previous
 			recipe := d.observations.provenance[row.RecipeSHA256]
 			generated[ref.EntityID] = Match{Channel: row.Kind, Score: cosine, Origin: "generated", ObservationID: row.ID, MediaID: ref.MediaID,
-				EvidenceID: ref.EvidenceID, URL: d.images.evidence[d.byID[ref.EntityID]][ref.EvidenceID], RecipeSHA256: row.RecipeSHA256,
+				EvidenceID: ref.EvidenceID, URL: d.evidenceURLs[d.byID[ref.EntityID]][ref.EvidenceID], RecipeSHA256: row.RecipeSHA256,
 				ModelID: recipe.ModelID, ModelRevision: recipe.ModelRevision, EmbeddingModelSHA256: d.Manifest.Observations.EmbeddingModelSHA256}
 		}
 	}

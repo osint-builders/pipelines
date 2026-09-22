@@ -224,7 +224,7 @@ func (d *Dataset) Verify() error {
 		}
 		pages[i] = map[string]bool{}
 		for _, page := range record.Evidence {
-			if !validImageURL(page.URL) {
+			if !validHTTPURL(page.URL) {
 				return errors.New("invalid source evidence URL")
 			}
 			pages[i][page.ID] = true

@@ -113,7 +113,7 @@ func (d *Dataset) loadTextIndex(observations bool) (*textIndex, error) {
 		}
 		add(lexicalDocument{Entity: chunk.Entity, Text: text, EvidenceID: chunk.EvidenceID, Field: "body"}, Match{Channel: "text", EvidenceID: chunk.EvidenceID, Reason: "source_text"})
 	}
-	raw, err := d.readImage("search/captions.json", 32<<20)
+	raw, err := d.readBounded("search/captions.json", 32<<20)
 	if err != nil {
 		return nil, err
 	}
@@ -175,7 +175,7 @@ func (d *Dataset) loadTextIndex(observations bool) (*textIndex, error) {
 func (d *Dataset) observationMatch(row Observation, ref ObservationReference) Match {
 	recipe := d.observations.provenance[row.RecipeSHA256]
 	return Match{Channel: row.Kind, Origin: "generated", ObservationID: row.ID, MediaID: ref.MediaID, EvidenceID: ref.EvidenceID,
-		URL: d.images.evidence[d.byID[ref.EntityID]][ref.EvidenceID], RecipeSHA256: row.RecipeSHA256, ModelID: recipe.ModelID,
+		URL: d.evidenceURLs[d.byID[ref.EntityID]][ref.EvidenceID], RecipeSHA256: row.RecipeSHA256, ModelID: recipe.ModelID,
 		ModelRevision: recipe.ModelRevision, EmbeddingModelSHA256: d.Manifest.Observations.EmbeddingModelSHA256, Reason: row.Kind}
 }
 

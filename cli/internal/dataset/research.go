@@ -249,7 +249,7 @@ func (d *Dataset) loadResearch() error {
 	for _, field := range d.Manifest.Research.Fields {
 		catalog[field.Name] = field
 	}
-	raw, err := d.readImage("research/claims.json", 32<<20)
+	raw, err := d.readBounded("research/claims.json", 32<<20)
 	if err != nil {
 		return err
 	}
@@ -275,7 +275,7 @@ func (d *Dataset) loadResearch() error {
 		}
 		field, exists := catalog[claim.Field]
 		if !exists || !researchID.MatchString(claim.ID) || !strings.HasPrefix(claim.ID, "claim:") || claim.ID <= previous || claim.Entity < 0 || claim.Entity >= len(d.Entities) || !safeKey(claim.EvidenceID) ||
-			(claim.Locator.Kind != "fact" && claim.Locator.Kind != "captured_at") || claim.Locator.Index < 0 || !boundedText(claim.Raw.Name, 1024) || len(claim.Raw.Raw) > 16384 || !validImageURL(claim.Raw.Evidence) || claim.Raw.Values == nil {
+			(claim.Locator.Kind != "fact" && claim.Locator.Kind != "captured_at") || claim.Locator.Index < 0 || !boundedText(claim.Raw.Name, 1024) || len(claim.Raw.Raw) > 16384 || !validHTTPURL(claim.Raw.Evidence) || claim.Raw.Values == nil {
 			return errors.New("invalid research claim")
 		}
 		if claim.Locator.Kind == "captured_at" && claim.Field != "captured_date" {
@@ -288,7 +288,7 @@ func (d *Dataset) loadResearch() error {
 		r.byEntity[claim.Entity] = append(r.byEntity[claim.Entity], len(r.claims))
 		r.claims = append(r.claims, claim)
 	}
-	raw, err = d.readImage("research/relations.json", 32<<20)
+	raw, err = d.readBounded("research/relations.json", 32<<20)
 	if err != nil {
 		return err
 	}
@@ -415,7 +415,7 @@ func (d *Dataset) researchRecord(index int) (*researchRecord, error) {
 		return nil, err
 	}
 	for _, page := range record.Evidence {
-		if !validImageURL(page.URL) || page.CanonicalURL != "" && !validImageURL(page.CanonicalURL) {
+		if !validHTTPURL(page.URL) || page.CanonicalURL != "" && !validHTTPURL(page.CanonicalURL) {
 			return nil, errors.New("invalid research evidence URL")
 		}
 	}

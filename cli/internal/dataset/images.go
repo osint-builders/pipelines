@@ -2,15 +2,12 @@ package dataset
 
 import (
 	"bytes"
-	"crypto/sha256"
 	"encoding/binary"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"image"
 	"math"
-	"net/url"
 	"path"
 	"regexp"
 	"sort"
@@ -80,24 +77,6 @@ type ImageProbe struct {
 	Vector      []float32 `json:"vector"`
 }
 
-type Match struct {
-	Method               string   `json:"method,omitempty"`
-	Terms                []string `json:"terms,omitempty"`
-	Reason               string   `json:"reason,omitempty"`
-	Channel              string   `json:"channel"`
-	Score                float64  `json:"score"`
-	EvidenceID           string   `json:"evidence_id"`
-	URL                  string   `json:"url"`
-	MediaID              string   `json:"media_id,omitempty"`
-	ModelSHA256          string   `json:"model_sha256,omitempty"`
-	Origin               string   `json:"origin,omitempty"`
-	ObservationID        string   `json:"observation_id,omitempty"`
-	RecipeSHA256         string   `json:"recipe_sha256,omitempty"`
-	ModelID              string   `json:"model_id,omitempty"`
-	ModelRevision        string   `json:"model_revision,omitempty"`
-	EmbeddingModelSHA256 string   `json:"embedding_model_sha256,omitempty"`
-}
-
 type VisualResult struct {
 	Entity
 	Score      float64      `json:"score"`
@@ -110,36 +89,12 @@ type VisualResult struct {
 }
 
 type imageData struct {
-	records  []MediaRecord
-	vectors  []float32
-	probes   []ImageProbe
-	evidence map[int]map[string]string
+	records []MediaRecord
+	vectors []float32
+	probes  []ImageProbe
 }
 
 func (d *Dataset) HasImages() bool { return d.Manifest.Image != nil }
-
-func digestString(body []byte) string {
-	digest := sha256.Sum256(body)
-	return hex.EncodeToString(digest[:])
-}
-
-func validDigest(value string) bool {
-	decoded, err := hex.DecodeString(value)
-	return err == nil && len(decoded) == 32 && value == strings.ToLower(value)
-}
-
-func validImageURL(value string) bool {
-	parsed, err := url.Parse(value)
-	return err == nil && (parsed.Scheme == "https" || parsed.Scheme == "http") && parsed.Host != "" && parsed.User == nil
-}
-
-func (d *Dataset) readImage(name string, maximum uint64) ([]byte, error) {
-	member := d.members[name]
-	if member == nil || member.UncompressedSize64 > maximum {
-		return nil, fmt.Errorf("missing or oversized bundle member: %s", name)
-	}
-	return d.Read(name)
-}
 
 // ImageModel verifies the self-contained graph and its preprocessing contract.
 // ONNX graph execution is checked by the runtime using ImageProbes.
@@ -147,7 +102,7 @@ func (d *Dataset) ImageModel() ([]byte, error) {
 	if !d.HasImages() {
 		return nil, errors.New("dataset has no image model")
 	}
-	raw, err := d.readImage("image/model.json", 1<<20)
+	raw, err := d.readBounded("image/model.json", 1<<20)
 	if err != nil {
 		return nil, err
 	}
@@ -177,7 +132,7 @@ func (d *Dataset) ImageModel() ([]byte, error) {
 	if err := lock.Preprocess.Validate(); err != nil {
 		return nil, err
 	}
-	graph, err := d.readImage("image/"+lock.File, 512<<20)
+	graph, err := d.readBounded("image/"+lock.File, 512<<20)
 	if err != nil {
 		return nil, err
 	}
@@ -213,21 +168,21 @@ func (d *Dataset) LoadImages() error {
 	if _, err := d.ImageModel(); err != nil {
 		return err
 	}
-	raw, err := d.readImage("image/index.json", 64<<20)
+	raw, err := d.readBounded("image/index.json", 64<<20)
 	if err != nil {
 		return err
 	}
 	if digestString(raw) != m.GallerySHA256 {
 		return errors.New("image gallery identity mismatch")
 	}
-	loaded := &imageData{evidence: map[int]map[string]string{}}
+	loaded := &imageData{}
 	if err := json.Unmarshal(raw, &loaded.records); err != nil {
 		return err
 	}
 	if len(loaded.records) != m.Records {
 		return errors.New("media record count mismatch")
 	}
-	raw, err = d.readImage("image/vectors.f16", 10000*512*2)
+	raw, err = d.readBounded("image/vectors.f16", 10000*512*2)
 	if err != nil {
 		return err
 	}
@@ -270,9 +225,9 @@ func (d *Dataset) LoadImages() error {
 		if i > 0 && loaded.records[i-1].ID >= record.ID {
 			return errors.New("media records are not uniquely sorted")
 		}
-		if !safeSource(record.Source) || !sources[record.Source] || !validImageURL(record.URL) ||
+		if !safeSource(record.Source) || !sources[record.Source] || !validHTTPURL(record.URL) ||
 			record.ID != record.Source+":media:"+digestString([]byte(record.URL))[:24] ||
-			(record.OriginalURL != "" && !validImageURL(record.OriginalURL)) ||
+			(record.OriginalURL != "" && !validHTTPURL(record.OriginalURL)) ||
 			!validDigest(record.SHA256) || record.Width < 1 || record.Height < 1 ||
 			record.Width > imagepreprocess.MaxImagePixels || record.Height > imagepreprocess.MaxImagePixels ||
 			int64(record.Width)*int64(record.Height) > imagepreprocess.MaxImagePixels ||
@@ -329,13 +284,11 @@ func (d *Dataset) LoadImages() error {
 			if !ok || d.Entities[entity].Source != record.Source {
 				return errors.New("media references an unrelated entity")
 			}
-			if loaded.evidence[entity] == nil {
-				loaded.evidence[entity], err = d.imageEvidence(entity)
-				if err != nil {
-					return err
-				}
+			pages, err := d.entityEvidence(entity)
+			if err != nil {
+				return err
 			}
-			if loaded.evidence[entity][ref.EvidenceID] == "" {
+			if pages[ref.EvidenceID] == "" {
 				return errors.New("media references unrelated evidence")
 			}
 			if record.VectorIndex != nil {
@@ -401,77 +354,6 @@ func (d *Dataset) LoadImages() error {
 	return nil
 }
 
-func (d *Dataset) imageEvidence(index int) (map[string]string, error) {
-	if pages := d.evidenceURLs[index]; pages != nil {
-		return pages, nil
-	}
-	entity := d.Entities[index]
-	raw, err := d.Read("entities/" + strings.Replace(entity.ID, ":", "/", 1) + ".json")
-	if err != nil {
-		return nil, err
-	}
-	var record struct {
-		ID, Source, Kind string
-		Evidence         []struct {
-			ID, URL  string
-			RecordID string `json:"record_id"`
-		}
-	}
-	if err := json.Unmarshal(raw, &record); err != nil {
-		return nil, err
-	}
-	if record.ID != entity.ID || record.Source != entity.Source || record.Kind != entity.Kind || len(record.Evidence) == 0 {
-		return nil, errors.New("invalid media entity record")
-	}
-	pages := map[string]string{}
-	for _, page := range record.Evidence {
-		identity := page.URL
-		if page.RecordID != "" {
-			identity += "\n" + page.RecordID
-		}
-		if !validImageURL(page.URL) || page.ID != digestString([]byte(identity))[:24] || pages[page.ID] != "" {
-			return nil, errors.New("invalid media evidence identity")
-		}
-		pages[page.ID] = page.URL
-	}
-	if d.evidenceURLs == nil {
-		d.evidenceURLs = map[int]map[string]string{}
-	}
-	d.evidenceURLs[index] = pages
-	return pages, nil
-}
-
-// TextMatch resolves contribution provenance without changing legacy result fields.
-func (d *Dataset) TextMatch(result Result) (Match, error) {
-	index, ok := d.byID[result.ID]
-	if !ok {
-		return Match{}, errors.New("text result references an unknown entity")
-	}
-	pages, err := d.imageEvidence(index)
-	if err != nil {
-		return Match{}, err
-	}
-	evidence := result.EvidenceID
-	if evidence == "" {
-		ids := make([]string, 0, len(pages))
-		for id := range pages {
-			ids = append(ids, id)
-		}
-		sort.Strings(ids)
-		evidence = ids[0]
-		for _, id := range ids {
-			if pages[id] == d.Entities[index].URL {
-				evidence = id
-				break
-			}
-		}
-	}
-	if pages[evidence] == "" {
-		return Match{}, errors.New("text match references unrelated evidence")
-	}
-	return Match{Channel: "text", Score: result.Score, EvidenceID: evidence, URL: pages[evidence]}, nil
-}
-
 func (d *Dataset) verifyImages() error {
 	if err := d.LoadImages(); err != nil {
 		return err
@@ -490,7 +372,7 @@ func (d *Dataset) verifyImages() error {
 }
 
 func (d *Dataset) previewBody(preview MediaPreview) ([]byte, error) {
-	body, err := d.readImage(preview.Member, 32<<20)
+	body, err := d.readBounded(preview.Member, 32<<20)
 	if err != nil {
 		return nil, err
 	}
@@ -530,7 +412,7 @@ func unitVector(vector []float32, dimensions int) error {
 }
 
 func (d *Dataset) loadImageProbes() ([]ImageProbe, error) {
-	raw, err := d.readImage("image/probes.json", 8<<20)
+	raw, err := d.readBounded("image/probes.json", 8<<20)
 	if err != nil {
 		return nil, err
 	}
@@ -552,7 +434,7 @@ func (d *Dataset) loadImageProbes() ([]ImageProbe, error) {
 		if err := unitVector(probe.Vector, d.Manifest.Image.Dimensions); err != nil {
 			return nil, err
 		}
-		body, err := d.readImage(probe.ImageMember, 1<<20)
+		body, err := d.readBounded(probe.ImageMember, 1<<20)
 		if err != nil {
 			return nil, err
 		}
@@ -683,7 +565,7 @@ func (d *Dataset) searchImages(imageVector, textVector []float32, query string, 
 			}
 			best[index] = VisualResult{Entity: entity, Score: cosine, Snippet: caption, EvidenceID: ref.EvidenceID,
 				Matches: []Match{{Channel: "image", Score: cosine, EvidenceID: ref.EvidenceID,
-					URL: d.images.evidence[index][ref.EvidenceID], MediaID: record.ID, ModelSHA256: d.Manifest.Image.ModelSHA256}}}
+					URL: d.evidenceURLs[index][ref.EvidenceID], MediaID: record.ID, ModelSHA256: d.Manifest.Image.ModelSHA256}}}
 		}
 	}
 	results := make([]VisualResult, 0, len(best))

@@ -13,8 +13,9 @@ Apply behavior-preserving changes in small tested commits on main. Existing rele
 artifacts and M10 benchmark inputs remain unchanged.
 
 - [x] Reuse content/evidence identity validation and remove the duplicate numeric validator; 163 focused tests and the released dataset verification passed.
-- [ ] Consolidate shared Go bundle validation and evidence ownership.
+- [x] Consolidate shared Go bundle validation and evidence ownership; all Go tests and vet passed.
 - [ ] Unify repeated scraper media-owner lookup while retaining source-specific matching.
+- [ ] Consolidate repeated HTML link rewriting without changing source policies.
 - [ ] Run the complete checks and commit the finished cleanup.
 
 ## ODIN source capture — ready for verification

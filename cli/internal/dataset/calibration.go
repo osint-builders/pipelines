@@ -320,7 +320,7 @@ func (d *Dataset) loadCalibration(fields map[string]json.RawMessage) error {
 	if meta.RetrievalSHA256 != retrieval {
 		return errors.New("calibration descriptor retrieval mismatch")
 	}
-	body, err := d.readImage(meta.Member, 65536)
+	body, err := d.readBounded(meta.Member, 65536)
 	if err != nil {
 		return err
 	}
