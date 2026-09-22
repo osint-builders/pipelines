@@ -127,7 +127,10 @@ class ArchiveSpider(Spider):
             self.logger.warning(
                 "Archived %s pages; %s URLs discovered", self.saved, len(self.scheduled)
             )
-        if not any(kind in content_type.lower() for kind in ("html", "xml", "json")):
+        if not any(kind in content_type.lower() for kind in ("html", "xml", "json")) and (
+            content_type.split(";", 1)[0].strip().lower()
+            not in getattr(self.source, "additional_content_types", ())
+        ):
             self.archive.fail(original, f"Unexpected content type: {content_type}")
             return
         try:

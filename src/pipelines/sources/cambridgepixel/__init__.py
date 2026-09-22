@@ -224,6 +224,7 @@ class CambridgePixel:
     media_origins: tuple[str, ...] = ("https://cambridgepixel.com",)
     media_workers = 1
     media_request_interval = 0.3
+    additional_content_types = ("application/pdf",)
 
     def __init__(self) -> None:
         from pipelines.sources.cambridgepixel.imagery import origins, reviews

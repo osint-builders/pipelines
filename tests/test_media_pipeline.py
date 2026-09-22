@@ -3,6 +3,7 @@ import json
 import socket
 import sys
 from contextlib import closing
+from dataclasses import replace
 from pathlib import Path
 from types import SimpleNamespace
 from typing import cast
@@ -193,6 +194,49 @@ def published(tmp_path: Path) -> tuple[ImageSource, Path]:
 
 def no_network(*args: object, **kwargs: object) -> None:
     raise AssertionError("Offline media operation attempted network access")
+
+
+@pytest.mark.parametrize("invalid", [False, True])
+def test_embedded_preview_is_saved_offline_and_repeatable(
+    published: tuple[ImageSource, Path],
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    invalid: bool,
+) -> None:
+    source, _ = published
+    stream = io.BytesIO()
+    Image.new("RGB", (12, 8), (80, 140, 200)).save(stream, format="PNG")
+
+    def discover(url: str, body: bytes, entities: list[dict]) -> list[MediaCandidate]:
+        reference = MediaReference(entities[0]["id"], entities[0]["evidence"][0]["id"])
+        candidate = MediaCandidate(
+            url,
+            [reference],
+            role="preview",
+            original_url=url,
+            page_url=url,
+            embedded_body=stream.getvalue(),
+            embedded_content_type="image/png",
+        )
+        return [replace(candidate, role="original") if invalid else candidate]
+
+    monkeypatch.setattr(source, "discover_media", discover)
+    monkeypatch.setattr(socket, "socket", no_network)
+    if invalid:
+        with pytest.raises(ValueError, match="Invalid embedded"):
+            media(source, tmp_path)
+        with MediaStore(tmp_path) as store:
+            assert store.records(source.id, "fixture") == []
+        return
+    report = media(source, tmp_path)
+    assert report["counts"]["saved"] == 1
+    assert report["counts"]["pending"] == 0
+    record = report["records"][0]
+    assert record["url"] == URL
+    assert record["width"] == 12 and record["height"] == 8
+    with MediaStore(tmp_path) as store:
+        assert store.body(record["sha256"]) == stream.getvalue()
+    assert media(source, tmp_path)["records"] == report["records"]
 
 
 def save_image(source: ImageSource, root: Path, archive_id: str = "fixture") -> dict:

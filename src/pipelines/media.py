@@ -60,6 +60,8 @@ class MediaCandidate:
     page_url: str = ""
     caption: str = ""
     section: str = ""
+    embedded_body: bytes | None = field(default=None, repr=False)
+    embedded_content_type: str = ""
 
 
 @dataclass(frozen=True)

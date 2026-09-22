@@ -27,10 +27,11 @@ cause false table/schema disagreements; functional URL differences still fail.
 Catalog archive: `20260922T142532Z-932ca3c5`. Image reviews are stored beside the
 adapter in `image_reviews.json`; matched originals use the shared media archive,
 with separate captured source evidence. Browser DOM captures are explicitly labelled.
-The first 185 models have been reviewed and audited: 174 image URLs saved for 179
-matched records, six unresolved matches, and no failed or pending downloads.
+The first 192 models have been reviewed and audited: 180 image URLs saved for 186
+matched records, six unresolved matches, and one failed museum download recovered
+through its browser page for the next capture. No downloads remain pending.
 Ten associations are explicitly marked ambiguous. Individual review has continued
-through MPN-14K (187 decisions). Garmin images retain selected part
+through RAT-31DL/M (196 decisions). Garmin images retain selected part
 numbers, sizes, and power configurations; GC's X5-21FH was verified in its hardware
 catalog after Google returned unrelated vehicle parts. SuperNet and SuperNet SSR
 retain separate identities and image evidence despite sharing a manufacturer page.
@@ -52,7 +53,12 @@ MDC catalog entry links to MDS; separate manufacturer model pages supply the ima
 evidence. ICx STS-12000 remains unresolved. Indra's shared L/S-band illustration
 is explicitly ambiguous. Kongsberg DR100 retains its full-screen gallery capture;
 MPN-14K retains an individually captioned Air Force museum photograph.
-Validation: 88 focused tests passed, including poster images, linked
+Reviewed PDF photographs now use the shared media store as document previews, with
+the original PDF, page, image name, exact quote, and document/image hashes retained.
+The ATCR-44S ENH datasheet resolves its earlier ambiguous family image. E-SATR,
+Kronos Land, and Kronos Naval also retain independently inspected datasheet images.
+Validation: 114 focused tests passed, including PDF evidence, offline embedded
+previews, source content-type opt-in, poster images, linked
 originals, responsive images, gallery thumbnails, CSS backgrounds, and ambiguous associations.
 Explicit image download types are supported; ordinary links and non-image CSS fail.
 All 393 records and 2,700 source facts pass the current capture audit.

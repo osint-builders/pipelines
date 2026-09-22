@@ -16,6 +16,7 @@ build = [
   "filelock>=3.20,<4",
   "markdownify>=1.2,<2",
   "pillow>=12.3,<13",
+  "pypdf==6.10.0",
   "scrapy>=2.19,<3",
 ]
 vector = ["filelock>=3.20,<4", "numpy>=2.3,<3", "onnxruntime>=1.24,<2", "tokenizers>=0.22,<1"]

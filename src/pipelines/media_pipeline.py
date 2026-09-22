@@ -1,5 +1,6 @@
 import json
 import re
+import tempfile
 from collections import Counter, defaultdict
 from contextlib import closing
 from pathlib import Path
@@ -7,7 +8,13 @@ from pathlib import Path
 from filelock import FileLock
 
 from pipelines.archive import Archive, atomic_json
-from pipelines.media import MEDIA_SCHEMA_VERSION, MediaCandidate, MediaStore
+from pipelines.media import (
+    MAX_IMAGE_BYTES,
+    MEDIA_SCHEMA_VERSION,
+    MediaCandidate,
+    MediaStore,
+    media_id,
+)
 from pipelines.snapshot import load_snapshot
 from pipelines.sources.base import MediaSource, PreparedSource, Source
 
@@ -285,9 +292,33 @@ def _discover(source: Source, root: Path, manifest: dict, entities: list[dict]) 
                     for reference in candidate.references
                 ):
                     raise ValueError("Media reference must belong to its archived page")
+                if candidate.embedded_body is not None and (
+                    candidate.role != "preview"
+                    or candidate.original_url != url
+                    or candidate.url != url
+                    or not candidate.references
+                    or candidate.exclusion_reason
+                    or not candidate.embedded_content_type.startswith("image/")
+                    or not candidate.embedded_body
+                    or len(candidate.embedded_body) > MAX_IMAGE_BYTES
+                ):
+                    raise ValueError("Invalid embedded image preview")
                 candidates.append(candidate)
     with MediaStore(root) as store:
         store.register(source.id, archive_id, candidates)
+        for candidate in candidates:
+            if candidate.embedded_body is None:
+                continue
+            with tempfile.TemporaryDirectory(prefix="pipeline-embedded-") as temporary:
+                path = Path(temporary) / "image"
+                path.write_bytes(candidate.embedded_body)
+                store.save(
+                    source.id,
+                    archive_id,
+                    media_id(source.id, candidate.url),
+                    path,
+                    content_type=candidate.embedded_content_type,
+                )
 
 
 def media(source: Source, root: Path, *, download: bool = False) -> dict:

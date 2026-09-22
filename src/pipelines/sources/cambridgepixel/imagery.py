@@ -1,3 +1,4 @@
+import base64
 import json
 import re
 from html import escape
@@ -18,6 +19,17 @@ def reviews() -> list[dict]:
 
 
 def validate_page(url: str, body: bytes, matches: list[dict]) -> None:
+    pdf_matches = [
+        row for row in matches if row["page_url"] == url and "pdf_image" in row
+    ]
+    if pdf_matches:
+        from pipelines.sources.cambridgepixel.pdf_image import extract as pdf_image
+
+        for row in pdf_matches:
+            pdf_image(body, row)
+        if len(pdf_matches) != sum(row["page_url"] == url for row in matches):
+            raise ValueError("Mixed PDF and HTML radar image reviews")
+        return
     soup = BeautifulSoup(body, "html.parser")
     visible = " ".join(text(soup).split())
     for row in matches:
@@ -85,8 +97,15 @@ def extract(
         key = identity(row["manufacturer"], row["model"])
         base = catalog[key]
         caption = row["caption"]
-        markdown = f"{row['quote']}\n\n![{caption}]({row['image_url']})\n\nImage search: {row['search_url']}\n\nMatch review: {row['notes']}"
-        rendered = f'<!doctype html><html><head><meta charset="utf-8"><title>{escape(base.title)}</title></head><body><h1>{escape(base.title)}</h1><p>{escape(row["quote"])}</p><figure><img src="{escape(row["image_url"], quote=True)}" alt="{escape(caption, quote=True)}"><figcaption>{escape(caption)}</figcaption></figure><p>{escape(row["notes"])}</p><a href="{escape(url, quote=True)}">Image source</a></body></html>'
+        display_url = row["image_url"]
+        if "pdf_image" in row:
+            from pipelines.sources.cambridgepixel.pdf_image import extract as pdf_image
+
+            image_body, mime = pdf_image(body, row)
+            display_url = f"data:{mime};base64,{base64.b64encode(image_body).decode()}"
+        image_marker = "" if "pdf_image" in row else "!"
+        markdown = f"{row['quote']}\n\n{image_marker}[{caption}]({row['image_url']})\n\nImage search: {row['search_url']}\n\nMatch review: {row['notes']}"
+        rendered = f'<!doctype html><html><head><meta charset="utf-8"><title>{escape(base.title)}</title></head><body><h1>{escape(base.title)}</h1><p>{escape(row["quote"])}</p><figure><img src="{escape(display_url, quote=True)}" alt="{escape(caption, quote=True)}"><figcaption>{escape(caption)}</figcaption></figure><p>{escape(row["notes"])}</p><a href="{escape(url, quote=True)}">Image source</a></body></html>'
         result.append(
             Entity(
                 key=key,
@@ -127,6 +146,11 @@ def discover(
         owner = ("cambridgepixel:" + key, evidence_id(url, key))
         if owner not in owners:
             raise ValueError("Reviewed radar image has no captured entity evidence")
+        embedded_body, embedded_type = None, ""
+        if "pdf_image" in row:
+            from pipelines.sources.cambridgepixel.pdf_image import extract as pdf_image
+
+            embedded_body, embedded_type = pdf_image(body, row)
         result.append(
             MediaCandidate(
                 row["image_url"],
@@ -144,6 +168,10 @@ def discover(
                 page_url=url,
                 caption=row["caption"],
                 section="Reviewed radar image",
+                role="preview" if embedded_body is not None else "original",
+                original_url=url if embedded_body is not None else "",
+                embedded_body=embedded_body,
+                embedded_content_type=embedded_type,
             )
         )
     return result

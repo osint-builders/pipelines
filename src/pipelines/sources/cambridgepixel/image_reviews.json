@@ -2127,6 +2127,142 @@
     "caption": "AN/MPN-14K Airport Surveillance Radar and Precision Approach Radar deployed at Al Asad Air Base, Iraq, as identified by the National Museum of the U.S. Air Force.",
     "quote": "DAYTON, Ohio -- AN MPN 14-K, with its Airport Surveillance Radar (ASR) and Precision Approach Radar (PAR) systems, deployed at Al Asad Air Base, Iraq.",
     "notes": "Google Images led to the museum fact sheet. Opened the individual photo record, verified its explicit model caption and visually inspected the original high-resolution photograph of the two radar units. Photo record credits Ken LaRock and VIRIN 260727-F-IO108-4321; the date is a record identifier, not an inferred deployment date.",
-    "capture_method": "browser-dom"
+    "capture_method": "browser-dom",
+    "media_capture_method": "browser-asset"
+  },
+  {
+    "manufacturer": "Leonardo",
+    "model": "ATCR-33S/NG",
+    "status": "matched",
+    "search_url": "https://www.google.com/search?udm=2&q=Leonardo+ATCR-33S+NG+radar",
+    "page_url": "https://www.radartutorial.eu/19.kartei/03.atc/en/karte075.en.html",
+    "image_url": "https://www.radartutorial.eu/19.kartei/03.atc/pic/img03-075-01.jpg",
+    "caption": "G-33 primary-surveillance antenna and co-mounted upper array, shown by Radartutorial for ATCR-33S-NG; the antenna is shared with its predecessor.",
+    "quote": "Figure 1: ATCR-33S-NG uses the same antenna as its predecessor",
+    "notes": "Google Images cross-check included Leonardo and Radartutorial. Leonardo ATCR33S.pdf explicitly identifies its G-33 antenna; the current Radartutorial page supplies a labeled full-resolution image. Visually reviewed the red-and-white installation. The antenna alone does not distinguish the NG electronics from the predecessor."
+  },
+  {
+    "manufacturer": "Leonardo",
+    "model": "ATCR-44S ENH",
+    "status": "matched",
+    "search_url": "https://www.google.com/search?udm=2&q=Leonardo+ATCR-44S+ENH+radar",
+    "page_url": "https://electronics.leonardo.com/documents/16277707/0/ATCR44S%2BLQ%2B%28mm08669%29%2Bblock%2B2.pdf/701492bd-a4b1-5957-b0c9-9fcdec4f98e1?t=1710332654561",
+    "image_url": "https://electronics.leonardo.com/documents/16277707/0/ATCR44S%2BLQ%2B%28mm08669%29%2Bblock%2B2.pdf/701492bd-a4b1-5957-b0c9-9fcdec4f98e1?t=1710332654561",
+    "caption": "Leonardo ATCR-44S ENH installation under a polygonal radome, extracted from page 1 of the exact model datasheet.",
+    "quote": "Leonardo ATCR-44S ENH is the L-Band solid-state system designed to provide superior surveillance for Long Range and En-Route applications.",
+    "notes": "Google Images identified the exact manufacturer datasheet. Rendered and visually inspected its first page and extracted photograph. This replaces a generic exposed ATCR-44 antenna photo whose ENH identity could not be established. The radome hides the antenna itself; retained as the manufacturer-labelled system installation.",
+    "capture_method": "http-response",
+    "media_capture_method": "pdf-image-extraction",
+    "pdf_image": {
+      "page": 1,
+      "name": "Im0.jpg",
+      "document_sha256": "e1f67cd848cf327952ce8fc3fb788d9365ece8b3e7109bb0e535f59c69f570db",
+      "image_sha256": "06b35468b28ad6fe7dd03eb7bef5c5b4977d5eae5e68652c3947386f25535c83",
+      "extractor": "pypdf-6.10.0"
+    }
+  },
+  {
+    "manufacturer": "Leonardo",
+    "model": "E-SATR",
+    "status": "matched",
+    "search_url": "https://www.google.com/search?udm=2&q=Leonardo+E-SATR+radar",
+    "page_url": "https://electronics.leonardo.com/documents/16277707/0/E-SATR%2B-%2BSMR%2B%28MM07840%29.pdf/de9c7a82-70c3-3489-4728-f7d0cc7bd59d?t=1710408545820",
+    "image_url": "https://electronics.leonardo.com/documents/16277707/0/E-SATR%2B-%2BSMR%2B%28MM07840%29.pdf/de9c7a82-70c3-3489-4728-f7d0cc7bd59d?t=1710408545820",
+    "caption": "Leonardo E-SATR surface movement radar antenna atop a red-and-white airport tower, extracted from page 1 of its manufacturer datasheet.",
+    "quote": "The SMR Enhanced Surface Airport Tracking Radar (E-SATR) is an X-Band, state-of-the-art, solid-state, high-resolution radar for complete ground movement control in A-SMGCS systems.",
+    "notes": "Google Images led to the exact manufacturer datasheet. Rendered and visually inspected page 1 and its embedded photograph independently. Antenna length is not inferred from the photograph. The media is an extracted PDF image preview; the original PDF is retained as source evidence.",
+    "capture_method": "http-response",
+    "media_capture_method": "pdf-image-extraction",
+    "pdf_image": {
+      "page": 1,
+      "name": "Im0.jpg",
+      "document_sha256": "db2fa0c55915e25595373ed29ad61b0dfd2175c82e4d26c56100b3e86080d20c",
+      "image_sha256": "9dfd30aaed68eec3425ac8a20f4673ecbc2e7fa9e7c425a62381b0d1b39d1ad2",
+      "extractor": "pypdf-6.10.0"
+    }
+  },
+  {
+    "manufacturer": "Leonardo",
+    "model": "Kronos Dual Band",
+    "status": "matched",
+    "search_url": "https://www.google.com/search?udm=2&q=Leonardo+Kronos+Dual+Band+radar",
+    "page_url": "https://electronics.leonardo.com/en/products/kronos_dual_band",
+    "image_url": "https://electronics.leonardo.com/o/adaptive-media/image/22483367/h_560/PPA_MK2_v2_Shot_01rid%20KRONOS%20DUAL%20BAND_new.jpg",
+    "caption": "Manufacturer rendering of a naval superstructure integrating Leonardo Kronos Dual Band fixed radar faces.",
+    "quote": "Multifunction Dual Band AESA radar",
+    "notes": "Google Images led to the exact manufacturer product page. Visually inspected the labelled hero image: a rendered naval installation with integrated flat arrays. This is a manufacturer illustration, not a deployment photograph."
+  },
+  {
+    "manufacturer": "Leonardo",
+    "model": "Kronos Grand Mobile HP",
+    "status": "matched",
+    "search_url": "https://www.google.com/search?udm=2&q=Leonardo+Kronos+Grand+Mobile+HP+radar",
+    "page_url": "https://electronics.leonardo.com/en/products/kronos-grand-mobile-hp",
+    "image_url": "https://electronics.leonardo.com/o/adaptive-media/image/25882599/h_560/krono_b.jpg",
+    "caption": "Leonardo Kronos Grand Mobile HP planar antenna raised above its camouflaged truck, viewed from above.",
+    "quote": "Kronos Grand Mobile High Power (KGMHP) is a C-Band high performance multifunctional radar, designed for Air and Missile Surveillance and Defence, both in land and littoral environment to contrast any type of air and missile threat.",
+    "notes": "Google Images returned the exact manufacturer page. Independently inspected its photograph: large rectangular antenna with a narrow upper panel and visible truck. Excluded Grand Naval and older Grand Mobile results."
+  },
+  {
+    "manufacturer": "Leonardo",
+    "model": "Kronos Land",
+    "status": "matched",
+    "search_url": "https://www.google.com/search?udm=2&q=Leonardo+Kronos+Land+radar",
+    "page_url": "https://electronics.leonardo.com/documents/16277707/18397051/KRONOS+Land+Radar.pdf?t=1671028842810",
+    "image_url": "https://electronics.leonardo.com/documents/16277707/18397051/KRONOS+Land+Radar.pdf?t=1671028842810",
+    "caption": "Leonardo Kronos Land antenna and pedestal photographed against blue sky, extracted from its manufacturer datasheet.",
+    "quote": "KRONOS LAND is a mobile multifunctional radar system designed by the company to support air and coastal defence tactical operations.",
+    "notes": "Google Images returned manufacturer family articles alongside other Kronos variants. Followed the exact Cambridge Pixel product link to its manufacturer brochure. Rendered page 1 and visually inspected the embedded photograph, showing the older compact antenna rather than Grand Mobile HP. Original PDF retained.",
+    "capture_method": "http-response",
+    "media_capture_method": "pdf-image-extraction",
+    "pdf_image": {
+      "page": 1,
+      "name": "Im0.jpg",
+      "document_sha256": "7069e9eb0667c9671892d2d565c6551e5efe7c76413740ab2e6e939badb36a6a",
+      "image_sha256": "53cb75c3792d9622a45193fc21d2f3f8e6661da4d9244678ec884beb7dc6ac0f",
+      "extractor": "pypdf-6.10.0"
+    }
+  },
+  {
+    "manufacturer": "Leonardo",
+    "model": "Kronos Series",
+    "status": "matched",
+    "search_url": "https://www.google.com/search?udm=2&q=Leonardo+Kronos+Series+naval+radar",
+    "page_url": "https://electronics.leonardo.com/documents/16277707/18327106/KRONOS+Naval+Radar+%28mm07664%29+2022+2.pdf?t=1671029132841",
+    "image_url": "https://electronics.leonardo.com/documents/16277707/18327106/KRONOS+Naval+Radar+%28mm07664%29+2022+2.pdf?t=1671029132841",
+    "caption": "Kronos Naval planar antenna near the waterfront, representing the Kronos Series entry linked to this model by Cambridge Pixel.",
+    "quote": "KRONOS NAVAL is a multifunctional radar based on advanced Active Electronically Scanned Array (AESA) technology, used on naval vessels of 400 gross tons and above.",
+    "notes": "Google Images returned several distinct Kronos variants. Cambridge Pixel explicitly links its Series record to Kronos Naval, so followed that exact page to its brochure rather than selecting Grand Naval HP or Dual Band. Rendered page 1 and independently inspected the extracted antenna photograph. The caption identifies the Naval member, not every series configuration.",
+    "capture_method": "http-response",
+    "media_capture_method": "pdf-image-extraction",
+    "pdf_image": {
+      "page": 1,
+      "name": "Im0.jpg",
+      "document_sha256": "6bfbf8702e79f612e5d44fcb3f338451377901453ab2a6bd1cd605146b09686f",
+      "image_sha256": "8dc74e52a715ad47bda0fba7177a0d38a69779fa350169bb27650e5aecaa5e16",
+      "extractor": "pypdf-6.10.0"
+    }
+  },
+  {
+    "manufacturer": "Leonardo",
+    "model": "RAT-31DL",
+    "status": "matched",
+    "search_url": "https://www.google.com/search?udm=2&q=Leonardo+RAT-31DL+radar",
+    "page_url": "https://electronics.leonardo.com/en/products/rat-31dl",
+    "image_url": "https://electronics.leonardo.com/o/adaptive-media/image/30340337/h_560/RAT31DL_hero.png",
+    "caption": "Leonardo RAT-31DL rectangular antenna array at sunset, from its manufacturer product page.",
+    "quote": "RAT 31DL L-band 3D surveillance radar delivers high-precision detection through NATO-proven advanced AESA technology",
+    "notes": "Google Images returned the exact manufacturer page and separate DL/M results. Visually checked the fully loaded product photograph and model-specific image alternative text. Kept the DL image distinct from the deployable DL/M."
+  },
+  {
+    "manufacturer": "Leonardo",
+    "model": "RAT-31DL/M",
+    "status": "matched",
+    "search_url": "https://www.google.com/search?udm=2&q=Leonardo+RAT-31DL%2FM+radar",
+    "page_url": "https://electronics.leonardo.com/en/products/rat-31dlm",
+    "image_url": "https://electronics.leonardo.com/o/adaptive-media/image/30346625/h_560/RAT31_M_hero.png",
+    "caption": "Leonardo RAT-31DL/M deployable antenna on stabilizing legs beside its equipment shelter at sunset.",
+    "quote": "RAT 31DL/M radar delivers dependable air surveillance in today’s dynamic threat environment.",
+    "notes": "Google Images led to the exact DL/M manufacturer page. Visually inspected the full image after loading, showing the deployable open array, upper bar antenna, stabilizers, and shelter. Kept separate from the fixed DL model."
   }
 ]

@@ -3,13 +3,18 @@ import json
 import subprocess
 import sys
 import threading
+from contextlib import closing
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import override
 from urllib.parse import urlsplit
 
+import pytest
+from scrapy.http import Response
+
 from pipelines.archive import Archive, atomic_json
 from pipelines.build import build
+from pipelines.crawl import ArchiveSpider
 from pipelines.model import Entity, EntityKind, Evidence
 from pipelines.snapshot import load_snapshot
 from pipelines.sources.radartutorial import Radartutorial
@@ -69,6 +74,32 @@ class PostFixture(FixtureSource):
 
     def request_headers(self, url: str) -> dict[str, str]:
         return {"Content-Type": "application/json"}
+
+
+@pytest.mark.parametrize("enabled", [False, True])
+def test_pdf_capture_requires_source_opt_in(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, enabled: bool
+) -> None:
+    source = FixtureSource("https://example.test")
+    monkeypatch.setattr(
+        source,
+        "additional_content_types",
+        ("application/pdf",) if enabled else (),
+        raising=False,
+    )
+    monkeypatch.setattr(source, "discover", lambda url, body: [])
+    with closing(Archive(tmp_path)) as archive:
+        spider = ArchiveSpider(source, archive)
+        request = spider.request(source.seeds[0])
+        response = Response(
+            source.seeds[0],
+            request=request,
+            status=200,
+            headers={"Content-Type": "application/pdf; charset=binary"},
+            body=b"%PDF-fixture",
+        )
+        assert list(spider.capture(response)) == []
+        assert archive.counts() == {"saved" if enabled else "failed": 1}
 
 
 def test_discovery_failure_during_resume_cannot_publish(tmp_path: Path) -> None:
