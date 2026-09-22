@@ -1,0 +1,10 @@
+{
+  "fields": {
+    "Author modified": "updated_date",
+    "Date of introduction": "service_entry",
+    "Modified": "updated_date",
+    "Origin": "origin_country",
+    "Published": "publication_date"
+  },
+  "relations": []
+}

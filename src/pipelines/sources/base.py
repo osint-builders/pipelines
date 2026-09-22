@@ -53,6 +53,13 @@ class AuthenticatedSource(Protocol):
 
 
 @runtime_checkable
+class PostSource(Protocol):
+    def request_body(self, url: str) -> bytes | None:
+        """Return a POST body for a stable archive URL, or None for GET."""
+        ...
+
+
+@runtime_checkable
 class MediaSource(Protocol):
     media_origins: tuple[str, ...]
 

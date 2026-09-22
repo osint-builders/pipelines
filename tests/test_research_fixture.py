@@ -112,7 +112,8 @@ def test_recorded_source_coverage_has_explicit_mapping_outcomes(source: str) -> 
 
 
 def test_pilot_scope_and_unmapped_semantics_remain_explicit() -> None:
-    assert sorted(FIXTURE["source_coverage"]) == source_names()
+    assert len(FIXTURE["source_coverage"]) == 11
+    assert set(FIXTURE["source_coverage"]) <= set(source_names())
     assert len(FIXTURE["field_cases"]) == 15
     assert len(FIXTURE["relations"]) == 13
     assert len(FIXTURE["negative_relations"]) == 8

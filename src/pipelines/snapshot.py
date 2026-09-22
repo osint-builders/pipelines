@@ -18,7 +18,10 @@ def load_snapshot(source_dir: Path) -> tuple[dict, list[dict]]:
             raise ValueError(f"Invalid {key} ID")
     snapshot = source_dir / "published/snapshots" / manifest["snapshot"]
     entities = []
-    for line in (snapshot / "entities.jsonl").read_text(encoding="utf-8").splitlines():
+    lines = (snapshot / "entities.jsonl").read_text(encoding="utf-8").split("\n")
+    if lines[-1] == "":
+        lines.pop()
+    for line in lines:
         entity = json.loads(line)
         key = entity["source_id"]
         if (

@@ -7,6 +7,25 @@ specifications, and images, with every result linked to captured evidence.
 
 **Branch:** `feature/multimodal-entity-search`.
 
+## ODIN source capture — active
+
+Requested alongside M10: archive the complete Worldwide Equipment Guide catalog and
+its pictures through the shared source interfaces. M10's frozen benchmark remains
+unchanged. The supplied API currently advertises 4,118 live equipment records and
+responds without a session cookie. Stable identifier pagination will be reconciled
+against that total and the source's equipment-type hierarchy.
+
+- [x] Add the ODIN adapter, full nested specifications, shared POST crawling, media discovery, and source audit.
+- [x] Capture every equipment page and category definition; verify no missing or duplicate IDs.
+- [ ] Download all linked equipment pictures and account for every outcome.
+- [ ] Verify offline replay, source/media audits, tests, and local entity-index access.
+- [ ] Record final counts and any source-side gaps; push the source changes.
+
+Capture `20260922T031929Z-df120f6c`: 42 catalog responses plus the category hierarchy,
+4,118 unique equipment records, 222 populated equipment types, 29,583 nested sections,
+and 166,232 source properties. All records declare imagery: 11,838 references to
+11,818 distinct URLs. Independent coverage: `build/odin/full-coverage-review.json`.
+
 Existing foundation: 11 source adapters, shared crawl/extract/audit commands, archived
 evidence, offline text search, and standalone CLI releases.
 

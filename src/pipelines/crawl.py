@@ -1,3 +1,4 @@
+import hashlib
 from collections.abc import AsyncIterator, Iterator
 from typing import Self, cast, override
 from urllib.parse import urlsplit
@@ -9,7 +10,12 @@ from scrapy.http import Response
 from twisted.python.failure import Failure
 
 from pipelines.archive import Archive
-from pipelines.sources.base import AuthenticatedSource, Source, SupplementalDiscovery
+from pipelines.sources.base import (
+    AuthenticatedSource,
+    PostSource,
+    Source,
+    SupplementalDiscovery,
+)
 
 
 class ScopeMiddleware:
@@ -50,8 +56,17 @@ class ArchiveSpider(Spider):
             return None
         self.scheduled.add(url)
         self.archive.add(url)
+        body = (
+            self.source.request_body(url)
+            if isinstance(self.source, PostSource) and self.source.normalize(url) == url
+            else None
+        )
+        if body is not None and not isinstance(body, bytes):
+            raise ValueError("Source POST body must be bytes")
         return Request(
             url,
+            method="POST" if body is not None else "GET",
+            body=body,
             callback=self.capture,
             errback=self.failed,
             meta={"archive_url": url},
@@ -89,6 +104,11 @@ class ArchiveSpider(Spider):
             if key.lower() not in {b"set-cookie", b"set-cookie2"}
         }
         headers["effective-url"] = response.url
+        if response.request is not None and response.request.method != "GET":
+            headers["request-method"] = response.request.method
+            headers["request-body-sha256"] = hashlib.sha256(
+                response.request.body
+            ).hexdigest()
         self.archive.save(
             original, response.status, response.body, content_type, headers
         )

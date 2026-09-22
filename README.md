@@ -98,3 +98,4 @@ Use `pipelines info` to see which sources are included in your binary.
 | [climateviewer](https://climateviewer.org/layers/geojson/2018/Fortress-Russia-SAM-Sites-ClimateViewer-3D.geojson) | Site records from the Fortress Russia GeoJSON |
 | [cambridgepixel](https://cambridgepixel.com/resources/radar-database/) | Radar database records |
 | [militaryperiscope](https://militaryperiscope.com/) | Weapons, armed forces, defense companies, and militant organizations |
+| [odin](https://odin.t2com.army.mil/WEG/List) | Worldwide Equipment Guide records, specifications, equipment types, and pictures |
