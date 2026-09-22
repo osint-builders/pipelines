@@ -28,7 +28,7 @@ commands and the source table.
 | M7 — Better text and combined ranking | M1, M5, M6 | Verified by user; `0d20f4a`, CI and offline acceptance pass; 116 baseline ranks preserved, new text 18/18 within five; latency and calibration gaps tracked in M10 |
 | M8 — Entity relationships and precise filters | M1, M7 | Verified by user; `beafc67b`, CI and offline acceptance pass; 63 evidence checks, 116 unchanged baseline ranks; resource gaps tracked in M10 |
 | M9 — Media coverage across all sources | M3, M5, M6 | Verified by user; `62d438c`, 822 tests and CI pass; all 11 sources audited, 9,696 saved media records, deterministic offline rebuild and Windows/Linux CLI acceptance |
-| M10 — Quality gates and compact releases | M4–M9 | In progress; compact gallery rebuilt, scoped calibration implemented, reviewed benchmark candidates and final resource validation underway |
+| M10 — Quality gates and compact releases | M4–M9 | In progress; reviewed benchmark frozen; JPEG parity and descriptive ranking improved (`09404cf`, `758401c`); image and specification quality still block release |
 
 Advance in milestone order and stop for user verification between milestones.
 Agents may work concurrently within the active milestone; dependencies do not authorize
@@ -937,8 +937,92 @@ Frozen selection SHA-256: `d64d70d621445202f501adcea42a5984fda9d5d7928bead76dc13
 Development fixture SHA-256: `0f92d1881fdab015ef20907aa18d05f3f7850a774b9ab6c9855ee93d448c2b67`.
 The fixture schedules 1,384 development captures across 27 exact mode/observation/
 source pools, each with 35 independent negative groups. Reusing a negative in several
-contexts does not add independent samples. Development captures are starting; no
-thresholds have been fitted and no expanded held-out evaluation has run.
+contexts does not add independent samples. All 1,384 actual CLI captures are complete
+and validated. A command-rendering correction removed the redundant `--mode hybrid`
+argument from combined queries; the frozen cases, query bytes, scopes, and executable
+were unchanged. Capture SHA-256:
+`1c5fd9cbf05631373bcfb9d903596c8535ef820f9f0c9c170a0ef08746362968`.
+
+Development calibration fails closed: 22 of 27 profiles can fit, but five image-only
+profiles cannot. Global image search ranks the correct entity first for 2/27 positive
+photos and within five for 7/27. The other failures are ArmyRecognition (0/1 first,
+1/1 within five), Commons (1/6, 4/6), MilitaryPeriscope (0/6, 2/6), and Deagel
+(0/10, 2/10). A reviewed absent FAMAS query exceeds both the image cosine and margin
+of every correct global first result. Accepting any of those positives necessarily
+accepts that negative; one false acceptance in 35 gives a Wilson upper bound of
+0.1453, above the frozen 0.10 limit. This is not a threshold-grid artifact. No
+calibration artifact was produced and no expanded held-out evaluation has run.
+
+Three independent pipeline controls pass: freshly encoded gallery images match their
+stored vectors above cosine 0.99999998, exact-image searches retrieve the expected
+entity first, and independent Python scoring reproduces Go's rankings. Different-view
+misses persist in Python (expected ranks 18, 1,125, and 16). This supports image model
+and scene sensitivity as the main explanation for those sampled failures. A separate
+natural-JPEG decoding difference produces cosine 0.99862 on one development image,
+below the existing 0.999 parity requirement; identical tensors infer identically.
+Development-only work is checking decoder compatibility, contextual gallery images,
+and model/preprocessing alternatives. Frozen inputs and M1 targets remain unchanged.
+Reports are under `build/m10/acceptance/` and `build/m10/runtime/image-diagnosis/`.
+
+Further development diagnostics retain the same candidates and labels. Preserving
+the full query frame by padding or stretching does not improve retrieval: first/five
+counts are 2/3 and 2/5, versus the original 2/7 out of 27. Precomputing paired CLIP
+text features from catalog titles/categories also falls short: the best first count
+is 3/27 and no tested text-anchor fusion improves recall within five. These experiments
+remain ignored build artifacts and are not adopted. Three gallery association checks
+find valid source links but contextual pictures: a distant T-72 behind lighter
+vehicles, an APS-94 pod on a dominant OV-1 aircraft, and an APG-85 article illustrated
+by an F-35 with the radar hidden. No query/winner photo-copy link was found. A general
+visible-subject qualification would need source and image review; caption-name matching
+alone is insufficient. Raw global combined ranking is also weak (5/25 first, 13/25
+within five), so a feasible calibration profile must not be read as a quality pass.
+The already-cached MobileCLIP2-B reference, tested against the same 3,117 gallery
+images and 62 development queries, improves first/five counts to 7/10 out of 27.
+Its float32 and float16 gallery controls agree. This is still far below M1's 80%/90%
+photograph targets, so the larger model is not adopted or packaged. GPU/ONNX reference
+probes agree within 1.17e-6; this experiment is about ranking, not release performance.
+
+Text diagnostics separate the 60 development positives: exact designations are 20/20
+first and within five, descriptions 14/20 and 20/20, specifications 1/20 and 5/20.
+The name override promotes ordinary words such as “air” and “max” when they happen to
+match entity aliases inside longer prose. Search policy v2 now reserves overriding
+priority for exact names or explicit leading designations, preserving legacy behavior
+and invalidating prior calibration bindings for new bundles. Its controlled candidate preserves every one of the frozen
+bundle's 12,575 non-manifest members; only search-policy metadata and the resulting
+recipe/dataset identities change. No acceptance fixture has been overwritten.
+
+The final reviewed candidate (`758401c`) completes 201 fresh comparisons: descriptive
+top-1 improves from 14/20 to 18/20, with 20/20 still within five. Exact designations
+remain 20/20, specifications 1/20 first and 5/20 within five, and combined queries
+5/25 and 13/25. All 116 baseline expected ranks are unchanged: 73/73 required pass,
+101/116 first, 110/116 within five, MRR@20 0.9018162871611147. No comparison loses
+expected rank. General CI, full Go tests, and vet pass after the final quote-parser
+correction. The controlled binary SHA-256 is
+`3eb5f94d73aa94206bd0ff1ba09291b8ade67068b0da9e24a4860acf488ca483`;
+`build/m10/runtime/search-policy-v2/final/comparison.json` has SHA-256
+`3bc2eaec15ac9f8b43dc345b009160795898ee42b3c297308de75530ac0997d5`.
+
+Remaining specification errors are grounded in source evidence. Ariete ranks first
+lexically but 1,082nd semantically; fusion places it 13th, while a competitor matches
+the number 550 in horsepower although the query asks for range in kilometers. AN/FPN-36
+has its frequency and power values split across overlapping chunks; no single chunk
+contains the requested conjunction. Typed claims already retain the needed values.
+`final/specification-gaps.json` records the exact source quotes, claims, chunks, and
+rankings. These failures need property/unit-aware retrieval, not another name boost.
+
+JPEG preprocessing v2 now uses Pillow-compatible chroma interpolation and RGB
+rounding in pure Go. The three natural development JPEGs pass with cosine at least
+0.999993; the formerly failing J-20 reaches 0.999994. All 30 local encoder probes
+pass with unchanged tolerances. Synthetic JPEGs reproduce the old error and cover
+subsampling, progressive encoding, odd/tiny dimensions, and edge handling. Legacy
+v1 tensor hashes and vectors are unchanged on all three natural controls. Python
+accepts either exact pinned recipe for existing bundles, while new builds use v2
+and distinct cache/recipe identities. No weights, dependencies, CGO requirements,
+or frozen artifacts changed. All five native targets pass the expanded 30-probe suite
+with network restrictions verified (`09404cf`, run `35681482003`); general CI also
+passes. Reports are under `build/m10/runtime/jpeg-native-v2/`. The integrated local
+suite passes 961 Python tests, lint, formatting, types, full Go tests, and Go vet;
+later added edge/malformed-version checks also pass focused tests.
 
 Calibration validation now uses the actual indexed-image entity pool for image-only
 queries, including source filters; text and combined modes retain their full eligible
@@ -948,6 +1032,8 @@ type checks pass. Independent combined-query photographs may reuse a generic tex
 constraint; image/group overlap remains prohibited and text-only duplicate protection
 is unchanged. The expanded focused suite passes 159 tests.
 
+- [ ] Improve specification retrieval using source-backed numeric/property evidence; verify unit/value matching on development queries.
+- [ ] Improve image retrieval and qualify gallery subject evidence; current and larger-reference models remain below M1 targets on development photos.
 - [ ] Run the frozen evaluation suite for text, image, combined, OCR, filters, and entity relationships; report results by task and source.
 - [ ] Verify top-result accuracy, recall within the first five results, confusable variants, and no-match behavior meet M1's targets.
 - [ ] Calibrate no-match decisions on larger development sets: M7 text negatives return candidates for 4/4 global and 3/4 filtered queries; image/generated modes currently abstain even for positive queries.
