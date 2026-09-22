@@ -54,9 +54,12 @@ def test_reviewed_photo_requires_exact_captured_model_and_image_evidence() -> No
     "markup",
     [
         f'<video poster="{IMAGE}"></video>',
+        f'<div style="background-image: url({IMAGE})"></div>',
+        f'<div style="color:red; background-image: url(\'{IMAGE}\')"></div>',
         f'<div role="img" data-thumbnail="{IMAGE}"></div>',
         f'<picture><source srcset="{IMAGE}"><img src="/fallback.jpg"></picture>',
         f'<a href="{IMAGE}"><img src="/thumbnail.jpg"></a>',
+        f'<a href="{IMAGE}" type="image/jpeg; length=2521101">Download</a>',
         f'<img src="/thumbnail.jpg"><a href="{IMAGE}" title="Watchman (click to enlarge)"></a>',
         f'<a href="{IMAGE}"><div role="img" data-thumbnail="/thumbnail.jpg"></div></a>',
         f'<picture><source srcset="/small.jpg 800w, {IMAGE} 1600w"><img src="/fallback.jpg"></picture>',
@@ -82,6 +85,16 @@ def test_family_illustration_keeps_ambiguous_association() -> None:
 
 def test_plain_link_is_not_image_evidence() -> None:
     body = f'<p>{MATCH["quote"]}</p><a href="{IMAGE}">Related page</a>'.encode()
+    with pytest.raises(ValueError, match="image changed"):
+        validate_page(URL, body, [MATCH])
+
+
+@pytest.mark.parametrize("property_name", ["--background-image", "content"])
+def test_non_image_css_reference_is_not_image_evidence(property_name: str) -> None:
+    body = (
+        f'<p>{MATCH["quote"]}</p>'
+        f'<div style="{property_name}: url({IMAGE})"></div>'
+    ).encode()
     with pytest.raises(ValueError, match="image changed"):
         validate_page(URL, body, [MATCH])
 

@@ -34,13 +34,22 @@ def validate_page(url: str, body: bytes, matches: list[dict]) -> None:
         images.update(
             urljoin(url, str(node["href"]))
             for node in soup.select(
-                'a[href]:has(img), a[href]:has([role="img"]), img + a[href][title]'
+                'a[href]:has(img), a[href]:has([role="img"]), img + a[href][title], '
+                'a[href][type^="image/"]'
             )
         )
         images.update(
             urljoin(url, str(node["data-thumbnail"]))
             for node in soup.select('[role="img"][data-thumbnail]')
         )
+        for node in soup.select("[style]"):
+            match = re.search(
+                r"(?:^|;)\s*background-image\s*:\s*url\(\s*(['\"]?)(.*?)\1\s*\)",
+                str(node["style"]),
+                flags=re.IGNORECASE,
+            )
+            if match:
+                images.add(urljoin(url, match.group(2)))
         for node in soup.select("img[srcset], source[srcset]"):
             images.update(
                 urljoin(url, match.group(1))

@@ -27,15 +27,15 @@ cause false table/schema disagreements; functional URL differences still fail.
 Catalog archive: `20260922T142532Z-932ca3c5`. Image reviews are stored beside the
 adapter in `image_reviews.json`; matched originals use the shared media archive,
 with separate captured source evidence. Browser DOM captures are explicitly labelled.
-The first 150 models have been reviewed and audited: 142 image URLs saved for 145
-matched records, five unresolved matches, and no failed or pending downloads.
-Eight associations are explicitly marked ambiguous. Individual review has continued
-through ELM-2138M Green Rock (153 decisions). Garmin images retain selected part
+The first 185 models have been reviewed and audited: 174 image URLs saved for 179
+matched records, six unresolved matches, and no failed or pending downloads.
+Ten associations are explicitly marked ambiguous. Individual review has continued
+through MPN-14K (187 decisions). Garmin images retain selected part
 numbers, sizes, and power configurations; GC's X5-21FH was verified in its hardware
 catalog after Google returned unrelated vehicle parts. SuperNet and SuperNet SSR
 retain separate identities and image evidence despite sharing a manufacturer page.
 Easat's inconsistent EA40575/EA45075 designation remains explicit. Four BAE, three
-BEL, and one Foxtrack image were exported from displayed browser assets and
+BEL, one Foxtrack, four ICS, two IAI, and two Indra images were exported from browser assets and
 validated by the shared image store. Foxtrack's public article capture excludes
 account controls. Source URL spaces and encoded spaces compare correctly without
 collapsing reserved path characters.
@@ -47,8 +47,14 @@ evidence and manufacturer/catalog status differences. Radartutorial enlargement
 links beside thumbnails are supported, and rendered Hikvision image URLs are
 preserved in browser captures. Legacy ELM-2129 imagery is explicitly related ARSS
 context, supported by the archived model cross-reference.
-Validation: 83 focused tests passed, including poster images, linked
-originals, responsive images, gallery thumbnails, and ambiguous associations.
+JRC scanner tabs retain labeled antenna options and dimensional drawings. Koden's
+MDC catalog entry links to MDS; separate manufacturer model pages supply the image
+evidence. ICx STS-12000 remains unresolved. Indra's shared L/S-band illustration
+is explicitly ambiguous. Kongsberg DR100 retains its full-screen gallery capture;
+MPN-14K retains an individually captioned Air Force museum photograph.
+Validation: 88 focused tests passed, including poster images, linked
+originals, responsive images, gallery thumbnails, CSS backgrounds, and ambiguous associations.
+Explicit image download types are supported; ordinary links and non-image CSS fail.
 All 393 records and 2,700 source facts pass the current capture audit.
 
 ## Code cleanup — complete
