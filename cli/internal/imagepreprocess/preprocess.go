@@ -14,10 +14,11 @@ import (
 )
 
 const (
-	RecipeVersion  = "exif-white-pillow-bilinear-aa-center-f32-v1"
-	MaxImageBytes  = 20 * 1024 * 1024
-	MaxImagePixels = 40_000_000
-	precision      = 1 << 22
+	LegacyRecipeVersion = "exif-white-pillow-bilinear-aa-center-f32-v1"
+	RecipeVersion       = "exif-white-pillow-bilinear-aa-center-f32-v2"
+	MaxImageBytes       = 20 * 1024 * 1024
+	MaxImagePixels      = 40_000_000
+	precision           = 1 << 22
 )
 
 type Recipe struct {
@@ -63,7 +64,7 @@ func DefaultRecipe() Recipe {
 }
 
 func (r Recipe) Validate() error {
-	if r.Version != RecipeVersion || r.Size < 1 || r.Size > r.ResizeShortestEdge || r.ResizeShortestEdge > 2048 {
+	if (r.Version != RecipeVersion && r.Version != LegacyRecipeVersion) || r.Size < 1 || r.Size > r.ResizeShortestEdge || r.ResizeShortestEdge > 2048 {
 		return errors.New("unsupported image preprocessing recipe")
 	}
 	for c := range 3 {
@@ -184,7 +185,7 @@ type rgbImage struct {
 	width, height int
 }
 
-func decode(body []byte) (rgbImage, error) {
+func decode(body []byte, version string) (rgbImage, error) {
 	if len(body) == 0 || len(body) > MaxImageBytes {
 		return rgbImage{}, errors.New("image exceeds the encoded byte limit or is empty")
 	}
@@ -212,6 +213,7 @@ func decode(body []byte) (rgbImage, error) {
 		width, height = h, w
 	}
 	result := rgbImage{make([]byte, width*height*3), width, height}
+	ycbcr, _ := decoded.(*image.YCbCr)
 	for y := range height {
 		for x := range width {
 			sx, sy := x, y
@@ -231,9 +233,14 @@ func decode(body []byte) (rgbImage, error) {
 			case 8:
 				sx, sy = w-1-y, x
 			}
+			index := (y*width + x) * 3
+			if version == RecipeVersion && ycbcr != nil {
+				r, g, b := jpegRGB(ycbcr, sx, sy)
+				result.data[index], result.data[index+1], result.data[index+2] = r, g, b
+				continue
+			}
 			pixel := color.NRGBAModel.Convert(decoded.At(sx, sy)).(color.NRGBA)
 			a := int(pixel.A)
-			index := (y*width + x) * 3
 			for c, component := range [3]byte{pixel.R, pixel.G, pixel.B} {
 				result.data[index+c] = byte((int(component)*a + 255*(255-a) + 127) / 255)
 			}
@@ -329,7 +336,7 @@ func Preprocess(body []byte, recipe Recipe) ([]float32, error) {
 	if err := recipe.Validate(); err != nil {
 		return nil, err
 	}
-	decoded, err := decode(body)
+	decoded, err := decode(body, recipe.Version)
 	if err != nil {
 		return nil, err
 	}

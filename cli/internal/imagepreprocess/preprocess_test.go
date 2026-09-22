@@ -100,22 +100,89 @@ func TestSharedReferenceProbes(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			actual, err := Preprocess(encoded, probe.Recipe)
+			for _, version := range []string{LegacyRecipeVersion, RecipeVersion} {
+				recipe := probe.Recipe
+				recipe.Version = version
+				actual, err := Preprocess(encoded, recipe)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if len(actual)*4 != len(expected) {
+					t.Fatalf("shape mismatch: %d values", len(actual))
+				}
+				maxError := 0.0
+				for i, value := range actual {
+					want := math.Float32frombits(binary.LittleEndian.Uint32(expected[i*4 : i*4+4]))
+					maxError = math.Max(maxError, math.Abs(float64(value-want)))
+				}
+				if maxError > probe.Tolerance {
+					t.Fatalf("%s max pixel error %.9g > %.9g", version, maxError, probe.Tolerance)
+				}
+			}
+		})
+	}
+}
+
+func TestSyntheticJPEGDecode(t *testing.T) {
+	body, err := os.ReadFile("../../../tests/fixtures/image_jpeg_decode.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var fixture struct {
+		Probes []struct {
+			Name    string `json:"name"`
+			Width   int    `json:"width"`
+			Height  int    `json:"height"`
+			Encoded string `json:"encoded_base64"`
+			RGB     string `json:"pillow_rgb_base64"`
+		} `json:"probes"`
+	}
+	if err := json.Unmarshal(body, &fixture); err != nil {
+		t.Fatal(err)
+	}
+	for _, probe := range fixture.Probes {
+		t.Run(probe.Name, func(t *testing.T) {
+			encoded, err := base64.StdEncoding.DecodeString(probe.Encoded)
 			if err != nil {
 				t.Fatal(err)
 			}
-			if len(actual)*4 != len(expected) {
-				t.Fatalf("shape mismatch: %d values", len(actual))
+			expected, err := base64.StdEncoding.DecodeString(probe.RGB)
+			if err != nil {
+				t.Fatal(err)
 			}
-			maxError := 0.0
-			for i, value := range actual {
-				want := math.Float32frombits(binary.LittleEndian.Uint32(expected[i*4 : i*4+4]))
-				maxError = math.Max(maxError, math.Abs(float64(value-want)))
+			actual, err := decode(encoded, RecipeVersion)
+			if err != nil {
+				t.Fatal(err)
 			}
-			if maxError > probe.Tolerance {
-				t.Fatalf("max pixel error %.9g > %.9g", maxError, probe.Tolerance)
+			if actual.width != probe.Width || actual.height != probe.Height || len(actual.data) != len(expected) {
+				t.Fatal("JPEG decode dimensions changed")
 			}
-			t.Logf("max normalized pixel error %.9g", maxError)
+			maxError := 0
+			for i, value := range actual.data {
+				difference := int(value) - int(expected[i])
+				maxError = max(maxError, difference, -difference)
+			}
+			// Different integer IDCT implementations can differ by up to 3 levels.
+			if maxError > 3 {
+				t.Fatalf("JPEG RGB error %d > 3", maxError)
+			}
+			legacy, err := decode(encoded, LegacyRecipeVersion)
+			if err != nil {
+				t.Fatal(err)
+			}
+			standard, _, err := image.Decode(bytes.NewReader(encoded))
+			if err != nil {
+				t.Fatal(err)
+			}
+			for y := range probe.Height {
+				for x := range probe.Width {
+					pixel := color.NRGBAModel.Convert(standard.At(x, y)).(color.NRGBA)
+					index := (y*probe.Width + x) * 3
+					if !bytes.Equal(legacy.data[index:index+3], []byte{pixel.R, pixel.G, pixel.B}) {
+						t.Fatalf("legacy decoder changed at %d,%d", x, y)
+					}
+				}
+			}
 		})
 	}
 }
@@ -234,7 +301,7 @@ func TestAlphaBeforeResampling(t *testing.T) {
 	input := image.NewNRGBA(image.Rect(0, 0, 2, 1))
 	input.SetNRGBA(0, 0, color.NRGBA{13, 255, 0, 0})
 	input.SetNRGBA(1, 0, color.NRGBA{12, 40, 200, 128})
-	actual, err := decode(pngBytes(t, input))
+	actual, err := decode(pngBytes(t, input), RecipeVersion)
 	if err != nil {
 		t.Fatal(err)
 	}

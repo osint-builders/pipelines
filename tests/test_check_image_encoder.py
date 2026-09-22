@@ -130,12 +130,12 @@ def setup_references(tmp_path: Path) -> tuple[Path, Path]:
     records = [
         {
             "id": str(index),
-            "kind": "image" if index < 20 else "tensor",
+            "kind": "image" if index < 27 else "tensor",
             "file": "input",
             "sha256": hashlib.sha256(b"synthetic").hexdigest(),
             "expected": expected,
         }
-        for index in range(23)
+        for index in range(30)
     ]
     (references / "probes.json").write_text(
         json.dumps(
@@ -145,6 +145,9 @@ def setup_references(tmp_path: Path) -> tuple[Path, Path]:
                 "tolerances": checker.TOLERANCES,
                 "procedural_fixture_sha256": hashlib.sha256(
                     checker.FIXTURES.read_bytes()
+                ).hexdigest(),
+                "jpeg_fixture_sha256": hashlib.sha256(
+                    checker.JPEG_FIXTURES.read_bytes()
                 ).hexdigest(),
                 "probes": records,
             }
@@ -186,8 +189,8 @@ def test_verify_runs_all_images_and_tensors_and_records_metrics(
     output = tmp_path / "report.json"
     report = checker.verify(path, references, tmp_path / "probe", output, path)
     assert report["passed"]
-    assert len(commands) == 23
-    assert sum("--image" in command for command in commands) == 20
+    assert len(commands) == 30
+    assert sum("--image" in command for command in commands) == 27
     assert sum("--tensor" in command for command in commands) == 3
     assert all(command[1:3] == ["--repeats", "0"] for command in commands)
     assert all(row["cosine"] == 1 for row in report["probes"])
@@ -238,7 +241,7 @@ def test_verify_failures_remain_visible(
         path, references, tmp_path / "probe", tmp_path / "report.json", path
     )
     assert not report["passed"]
-    assert len(report["probes"]) == 23
+    assert len(report["probes"]) == 30
     assert any(not row["passed"] for row in report["probes"])
 
 
@@ -275,6 +278,19 @@ def test_lock_fixture_and_path_integrity(tmp_path: Path) -> None:
         )
 
 
+@pytest.mark.parametrize("field", ["procedural_fixture_sha256", "jpeg_fixture_sha256"])
+def test_reference_fixture_binding_cannot_change(tmp_path: Path, field: str) -> None:
+    path, references = setup_references(tmp_path)
+    metadata = references / "probes.json"
+    value = json.loads(metadata.read_bytes())
+    value[field] = "0" * 64
+    metadata.write_text(json.dumps(value))
+    with pytest.raises(ValueError, match="fixture or tolerance contract"):
+        checker.verify(
+            path, references, tmp_path / "probe", tmp_path / "report.json", path
+        )
+
+
 def test_isolation_claim_requires_linux_namespace(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -306,8 +322,8 @@ def test_reference_uses_model_recipe_and_exports_three_tensors(
     monkeypatch.setattr(checker, "Encoder", FakeEncoder)
     output = tmp_path / "references"
     report = checker.reference(path, output, path)
-    assert shapes == [(3, 2, 2)] * 20
-    assert len(report["probes"]) == 23
+    assert shapes == [(3, 2, 2)] * 27
+    assert len(report["probes"]) == 30
     tensors = [row for row in report["probes"] if row["kind"] == "tensor"]
     assert len(tensors) == 3
     assert all((output / row["file"]).stat().st_size == 48 for row in tensors)

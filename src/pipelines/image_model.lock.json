@@ -36,7 +36,7 @@
       1.0,
       1.0
     ],
-    "version": "exif-white-pillow-bilinear-aa-center-f32-v1"
+    "version": "exif-white-pillow-bilinear-aa-center-f32-v2"
   },
   "export": {
     "opset": 17,

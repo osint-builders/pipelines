@@ -11,7 +11,9 @@ import pytest
 from PIL import Image
 
 from pipelines.image_preprocess import (
+    LEGACY_RECIPE_VERSION,
     MAX_IMAGE_BYTES,
+    RECIPE_VERSION,
     Recipe,
     _decode,
     _resize_crop,
@@ -40,6 +42,31 @@ def test_shared_reference_probes(probe: dict) -> None:
     assert actual.dtype == np.float32
     assert actual.flags.c_contiguous
     np.testing.assert_allclose(actual, expected, atol=probe["max_abs_error"], rtol=0)
+    np.testing.assert_array_equal(
+        preprocess(
+            base64.b64decode(probe["encoded_base64"]),
+            replace(recipe, version=RECIPE_VERSION),
+        ),
+        actual,
+    )
+
+
+@pytest.mark.parametrize(
+    "probe",
+    json.loads((Path(__file__).parent / "fixtures/image_jpeg_decode.json").read_text())[
+        "probes"
+    ],
+    ids=lambda value: value["name"],
+)
+def test_jpeg_decode_reference(probe: dict) -> None:
+    body = base64.b64decode(probe["encoded_base64"])
+    expected = np.frombuffer(base64.b64decode(probe["pillow_rgb_base64"]), np.uint8)
+    actual = np.asarray(_decode(body)).reshape(-1)
+    np.testing.assert_array_equal(actual, expected)
+    np.testing.assert_array_equal(
+        preprocess(body, Recipe(version=LEGACY_RECIPE_VERSION)),
+        preprocess(body, Recipe()),
+    )
 
 
 @pytest.mark.parametrize(
@@ -95,6 +122,12 @@ def test_normalization_order() -> None:
 def test_invalid_recipe(recipe: Recipe) -> None:
     with pytest.raises(ValueError, match="recipe"):
         preprocess(b"", recipe)
+
+
+@pytest.mark.parametrize("version", [[], {}, None, True, 1])
+def test_recipe_rejects_malformed_version(version: object) -> None:
+    with pytest.raises(ValueError, match="recipe"):
+        replace(Recipe(), version=version).validate()  # type: ignore[arg-type]
 
 
 @pytest.mark.parametrize("field", ["mean", "std"])

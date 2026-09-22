@@ -23,6 +23,7 @@ from pipelines.image_preprocess import preprocess
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_LOCK = ROOT / "src/pipelines/image_model.lock.json"
 FIXTURES = ROOT / "tests/fixtures/image_preprocess.json"
+JPEG_FIXTURES = ROOT / "tests/fixtures/image_jpeg_decode.json"
 TOLERANCES: dict = {
     "image": {"min_cosine": 0.999, "max_abs_error": 0.01},
     "tensor": {"min_cosine": 0.999999, "max_abs_error": 0.00002},
@@ -166,6 +167,13 @@ def reference(manifest_path: Path, output: Path, lock: Path = DEFAULT_LOCK) -> d
     probes = fixture["probes"]
     if len(probes) != 20 or len({probe["name"] for probe in probes}) != 20:
         raise ValueError("Expected the pinned 20 procedural image probes")
+    jpeg_probes = _json(JPEG_FIXTURES)["probes"]
+    if len(jpeg_probes) != 7 or len({probe["name"] for probe in jpeg_probes}) != 7:
+        raise ValueError("Expected the pinned seven JPEG decode probes")
+    probes = probes + [
+        {**probe, "name": "jpeg_decode_" + probe["name"].replace("-", "_")}
+        for probe in jpeg_probes
+    ]
     output.mkdir(parents=True, exist_ok=True)
     records = []
     for index, probe in enumerate(probes):
@@ -209,6 +217,7 @@ def reference(manifest_path: Path, output: Path, lock: Path = DEFAULT_LOCK) -> d
         "model": _contract(manifest),
         "tolerances": TOLERANCES,
         "procedural_fixture_sha256": _sha(FIXTURES.read_bytes()),
+        "jpeg_fixture_sha256": _sha(JPEG_FIXTURES.read_bytes()),
         "reference_runtime": {
             name: importlib.metadata.version(name)
             for name in ("onnxruntime", "numpy", "pillow")
@@ -433,18 +442,19 @@ def verify(
         or reference_data.get("tolerances") != TOLERANCES
         or reference_data.get("procedural_fixture_sha256")
         != _sha(FIXTURES.read_bytes())
+        or reference_data.get("jpeg_fixture_sha256") != _sha(JPEG_FIXTURES.read_bytes())
     ):
         raise ValueError(
             "Reference model, fixture or tolerance contract does not match"
         )
     records = reference_data["probes"]
     if (
-        sum(row["kind"] == "image" for row in records) != 20
+        sum(row["kind"] == "image" for row in records) != 27
         or sum(row["kind"] == "tensor" for row in records) != 3
-        or len(records) != 23
-        or len({row["id"] for row in records}) != 23
+        or len(records) != 30
+        or len({row["id"] for row in records}) != 30
     ):
-        raise ValueError("Expected 20 image probes and three tensor probes")
+        raise ValueError("Expected 27 image probes and three tensor probes")
     baseline = _json(network_baseline_path) if network_baseline_path else None
     try:
         isolation = _isolation(network_isolation, probe, baseline, firewall_rule)

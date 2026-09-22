@@ -550,14 +550,26 @@ def validate_image_bundle(
     import numpy as np
     from PIL import Image
 
-    from pipelines.image_preprocess import MAX_IMAGE_BYTES, MAX_IMAGE_PIXELS, Recipe
+    from pipelines.image_preprocess import (
+        LEGACY_RECIPE_VERSION,
+        MAX_IMAGE_BYTES,
+        MAX_IMAGE_PIXELS,
+        RECIPE_VERSION,
+        Recipe,
+    )
     from pipelines.media import media_id
 
     if manifest.get("format_version") not in {3, 4, 5}:
         raise ValueError("Image extension requires bundle format 3 or 4")
     metadata = manifest.get("image", {})
     lock = json.loads(IMAGE_LOCK_PATH.read_bytes())
-    lock_body = canonical(lock)
+    accepted_locks = {canonical(lock): lock}
+    if lock["preprocess"]["version"] == RECIPE_VERSION:
+        legacy = {
+            **lock,
+            "preprocess": {**lock["preprocess"], "version": LEGACY_RECIPE_VERSION},
+        }
+        accepted_locks[canonical(legacy)] = legacy
     declared = {name for name in manifest["files"] if name.startswith("image/")}
     actual = [name for name in archive.namelist() if name.startswith("image/")]
     if set(actual) != declared or len(actual) != len(set(actual)):
@@ -565,10 +577,11 @@ def validate_image_bundle(
     for name in declared:
         if sha256(archive.read(name)) != manifest["files"][name]:
             raise ValueError("Image bundle checksum mismatch")
-    if (
-        archive.read("image/model.json") != lock_body
-        or sha256(archive.read("image/" + lock["file"])) != lock["sha256"]
-    ):
+    model_body = archive.read("image/model.json")
+    if model_body not in accepted_locks:
+        raise ValueError("Image model does not match the pinned lock")
+    lock = accepted_locks[model_body]
+    if sha256(archive.read("image/" + lock["file"])) != lock["sha256"]:
         raise ValueError("Image model does not match the pinned lock")
     Recipe(**lock["preprocess"]).validate()
     if (

@@ -4,6 +4,8 @@ Resampling uses pixel centers, clipped/renormalized triangle support, signed
 22-bit coefficients and uint8 rounding after each separable pass. Crop offsets
 round ties to even. Normalization executes float32 division, subtraction, then
 division. ICC profiles and gamma chunks do not alter decoded sample values.
+Python pixels are unchanged between v1 and v2. Version 2 binds the Go decoder's
+centered JPEG chroma interpolation; v1 remains available for archived bundles.
 """
 
 import math
@@ -15,7 +17,8 @@ import numpy as np
 from numpy.typing import NDArray
 from PIL import Image
 
-RECIPE_VERSION = "exif-white-pillow-bilinear-aa-center-f32-v1"
+LEGACY_RECIPE_VERSION = "exif-white-pillow-bilinear-aa-center-f32-v1"
+RECIPE_VERSION = "exif-white-pillow-bilinear-aa-center-f32-v2"
 MAX_IMAGE_BYTES = 20 * 1024 * 1024
 MAX_IMAGE_PIXELS = 40_000_000
 _PRECISION = 1 << 22
@@ -32,7 +35,7 @@ class Recipe:
 
     def validate(self) -> None:
         if (
-            self.version != RECIPE_VERSION
+            self.version not in (LEGACY_RECIPE_VERSION, RECIPE_VERSION)
             or type(self.size) is not int
             or type(self.resize_shortest_edge) is not int
             or not 1 <= self.size <= self.resize_shortest_edge <= 2048

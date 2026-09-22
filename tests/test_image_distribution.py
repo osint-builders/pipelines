@@ -13,7 +13,7 @@ from test_pipeline import archived
 from pipelines import distribution, image_distribution
 from pipelines.build import publish
 from pipelines.distribution import canonical, collect_artifacts, sha256, write_bundle
-from pipelines.image_preprocess import Recipe
+from pipelines.image_preprocess import LEGACY_RECIPE_VERSION, Recipe
 from pipelines.media import MediaCandidate, MediaReference, MediaStore, media_id
 
 
@@ -185,6 +185,61 @@ def test_duplicates_siblings_cached_vectors_and_byte_determinism(
     assert build(setup) == (members, metadata, report)
     assert ImageEncoder.calls.count(original["sha256"]) == 1
     assert original["sha256"] not in {sha256(body) for body in members.values()}
+
+
+def test_new_recipe_invalidates_vector_cache_and_validates_old_bundle(
+    setup: tuple[Path, list[dict], Path],
+) -> None:
+    _, _, model = setup
+    current = model.read_bytes()
+    legacy = json.loads(current)
+    legacy["preprocess"]["version"] = LEGACY_RECIPE_VERSION
+    model.write_bytes(canonical(legacy))
+    original = add(setup, "original.jpg", format="JPEG")
+    old_members, old_metadata, old_report = build(setup)
+    assert ImageEncoder.calls.count(original["sha256"]) == 1
+    model.write_bytes(current)
+    assert validate(setup, old_members, old_metadata)["vectors"] == 1
+    new_members, new_metadata, new_report = build(setup)
+    assert ImageEncoder.calls.count(original["sha256"]) == 2
+    assert old_report["vector_recipe"] != new_report["vector_recipe"]
+    assert old_members["image/model.json"] != new_members["image/model.json"]
+    assert old_members["image/image.onnx"] == new_members["image/image.onnx"]
+    assert build(setup) == (new_members, new_metadata, new_report)
+    assert ImageEncoder.calls.count(original["sha256"]) == 2
+
+
+@pytest.mark.parametrize("change", ["version", "mean", "input", "weights"])
+def test_legacy_bundle_compatibility_rejects_other_model_changes(
+    setup: tuple[Path, list[dict], Path], change: str
+) -> None:
+    add(setup, "original.jpg", format="JPEG")
+    members, metadata, _ = build(setup)
+    legacy = json.loads(members["image/model.json"])
+    legacy["preprocess"]["version"] = LEGACY_RECIPE_VERSION
+    if change == "version":
+        legacy["preprocess"]["version"] = "unknown"
+    elif change == "mean":
+        legacy["preprocess"]["mean"][0] = 0.1
+    elif change == "input":
+        legacy["input"] = "different"
+    else:
+        members["image/image.onnx"] += b"changed"
+    members["image/model.json"] = canonical(legacy)
+    with pytest.raises(ValueError, match="pinned lock"):
+        validate(setup, members, metadata)
+
+
+def test_new_build_rejects_legacy_model_recipe(
+    setup: tuple[Path, list[dict], Path],
+) -> None:
+    root, _, model = setup
+    legacy = json.loads(model.read_bytes())
+    legacy["preprocess"]["version"] = LEGACY_RECIPE_VERSION
+    supplied = root / "old-model.json"
+    supplied.write_bytes(canonical(legacy))
+    with pytest.raises(ValueError, match="pinned model contract"):
+        image_distribution._model(supplied)
 
 
 def test_selection_does_not_read_unselected_originals(
