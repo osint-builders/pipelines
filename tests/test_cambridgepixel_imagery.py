@@ -57,6 +57,7 @@ def test_reviewed_photo_requires_exact_captured_model_and_image_evidence() -> No
         f'<div role="img" data-thumbnail="{IMAGE}"></div>',
         f'<picture><source srcset="{IMAGE}"><img src="/fallback.jpg"></picture>',
         f'<a href="{IMAGE}"><img src="/thumbnail.jpg"></a>',
+        f'<img src="/thumbnail.jpg"><a href="{IMAGE}" title="Watchman (click to enlarge)"></a>',
         f'<a href="{IMAGE}"><div role="img" data-thumbnail="/thumbnail.jpg"></div></a>',
         f'<picture><source srcset="/small.jpg 800w, {IMAGE} 1600w"><img src="/fallback.jpg"></picture>',
         f'<img src="/_next/image?url={quote(IMAGE, safe="")}&amp;w=1920">',

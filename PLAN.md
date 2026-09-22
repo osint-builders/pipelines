@@ -27,10 +27,10 @@ cause false table/schema disagreements; functional URL differences still fail.
 Catalog archive: `20260922T142532Z-932ca3c5`. Image reviews are stored beside the
 adapter in `image_reviews.json`; matched originals use the shared media archive,
 with separate captured source evidence. Browser DOM captures are explicitly labelled.
-The first 122 models have been reviewed and audited: 114 image URLs saved for 117
+The first 150 models have been reviewed and audited: 142 image URLs saved for 145
 matched records, five unresolved matches, and no failed or pending downloads.
-Seven associations are explicitly marked ambiguous. Individual review has continued
-through Spexer 2000 Mk III Land (130 decisions). Garmin images retain selected part
+Eight associations are explicitly marked ambiguous. Individual review has continued
+through ELM-2138M Green Rock (153 decisions). Garmin images retain selected part
 numbers, sizes, and power configurations; GC's X5-21FH was verified in its hardware
 catalog after Google returned unrelated vehicle parts. SuperNet and SuperNet SSR
 retain separate identities and image evidence despite sharing a manufacturer page.
@@ -42,7 +42,12 @@ collapsing reserved path characters.
 HADES gallery originals are validated through linked image roles; plain links
 still fail image-evidence validation. Hensoldt originals retain the gallery DOM,
 with separate Mk11 and IFF images resolving reversed Cambridge reference links.
-Validation: 82 focused tests and Ruff passed, including poster images, linked
+TRML and TRS variants have separate images; Hikvision ranges retain model-specific
+evidence and manufacturer/catalog status differences. Radartutorial enlargement
+links beside thumbnails are supported, and rendered Hikvision image URLs are
+preserved in browser captures. Legacy ELM-2129 imagery is explicitly related ARSS
+context, supported by the archived model cross-reference.
+Validation: 83 focused tests passed, including poster images, linked
 originals, responsive images, gallery thumbnails, and ambiguous associations.
 All 393 records and 2,700 source facts pass the current capture audit.
 
