@@ -9,6 +9,7 @@ import (
 	"image"
 	"image/color"
 	"image/gif"
+	"image/jpeg"
 	"image/png"
 	"math"
 	"sort"
@@ -159,7 +160,7 @@ func TestImageSearchUsesBestViewAndEvidenceWithoutLoadingText(t *testing.T) {
 	}
 }
 
-func TestArchivedGIFMetadataCannotEnterImageSearch(t *testing.T) {
+func TestArchivedFormatsCannotEnterImageSearch(t *testing.T) {
 	var original bytes.Buffer
 	if err := gif.Encode(&original, image.NewNRGBA(image.Rect(0, 0, 3, 2)), nil); err != nil {
 		t.Fatal(err)
@@ -167,55 +168,87 @@ func TestArchivedGIFMetadataCannotEnterImageSearch(t *testing.T) {
 	if _, err := imagepreprocess.Preprocess(original.Bytes(), imagepreprocess.DefaultRecipe()); err == nil {
 		t.Fatal("GIF query image was accepted")
 	}
-	for _, change := range []string{"none", "reason", "vector", "preview"} {
-		t.Run(change, func(t *testing.T) {
-			f := newImageFixture(t)
-			mediaURL := "https://sample.test/media/original.gif"
-			mediaID := "sample:media:" + digestString([]byte(mediaURL))[:24]
-			f.editRecords(t, func(records []MediaRecord) []MediaRecord {
-				row := MediaRecord{
-					ID: mediaID, Source: "sample", URL: mediaURL,
-					SHA256: digestString(original.Bytes()), ContentType: "image/gif", Width: 3, Height: 2,
-					References: records[0].References, ExclusionReason: "unsupported_image_format",
-				}
-				switch change {
-				case "reason":
-					row.ExclusionReason = "selection"
-				case "vector":
-					index := 0
-					row.VectorIndex = &index
-				case "preview":
-					row.Preview = records[0].Preview
-				}
-				records = append(records, row)
-				sort.Slice(records, func(i, j int) bool { return records[i].ID < records[j].ID })
-				return records
-			})
-			d := f.open(t)
-			err := d.LoadImages()
-			if change != "none" {
-				if err == nil || !strings.Contains(err.Error(), "GIF metadata") {
-					t.Fatalf("invalid GIF metadata was accepted: %v", err)
-				}
-				return
+	var jpegOriginal bytes.Buffer
+	if err := jpeg.Encode(&jpegOriginal, image.NewNRGBA(image.Rect(0, 0, 3, 2)), nil); err != nil {
+		t.Fatal(err)
+	}
+	mpo := append([]byte{0xff, 0xd8, 0xff, 0xe2, 0, 6, 'M', 'P', 'F', 0}, jpegOriginal.Bytes()[2:]...)
+	if _, err := imagepreprocess.Preprocess(mpo, imagepreprocess.DefaultRecipe()); err == nil || !strings.Contains(err.Error(), "multi-picture") {
+		t.Fatalf("MPO query image was accepted: %v", err)
+	}
+	for _, format := range []string{"gif", "mpo"} {
+		for _, change := range []string{"none", "reason", "vector", "preview", "missing", "count", "primary", "duplicate", "outside", "validated"} {
+			if format == "gif" && (change == "missing" || change == "count" || change == "primary" || change == "duplicate" || change == "outside" || change == "validated") {
+				continue
 			}
-			if err != nil {
-				t.Fatal(err)
-			}
-			vector := make([]float32, 512)
-			vector[0] = 1
-			results, err := d.SearchImages(vector, nil, "", Filter{}, 2)
-			if err != nil || len(results) != 2 {
-				t.Fatal(results, err)
-			}
-			for _, result := range results {
-				for _, match := range result.Matches {
-					if match.MediaID == mediaID {
-						t.Fatal("excluded GIF contributed an image match")
+			t.Run(format+"/"+change, func(t *testing.T) {
+				f := newImageFixture(t)
+				mediaURL := "https://sample.test/media/original." + format
+				mediaID := "sample:media:" + digestString([]byte(mediaURL))[:24]
+				f.editRecords(t, func(records []MediaRecord) []MediaRecord {
+					row := MediaRecord{
+						ID: mediaID, Source: "sample", URL: mediaURL,
+						SHA256: digestString([]byte(format + "original")), ContentType: "image/" + format, Width: 3, Height: 2,
+						References: records[0].References, ExclusionReason: "unsupported_image_format",
+					}
+					if format == "mpo" {
+						row.FrameCount, row.ValidatedFrameCount = 2, 2
+					}
+					switch change {
+					case "reason":
+						row.ExclusionReason = "selection"
+					case "vector":
+						index := 0
+						row.VectorIndex = &index
+					case "preview":
+						row.Preview = records[0].Preview
+					case "missing":
+						row.ValidatedFrameCount = 1
+						row.UnreadableFrames = []int{1}
+					case "count":
+						row.FrameCount = 65
+					case "primary":
+						row.ValidatedFrameCount = 1
+						row.UnreadableFrames = []int{0}
+					case "duplicate":
+						row.FrameCount, row.ValidatedFrameCount = 3, 1
+						row.UnreadableFrames = []int{1, 1}
+					case "outside":
+						row.ValidatedFrameCount = 1
+						row.UnreadableFrames = []int{2}
+					case "validated":
+						row.ValidatedFrameCount = 0
+					}
+					records = append(records, row)
+					sort.Slice(records, func(i, j int) bool { return records[i].ID < records[j].ID })
+					return records
+				})
+				d := f.open(t)
+				err := d.LoadImages()
+				if change != "none" && change != "missing" {
+					if err == nil || !strings.Contains(err.Error(), "metadata") {
+						t.Fatalf("invalid archival metadata was accepted: %v", err)
+					}
+					return
+				}
+				if err != nil {
+					t.Fatal(err)
+				}
+				vector := make([]float32, 512)
+				vector[0] = 1
+				results, err := d.SearchImages(vector, nil, "", Filter{}, 2)
+				if err != nil || len(results) != 2 {
+					t.Fatal(results, err)
+				}
+				for _, result := range results {
+					for _, match := range result.Matches {
+						if match.MediaID == mediaID {
+							t.Fatal("excluded archival format contributed an image match")
+						}
 					}
 				}
-			}
-		})
+			})
+		}
 	}
 }
 

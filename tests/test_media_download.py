@@ -13,6 +13,7 @@ from urllib.request import BaseHandler
 
 import pytest
 from PIL import Image
+from PIL.MpoImagePlugin import MpoImageFile
 
 from pipelines import media_download
 from pipelines.media import MediaCandidate, MediaReference, MediaStore
@@ -79,6 +80,17 @@ class LocalServer:
         self.server.shutdown()
         self.server.server_close()
         self.thread.join()
+
+
+class FallbackSource(LocalSource):
+    def __init__(self, origin: str, fallback: str | None, *extra_origins: str) -> None:
+        super().__init__(origin, *extra_origins)
+        self.fallback = fallback
+        self.fallback_calls: list[tuple[str, str]] = []
+
+    def media_fallback_url(self, url: str, error: str) -> str | None:
+        self.fallback_calls.append((url, error))
+        return self.fallback
 
 
 @pytest.fixture
@@ -217,6 +229,159 @@ def test_completed_images_reuse_offline_and_never_store_headers(
         for file in (tmp_path / "media").rglob("*")
         if file.is_file()
     )
+
+
+def test_media_fallback_preserves_original_provenance_without_partial_mixing(
+    tmp_path: Path, servers: Any, png: bytes, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(media_download._Pacer, "pause", lambda self, delay: True)
+
+    def serve(request: BaseHTTPRequestHandler) -> None:
+        if request.path == "/proxy":
+            reply(
+                request,
+                b"broken prefix" * 20,
+                truncate=20,
+                headers={"ETag": '"original"'},
+            )
+        else:
+            assert request.path == "/direct"
+            assert "Range" not in request.headers
+            assert "If-Range" not in request.headers
+            reply(request, png)
+
+    server = servers(serve)
+    original, fallback = server.origin + "/proxy", server.origin + "/direct"
+    source = FallbackSource(server.origin, fallback)
+    register(tmp_path, original)
+    before = records(tmp_path)[0]
+    result = capture_media(source, tmp_path, "run")["records"][0]
+    assert result["state"] == "saved"
+    assert result["url"] == original
+    assert result["final_url"] == fallback
+    assert result["sha256"] == hashlib.sha256(png).hexdigest()
+    assert result["references"] == before["references"]
+    assert result["occurrences"] == before["occurrences"]
+    assert source.fallback_calls == [(original, "interrupted_transfer")]
+    assert [path for path, _ in server.requests] == [
+        "/proxy"
+    ] * media_download.MAX_ATTEMPTS + ["/direct"]
+    assert not list((tmp_path / "media/tmp").rglob("*.part"))
+    assert capture_media(source, tmp_path, "run")["records"] == [result]
+    assert len(server.requests) == media_download.MAX_ATTEMPTS + 1
+
+
+@pytest.mark.parametrize("secondary", ["corrupt", "interrupted", "redirect_outside"])
+def test_media_fallback_keeps_validation_and_retry_bounds(
+    tmp_path: Path,
+    servers: Any,
+    png: bytes,
+    monkeypatch: pytest.MonkeyPatch,
+    secondary: str,
+) -> None:
+    monkeypatch.setattr(media_download._Pacer, "pause", lambda self, delay: True)
+    outside = servers(lambda request: reply(request, png))
+
+    def serve(request: BaseHTTPRequestHandler) -> None:
+        if request.path == "/proxy" or secondary == "interrupted":
+            reply(request, png, truncate=0)
+        elif secondary == "corrupt":
+            reply(request, b"not an image")
+        else:
+            reply(request, status=302, headers={"Location": outside.origin + "/image"})
+
+    server = servers(serve)
+    original = server.origin + "/proxy"
+    source = FallbackSource(server.origin, server.origin + "/direct")
+    register(tmp_path, original)
+    result = capture_media(source, tmp_path, "run")["records"][0]
+    assert result["state"] == "failed"
+    assert result["url"] == original
+    assert (
+        result["error"]
+        == {
+            "corrupt": "invalid_image",
+            "interrupted": "interrupted_transfer",
+            "redirect_outside": "media_origin_not_allowed",
+        }[secondary]
+    )
+    assert source.fallback_calls == [(original, "interrupted_transfer")]
+    assert len(server.requests) == media_download.MAX_ATTEMPTS + (
+        media_download.MAX_ATTEMPTS if secondary == "interrupted" else 1
+    )
+    assert not outside.requests
+    assert not (tmp_path / "media/objects").exists()
+
+
+@pytest.mark.parametrize("fallback_kind", ["none", "same", "outside", "invalid"])
+def test_media_fallback_refuses_invalid_or_different_origin_alternatives(
+    tmp_path: Path,
+    servers: Any,
+    png: bytes,
+    monkeypatch: pytest.MonkeyPatch,
+    fallback_kind: str,
+) -> None:
+    monkeypatch.setattr(media_download._Pacer, "pause", lambda self, delay: True)
+    outside = servers(lambda request: reply(request, png))
+    server = servers(lambda request: reply(request, png, truncate=0))
+    original = server.origin + "/proxy"
+    target = {
+        "none": None,
+        "same": original,
+        "outside": outside.origin + "/image",
+        "invalid": "not a URL",
+    }[fallback_kind]
+    source = FallbackSource(server.origin, target, outside.origin)
+    register(tmp_path, original)
+    result = capture_media(source, tmp_path, "run")["records"][0]
+    assert result["state"] == "failed"
+    assert result["error"] == "interrupted_transfer"
+    assert len(server.requests) == media_download.MAX_ATTEMPTS
+    assert not outside.requests
+
+
+@pytest.mark.parametrize("status", [401, 403, 429, 500])
+def test_media_fallback_never_handles_auth_throttle_or_unrelated_errors(
+    tmp_path: Path,
+    servers: Any,
+    png: bytes,
+    monkeypatch: pytest.MonkeyPatch,
+    status: int,
+) -> None:
+    monkeypatch.setattr(media_download._Pacer, "pause", lambda self, delay: True)
+    server = servers(lambda request: reply(request, status=status))
+    source = FallbackSource(server.origin, server.origin + "/direct")
+    register(tmp_path, server.origin + "/proxy")
+    result = capture_media(source, tmp_path, "run")["records"][0]
+    assert result["error"] == f"http_{status}"
+    assert source.fallback_calls == []
+    assert len(server.requests) == (media_download.MAX_ATTEMPTS if status == 500 else 1)
+
+
+@pytest.mark.parametrize("status", [401, 403, 429])
+def test_media_fallback_auth_or_throttle_stops_the_source(
+    tmp_path: Path,
+    servers: Any,
+    png: bytes,
+    monkeypatch: pytest.MonkeyPatch,
+    status: int,
+) -> None:
+    monkeypatch.setattr(media_download._Pacer, "pause", lambda self, delay: True)
+    stopped = observe_source_stop(monkeypatch)
+
+    def serve(request: BaseHTTPRequestHandler) -> None:
+        if request.path == "/proxy":
+            reply(request, png, truncate=0)
+        else:
+            reply(request, status=status)
+
+    server = servers(serve)
+    source = FallbackSource(server.origin, server.origin + "/direct")
+    register(tmp_path, server.origin + "/proxy")
+    result = capture_media(source, tmp_path, "run")["records"][0]
+    assert result["error"] == f"http_{status}"
+    assert stopped.is_set()
+    assert len(server.requests) == media_download.MAX_ATTEMPTS + 1
 
 
 def test_source_request_interval_is_observed(
@@ -677,6 +842,37 @@ def test_gif_originals_are_saved_only_when_static(
         assert record["response_content_type"] == declared_mime
         with MediaStore(tmp_path, read_only=True) as store:
             assert store.body(record["sha256"]) == body
+    assert len(server.requests) == 1
+    assert not list((tmp_path / "media" / "tmp").rglob("*.part"))
+
+
+@pytest.mark.parametrize("missing_secondary", [False, True])
+def test_mpo_http_capture_keeps_original_and_frame_metadata(
+    tmp_path: Path, servers: Any, missing_secondary: bool
+) -> None:
+    output = BytesIO()
+    frames = [Image.new("RGB", (16, 12), color) for color in ("red", "blue")]
+    frames[0].save(output, format="MPO", save_all=True, append_images=frames[1:])
+    body = output.getvalue()
+    if missing_secondary:
+        with Image.open(BytesIO(body)) as image:
+            assert isinstance(image, MpoImageFile)
+            image.seek(1)
+            body = body[: image.offset]
+    server = servers(
+        lambda request: reply(request, body, headers={"Content-Type": "image/jpeg"})
+    )
+    register(tmp_path, server.origin + "/image.jpg")
+    report = capture_media(LocalSource(server.origin), tmp_path, "run")
+    record = report["records"][0]
+    assert record["state"] == "saved"
+    assert record["content_type"] == "image/mpo"
+    assert record["response_content_type"] == "image/jpeg"
+    assert record["frame_count"] == 2
+    assert record["validated_frame_count"] == (1 if missing_secondary else 2)
+    assert record["unreadable_frames"] == ([1] if missing_secondary else [])
+    with MediaStore(tmp_path, read_only=True) as store:
+        assert store.body(record["sha256"]) == body
     assert len(server.requests) == 1
     assert not list((tmp_path / "media" / "tmp").rglob("*.part"))
 

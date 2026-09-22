@@ -20,7 +20,7 @@ from pipelines.media import (
     MediaStore,
     _resolved_path,
 )
-from pipelines.sources.base import AuthenticatedSource, Source
+from pipelines.sources.base import AuthenticatedSource, MediaFallbackSource, Source
 
 MAX_ATTEMPTS = 3
 MAX_WORKERS = 8
@@ -413,12 +413,14 @@ def _capture_record(
         for path in (partial, metadata, metadata.with_suffix(".tmp"))
     ):
         raise ValueError("Media partial path escapes the temporary directory")
-    for attempt in range(MAX_ATTEMPTS):
+    url = record["url"]
+    attempt, fallback_used = 0, False
+    while attempt < MAX_ATTEMPTS:
         if pacer.stopped.is_set():
             return
         try:
-            _origin(record["url"])
-            result = _download(source, allowed, record["url"], partial, metadata, pacer)
+            _origin(url)
+            result = _download(source, allowed, url, partial, metadata, pacer)
             try:
                 store.save(
                     source.id,
@@ -454,13 +456,34 @@ def _capture_record(
                 http_status=error.status,
                 retry_after=error.retry_after,
             )
-            if (
-                pacer.stopped.is_set()
-                or not error.transient
-                or attempt + 1 == MAX_ATTEMPTS
-                or not pacer.pause(error.delay or min(attempt + 1, 2))
-            ):
+            if pacer.stopped.is_set() or not error.transient:
                 return
+            if attempt + 1 == MAX_ATTEMPTS:
+                fallback = None
+                if (
+                    not fallback_used
+                    and error.code == "interrupted_transfer"
+                    and isinstance(source, MediaFallbackSource)
+                ):
+                    try:
+                        candidate = source.media_fallback_url(url, error.code)
+                        if (
+                            isinstance(candidate, str)
+                            and candidate != url
+                            and _origin(candidate) == _origin(url)
+                            and _origin(candidate) in allowed
+                        ):
+                            fallback = candidate
+                    except Exception:
+                        pass
+                if fallback is None:
+                    return
+                _remove_partial(partial, metadata)
+                url, attempt, fallback_used = fallback, 0, True
+                continue
+            if not pacer.pause(error.delay or min(attempt + 1, 2)):
+                return
+            attempt += 1
 
 
 def capture_media(source: Source, root: Path, archive_id: str) -> dict:

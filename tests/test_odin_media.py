@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 
 from pipelines.media import MediaStore
-from pipelines.sources.base import MediaSource
+from pipelines.sources.base import MediaFallbackSource, MediaSource
 from pipelines.sources.odin import HOST, ORIGIN, Odin, page_url
 from pipelines.sources.odin.media import media_url, record_images
 
@@ -15,6 +15,33 @@ ID_B = "2" * 32
 ASSET = "a" * 32
 IMAGE = f"/dA/{ASSET}/fileAsset/Vehicle%20(A)-ea38"
 IMAGE_URL = ORIGIN + "/dotcms" + IMAGE
+
+
+def test_interrupted_proxy_fallback_preserves_exact_asset_path() -> None:
+    source = Odin()
+    assert isinstance(source, MediaFallbackSource)
+    assert (
+        source.media_fallback_url(IMAGE_URL, "interrupted_transfer") == ORIGIN + IMAGE
+    )
+
+
+@pytest.mark.parametrize(
+    "url,error",
+    [
+        (IMAGE_URL, "http_401"),
+        (IMAGE_URL, "http_403"),
+        (IMAGE_URL, "http_429"),
+        (IMAGE_URL, "invalid_image"),
+        (IMAGE_URL, "unknown"),
+        (ORIGIN + IMAGE, "interrupted_transfer"),
+        (IMAGE_URL.replace(ORIGIN, "https://other.example"), "interrupted_transfer"),
+        (IMAGE_URL + "?query=extra", "interrupted_transfer"),
+        (IMAGE_URL.replace(ASSET, "not-an-asset"), "interrupted_transfer"),
+        (ORIGIN + "/dotcms/images/a/ab/old.jpg", "interrupted_transfer"),
+    ],
+)
+def test_fallback_rejects_unrelated_errors_or_routes(url: str, error: str) -> None:
+    assert Odin().media_fallback_url(url, error) is None
 
 
 def record(identity: str = ID_A, **values: object) -> dict:

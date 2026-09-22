@@ -233,6 +233,18 @@ class Odin:
             "Referer": ORIGIN + "/WEG/List",
         }
 
+    def media_fallback_url(self, url: str, error: str) -> str | None:
+        from pipelines.sources.odin.media import media_url
+
+        prefix = ORIGIN + "/dotcms/dA/"
+        if (
+            error == "interrupted_transfer"
+            and url.startswith(prefix)
+            and media_url(url) == url
+        ):
+            return ORIGIN + "/dA/" + url.removeprefix(prefix)
+        return None
+
     def discover(self, url: str, body: bytes) -> list[str]:
         if url == SUBNAV:
             category_tree(body)

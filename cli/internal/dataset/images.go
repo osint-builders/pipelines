@@ -56,19 +56,22 @@ type MediaPreview struct {
 }
 
 type MediaRecord struct {
-	ID              string           `json:"id"`
-	Source          string           `json:"source"`
-	URL             string           `json:"url"`
-	OriginalURL     string           `json:"original_url"`
-	SHA256          string           `json:"sha256"`
-	ContentType     string           `json:"content_type"`
-	Width           int              `json:"width"`
-	Height          int              `json:"height"`
-	Caption         string           `json:"caption"`
-	References      []MediaReference `json:"references"`
-	VectorIndex     *int             `json:"vector_index"`
-	ExclusionReason string           `json:"exclusion_reason"`
-	Preview         *MediaPreview    `json:"preview"`
+	ID                  string           `json:"id"`
+	Source              string           `json:"source"`
+	URL                 string           `json:"url"`
+	OriginalURL         string           `json:"original_url"`
+	SHA256              string           `json:"sha256"`
+	ContentType         string           `json:"content_type"`
+	FrameCount          int              `json:"frame_count,omitempty"`
+	ValidatedFrameCount int              `json:"validated_frame_count,omitempty"`
+	UnreadableFrames    []int            `json:"unreadable_frames,omitempty"`
+	Width               int              `json:"width"`
+	Height              int              `json:"height"`
+	Caption             string           `json:"caption"`
+	References          []MediaReference `json:"references"`
+	VectorIndex         *int             `json:"vector_index"`
+	ExclusionReason     string           `json:"exclusion_reason"`
+	Preview             *MediaPreview    `json:"preview"`
 }
 
 type ImageProbe struct {
@@ -251,8 +254,10 @@ func (d *Dataset) LoadImages() error {
 	}
 	vectorHashes, hashVectors := map[int]string{}, map[string]int{}
 	originals := map[string]struct {
-		MIME          string
-		Width, Height int
+		MIME                            string
+		Width, Height                   int
+		FrameCount, ValidatedFrameCount int
+		UnreadableFrames                string
 	}{}
 	sources := map[string]bool{}
 	for _, source := range d.Manifest.Sources {
@@ -271,16 +276,28 @@ func (d *Dataset) LoadImages() error {
 			!validDigest(record.SHA256) || record.Width < 1 || record.Height < 1 ||
 			record.Width > imagepreprocess.MaxImagePixels || record.Height > imagepreprocess.MaxImagePixels ||
 			int64(record.Width)*int64(record.Height) > imagepreprocess.MaxImagePixels ||
-			(record.ContentType != "image/jpeg" && record.ContentType != "image/png" && record.ContentType != "image/webp" && record.ContentType != "image/gif") {
+			(record.ContentType != "image/jpeg" && record.ContentType != "image/png" && record.ContentType != "image/webp" && record.ContentType != "image/gif" && record.ContentType != "image/mpo") {
 			return errors.New("invalid original media metadata")
 		}
-		if record.ContentType == "image/gif" && (record.ExclusionReason != "unsupported_image_format" || record.VectorIndex != nil || record.Preview != nil) {
-			return errors.New("GIF metadata requires an unsupported-format exclusion without a vector or preview")
+		if (record.ContentType == "image/gif" || record.ContentType == "image/mpo") && (record.ExclusionReason != "unsupported_image_format" || record.VectorIndex != nil || record.Preview != nil) {
+			return errors.New("GIF/MPO metadata requires an unsupported-format exclusion without a vector or preview")
+		}
+		if record.ContentType == "image/mpo" {
+			if record.FrameCount < 1 || record.FrameCount > 64 || record.ValidatedFrameCount < 1 || record.ValidatedFrameCount > record.FrameCount || len(record.UnreadableFrames) != record.FrameCount-record.ValidatedFrameCount {
+				return errors.New("invalid MPO frame metadata")
+			}
+			for i, frame := range record.UnreadableFrames {
+				if frame < 1 || frame >= record.FrameCount || (i > 0 && record.UnreadableFrames[i-1] >= frame) {
+					return errors.New("invalid MPO frame metadata")
+				}
+			}
 		}
 		metadata := struct {
-			MIME          string
-			Width, Height int
-		}{record.ContentType, record.Width, record.Height}
+			MIME                            string
+			Width, Height                   int
+			FrameCount, ValidatedFrameCount int
+			UnreadableFrames                string
+		}{record.ContentType, record.Width, record.Height, record.FrameCount, record.ValidatedFrameCount, fmt.Sprint(record.UnreadableFrames)}
 		if previous, ok := originals[record.SHA256]; ok && previous != metadata {
 			return errors.New("inconsistent original media metadata")
 		}

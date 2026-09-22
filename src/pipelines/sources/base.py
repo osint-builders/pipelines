@@ -68,3 +68,10 @@ class MediaSource(Protocol):
     ) -> Iterable["MediaCandidate"]:
         """Describe media and its evidence links using an archived response."""
         ...
+
+
+@runtime_checkable
+class MediaFallbackSource(Protocol):
+    def media_fallback_url(self, url: str, error: str) -> str | None:
+        """Return a same-origin alternative for an interrupted media transfer."""
+        ...

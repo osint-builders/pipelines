@@ -21,6 +21,7 @@ from pipelines.model import valid_key
 MEDIA_SCHEMA_VERSION = 1
 MAX_IMAGE_BYTES = 20 * 1024 * 1024
 MAX_IMAGE_PIXELS = 40_000_000
+MAX_IMAGE_FRAMES = 64
 NEAR_DUPLICATE_DISTANCE = 5
 GENERIC_IMAGE_CONTENT_TYPES = frozenset({"", "unknown", "application/octet-stream"})
 _STATES = {"pending", "saved", "failed", "excluded", "unassociated"}
@@ -29,6 +30,7 @@ _MIMES = {
     "PNG": "image/png",
     "WEBP": "image/webp",
     "GIF": "image/gif",
+    "MPO": "image/mpo",
 }
 
 
@@ -138,7 +140,7 @@ def _decode(body: bytes, content_type: str) -> dict:
             expected_mime = _MIMES.get(image.format or "")
             if expected_mime is None:
                 raise MediaValidationError(
-                    "Unsupported image format; expected JPEG, PNG, WEBP, or static GIF",
+                    "Unsupported image format; expected JPEG, PNG, WEBP, static GIF, or MPO",
                     "unsupported_image_format",
                 )
             if mime not in _MIMES.values() and mime not in GENERIC_IMAGE_CONTENT_TYPES:
@@ -150,11 +152,36 @@ def _decode(body: bytes, content_type: str) -> dict:
                 raise MediaValidationError(
                     "Image exceeds the decoded pixel limit", "decoded_image_too_large"
                 )
-            if getattr(image, "n_frames", 1) != 1:
+            frame_count = getattr(image, "n_frames", 1)
+            if image.format != "MPO" and frame_count != 1:
                 raise MediaValidationError(
                     "Animated images are not supported", "animated_image"
                 )
-            image.verify()
+            if type(frame_count) is not int or not 1 <= frame_count <= MAX_IMAGE_FRAMES:
+                raise MediaValidationError(
+                    "Image exceeds the frame limit", "image_frame_limit"
+                )
+            if image.format == "MPO":
+                total_pixels = 0
+                unreadable_frames = []
+                for frame in range(frame_count):
+                    try:
+                        image.seek(frame)
+                    except ValueError as exc:
+                        # Some primary JPEGs retain stale MPF thumbnail offsets.
+                        if frame and str(exc) == "No data found for frame":
+                            unreadable_frames.append(frame)
+                            continue
+                        raise
+                    total_pixels += image.width * image.height
+                    if total_pixels > MAX_IMAGE_PIXELS:
+                        raise MediaValidationError(
+                            "Image frames exceed the aggregate decoded pixel limit",
+                            "decoded_image_too_large",
+                        )
+                    image.load()
+            else:
+                image.verify()
         with Image.open(BytesIO(body)) as image:
             image.load()
             normalized = ImageOps.exif_transpose(image)
@@ -165,10 +192,27 @@ def _decode(body: bytes, content_type: str) -> dict:
             for y in range(8):
                 for x in range(8):
                     bits = (bits << 1) | (pixels[y * 9 + x] > pixels[y * 9 + x + 1])
-    except (OSError, SyntaxError, Image.DecompressionBombError) as exc:
+    except MediaValidationError:
+        raise
+    except (
+        OSError,
+        SyntaxError,
+        ValueError,
+        EOFError,
+        Image.DecompressionBombError,
+    ) as exc:
         raise MediaValidationError("Invalid or truncated image") from exc
     return {
         "content_type": expected_mime,
+        **(
+            {
+                "frame_count": frame_count,
+                "validated_frame_count": frame_count - len(unreadable_frames),
+                "unreadable_frames": unreadable_frames,
+            }
+            if expected_mime == "image/mpo"
+            else {}
+        ),
         "width": width,
         "height": height,
         "sha256": hashlib.sha256(body).hexdigest(),

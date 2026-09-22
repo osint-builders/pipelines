@@ -7,19 +7,19 @@ specifications, and images, with every result linked to captured evidence.
 
 **Branch:** `feature/multimodal-entity-search`.
 
-## ODIN source capture — active
+## ODIN source capture — ready for verification
 
 Requested alongside M10: archive the complete Worldwide Equipment Guide catalog and
 its pictures through the shared source interfaces. M10's frozen benchmark remains
-unchanged. The supplied API currently advertises 4,118 live equipment records and
-responds without a session cookie. Stable identifier pagination will be reconciled
-against that total and the source's equipment-type hierarchy.
+unchanged. The supplied API advertised 4,118 live equipment records and responded
+without a session cookie. Stable identifier pagination was reconciled against that
+total and the source's complete equipment-type hierarchy.
 
 - [x] Add the ODIN adapter, full nested specifications, shared POST crawling, media discovery, and source audit.
 - [x] Capture every equipment page and category definition; verify no missing or duplicate IDs.
-- [ ] Download all linked equipment pictures and account for every outcome.
-- [ ] Verify offline replay, source/media audits, tests, and local entity-index access.
-- [ ] Record final counts and any source-side gaps; push the source changes.
+- [x] Download all linked equipment pictures and account for every outcome.
+- [x] Verify offline replay, source/media audits, tests, and local entity-index access.
+- [x] Record final counts and any source-side gaps; push the source changes.
 
 Capture `20260922T031929Z-df120f6c`: 42 catalog responses plus the category hierarchy,
 4,118 unique equipment records, 222 populated equipment types, 29,583 nested sections,
@@ -31,8 +31,26 @@ and rendered-evidence checksums also pass (`build/odin/artifact-checks.json`). T
 capture exposed and fixed a shared JSONL reader issue with literal Unicode separators.
 Media review identifies four records with only placeholder-labelled images and six
 source-association groups for later visual review (`build/odin/media-review.json`).
-Bulk downloads and the combined local text index are running; generic image MIME
-headers and static GIF originals are being handled through the shared media layer.
+The local text index and single-executable Windows CLI now include all 8,455 entities
+across 12 sources (`build/odin/dataset.zip`, `build/odin/pipelines.exe`). Four ODIN
+queries rank their expected aircraft, vehicle, vessel, and radar first; JSON, HTML,
+Markdown, and source exports match the bundle (`build/odin/cli-checks.json`).
+Media capture saved all 11,818 URLs as 11,758 distinct original files (1.95 GB); all 4,118
+entities have saved media, with zero failed, pending, excluded, or unassociated URLs.
+Two broken proxy responses were recovered through matching direct asset routes using
+a bounded shared fallback; original URLs and evidence references remain intact.
+Generic MIME headers, static GIFs, and MPO originals retain their unchanged bytes.
+One MPO has a valid primary picture but an absent secondary thumbnail; frame
+validation metadata records that source defect. GIF/MPO originals are archived and
+explicitly excluded from image vectors and previews.
+
+The ODIN build currently provides text search; its downloaded originals remain in
+the shared local media archive. No M10 image-search calibration or release gates
+were changed. The stripped Windows executable is 295.67 MiB, or 270.91 MiB as a
+single-executable ZIP (`build/odin/pipelines-windows-amd64.zip`, `SHA256SUMS`).
+Validation: 1,147 Python tests, full Ruff/mypy, Go tests/vet, CLI integrity and model
+checks, and four ODIN query/export checks passed. Final source/media audit:
+`build/odin/audit.json`; generated artifacts remain outside version control.
 
 Existing foundation: 11 source adapters, shared crawl/extract/audit commands, archived
 evidence, offline text search, and standalone CLI releases.

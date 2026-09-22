@@ -8,6 +8,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 from PIL import Image
+from PIL.MpoImagePlugin import MpoImageFile
 from test_pipeline import archived
 
 from pipelines import distribution, image_distribution
@@ -116,7 +117,16 @@ def add(
     )
     path = root / "input-image"
     if body is None:
-        Image.new("RGB", (24, 16), color).save(path, format=format)
+        image = Image.new("RGB", (24, 16), color)
+        if format == "MPO":
+            image.save(
+                path,
+                format=format,
+                save_all=True,
+                append_images=[Image.new("RGB", (24, 16), "blue")],
+            )
+        else:
+            image.save(path, format=format)
     else:
         path.write_bytes(body)
     with MediaStore(root) as store:
@@ -131,6 +141,7 @@ def add(
                 "JPEG": "image/jpeg",
                 "WEBP": "image/webp",
                 "GIF": "image/gif",
+                "MPO": "image/mpo",
             }[format],
         )
     return row
@@ -485,12 +496,13 @@ def test_capture_failure_and_unsupported_format_remain_explicit(
 
 
 @pytest.mark.parametrize("selected", [True, False])
-def test_static_gif_archive_remains_metadata_only_in_image_bundle(
-    setup: tuple[Path, list[dict], Path], selected: bool
+@pytest.mark.parametrize("format", ["GIF", "MPO"])
+def test_archival_formats_remain_metadata_only_in_image_bundle(
+    setup: tuple[Path, list[dict], Path], selected: bool, format: str
 ) -> None:
     from pipelines.image_preprocess import preprocess
 
-    original = add(setup, "original.gif", format="GIF")
+    original = add(setup, "original." + format.lower(), format=format)
     selection = setup[0] / "selection.json"
     selection.write_bytes(
         canonical(
@@ -502,7 +514,10 @@ def test_static_gif_archive_remains_metadata_only_in_image_bundle(
     )
     members, metadata, report = build(setup, selection)
     (row,) = json.loads(members["image/index.json"])
-    assert row["content_type"] == "image/gif"
+    assert row["content_type"] == "image/" + format.lower()
+    if format == "MPO":
+        assert row["frame_count"] == row["validated_frame_count"] == 2
+        assert row["unreadable_frames"] == []
     assert row["sha256"] == original["sha256"]
     assert row["exclusion_reason"] == "unsupported_image_format"
     assert row["vector_index"] is row["preview"] is None
@@ -514,15 +529,16 @@ def test_static_gif_archive_remains_metadata_only_in_image_bundle(
     validate(setup, members, metadata)
     with MediaStore(setup[0], read_only=True) as store:
         body = store.body(original["sha256"])
-    with pytest.raises(ValueError, match="JPEG or PNG"):
+    with pytest.raises(ValueError, match="JPEG"):
         preprocess(body, Recipe())
 
 
 @pytest.mark.parametrize("change", ["reason", "vector", "preview"])
-def test_gif_bundle_cannot_enable_image_encoding(
-    setup: tuple[Path, list[dict], Path], change: str
+@pytest.mark.parametrize("format", ["GIF", "MPO"])
+def test_archival_formats_cannot_enable_image_encoding(
+    setup: tuple[Path, list[dict], Path], change: str, format: str
 ) -> None:
-    add(setup, "original.gif", format="GIF")
+    add(setup, "original." + format.lower(), format=format)
     members, metadata, _ = build(setup)
     rows = json.loads(members["image/index.json"])
     if change == "reason":
@@ -533,8 +549,64 @@ def test_gif_bundle_cannot_enable_image_encoding(
         rows[0]["preview"] = {}
     members["image/index.json"] = canonical(rows)
     metadata["gallery_sha256"] = sha256(members["image/index.json"])
-    with pytest.raises(ValueError, match="GIF metadata"):
+    with pytest.raises(ValueError, match="GIF/MPO metadata"):
         validate(setup, members, metadata)
+
+
+@pytest.mark.parametrize(
+    "frames,validated,unreadable",
+    [
+        (0, 0, []),
+        (65, 65, []),
+        (2, 2, [1]),
+        (2, 1, [0]),
+        (2, 1, [2]),
+        (3, 1, [1, 1]),
+        (2, 1, [True]),
+        (True, 1, []),
+    ],
+)
+def test_mpo_bundle_rejects_invalid_frame_metadata(
+    setup: tuple[Path, list[dict], Path], frames: int, validated: int, unreadable: list
+) -> None:
+    add(setup, "original.mpo", format="MPO")
+    members, metadata, _ = build(setup)
+    rows = json.loads(members["image/index.json"])
+    rows[0].update(
+        frame_count=frames,
+        validated_frame_count=validated,
+        unreadable_frames=unreadable,
+    )
+    members["image/index.json"] = canonical(rows)
+    metadata["gallery_sha256"] = sha256(members["image/index.json"])
+    with pytest.raises(ValueError, match="MPO frame metadata"):
+        validate(setup, members, metadata)
+
+
+def test_missing_mpo_secondary_is_retained_in_metadata_only_bundle(
+    setup: tuple[Path, list[dict], Path],
+) -> None:
+    path = setup[0] / "missing.mpo"
+    first = Image.new("RGB", (24, 16), "red")
+    first.save(
+        path,
+        format="MPO",
+        save_all=True,
+        append_images=[Image.new("RGB", (24, 16), "blue")],
+    )
+    with Image.open(path) as image:
+        assert isinstance(image, MpoImageFile)
+        image.seek(1)
+        body = path.read_bytes()[: image.offset]
+    original = add(setup, "missing.mpo", format="MPO", body=body)
+    members, metadata, _ = build(setup)
+    (row,) = json.loads(members["image/index.json"])
+    assert row["frame_count"] == 2
+    assert row["validated_frame_count"] == 1
+    assert row["unreadable_frames"] == [1]
+    assert row["sha256"] == original["sha256"]
+    assert row["exclusion_reason"] == "unsupported_image_format"
+    validate(setup, members, metadata)
 
 
 def test_diverse_views_and_preview_budget_are_explicit(

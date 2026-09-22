@@ -127,6 +127,14 @@ def _row(record: dict, references: list[dict]) -> dict:
         "original_url": original_urls[0] if original_urls else "",
         "sha256": record["sha256"],
         "content_type": record["content_type"],
+        **(
+            {
+                key: record[key]
+                for key in ("frame_count", "validated_frame_count", "unreadable_frames")
+            }
+            if record["content_type"] == "image/mpo"
+            else {}
+        ),
         "width": record["width"],
         "height": record["height"],
         "caption": next(
@@ -376,7 +384,7 @@ def build_image_members(
         row["_original"] = not eligible or any(
             item["role"] == "original" for item in eligible
         )
-        if row["content_type"] == "image/gif":
+        if row["content_type"] in {"image/gif", "image/mpo"}:
             row["exclusion_reason"] = "unsupported_image_format"
         elif chosen is not None and row["id"] not in chosen:
             row["exclusion_reason"] = "selection"
@@ -559,7 +567,7 @@ def validate_image_bundle(
         RECIPE_VERSION,
         Recipe,
     )
-    from pipelines.media import media_id
+    from pipelines.media import MAX_IMAGE_FRAMES, media_id
 
     if manifest.get("format_version") not in {3, 4, 5}:
         raise ValueError("Image extension requires bundle format 3 or 4")
@@ -633,21 +641,39 @@ def validate_image_bundle(
         if (
             not re.fullmatch(r"[a-f0-9]{64}", row["sha256"])
             or row["content_type"]
-            not in {"image/jpeg", "image/png", "image/webp", "image/gif"}
+            not in {"image/jpeg", "image/png", "image/webp", "image/gif", "image/mpo"}
             or type(row["width"]) is not int
             or type(row["height"]) is not int
             or min(row["width"], row["height"]) < 1
             or row["width"] * row["height"] > MAX_IMAGE_PIXELS
         ):
             raise ValueError("Invalid original image metadata")
-        if row["content_type"] == "image/gif" and (
+        if row["content_type"] in {"image/gif", "image/mpo"} and (
             row["exclusion_reason"] != "unsupported_image_format"
             or row["vector_index"] is not None
             or row["preview"] is not None
         ):
             raise ValueError(
-                "GIF metadata requires an unsupported-format exclusion without a vector or preview"
+                "GIF/MPO metadata requires an unsupported-format exclusion without a vector or preview"
             )
+        if row["content_type"] == "image/mpo":
+            frames = row.get("frame_count")
+            validated = row.get("validated_frame_count")
+            unreadable = row.get("unreadable_frames", [])
+            if (
+                type(frames) is not int
+                or not 1 <= frames <= MAX_IMAGE_FRAMES
+                or type(validated) is not int
+                or not 1 <= validated <= frames
+                or not isinstance(unreadable, list)
+                or any(
+                    type(index) is not int or not 1 <= index < frames
+                    for index in unreadable
+                )
+                or unreadable != sorted(set(unreadable))
+                or len(unreadable) != frames - validated
+            ):
+                raise ValueError("Invalid MPO frame metadata")
         if row["original_url"] and urlsplit(row["original_url"]).scheme not in {
             "https",
             "http",

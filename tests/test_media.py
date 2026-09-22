@@ -7,6 +7,7 @@ from pathlib import Path
 
 import pytest
 from PIL import Image
+from PIL.MpoImagePlugin import MpoImageFile
 
 from pipelines.media import (
     MAX_IMAGE_BYTES,
@@ -304,6 +305,67 @@ def test_generic_content_type_uses_decoded_format(tmp_path: Path, mime: str) -> 
         assert store.body(record["sha256"]) == path.read_bytes()
     with MediaStore(tmp_path, read_only=True) as store:
         assert store.records("fixture", "run-1") == [record]
+
+
+def mpo_file(path: Path) -> tuple[Path, int]:
+    frames = [Image.new("RGB", (24, 16), "red"), Image.new("RGB", (31, 19), "blue")]
+    frames[0].save(path, format="MPO", save_all=True, append_images=frames[1:])
+    with Image.open(path) as image:
+        assert isinstance(image, MpoImageFile)
+        image.seek(1)
+        return path, image.offset
+
+
+@pytest.mark.parametrize("missing_secondary", [False, True])
+def test_mpo_archive_preserves_bytes_and_frame_validation(
+    tmp_path: Path, missing_secondary: bool
+) -> None:
+    path, second_offset = mpo_file(tmp_path / "input.mpo")
+    if missing_secondary:
+        path.write_bytes(path.read_bytes()[:second_offset])
+    with MediaStore(tmp_path) as store:
+        store.register("fixture", "run-1", [candidate()])
+        record = store.save(
+            "fixture",
+            "run-1",
+            media_id("fixture", URL),
+            path,
+            content_type="image/jpeg",
+            response_content_type="image/jpeg",
+        )
+        assert record["content_type"] == "image/mpo"
+        assert record["response_content_type"] == "image/jpeg"
+        assert record["frame_count"] == 2
+        assert record["validated_frame_count"] == (1 if missing_secondary else 2)
+        assert record["unreadable_frames"] == ([1] if missing_secondary else [])
+        assert (record["width"], record["height"]) == (24, 16)
+        assert store.body(record["sha256"]) == path.read_bytes()
+    with MediaStore(tmp_path, read_only=True) as store:
+        assert store.records("fixture", "run-1") == [record]
+
+
+@pytest.mark.parametrize("failure", ["primary", "secondary", "pixels", "frames"])
+def test_mpo_rejects_corrupt_present_frames_and_aggregate_limits(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, failure: str
+) -> None:
+    path, second_offset = mpo_file(tmp_path / "input.mpo")
+    if failure == "primary":
+        path.write_bytes(path.read_bytes()[: second_offset - 20])
+    elif failure == "secondary":
+        path.write_bytes(path.read_bytes()[:-20])
+    elif failure == "pixels":
+        monkeypatch.setattr("pipelines.media.MAX_IMAGE_PIXELS", 24 * 16 + 31 * 19 - 1)
+    else:
+        monkeypatch.setattr("pipelines.media.MAX_IMAGE_FRAMES", 1)
+    expected = {
+        "primary": "Invalid or truncated",
+        "secondary": "Invalid or truncated",
+        "pixels": "aggregate",
+        "frames": "frame limit",
+    }[failure]
+    with MediaStore(tmp_path) as store, pytest.raises(ValueError, match=expected):
+        saved(store, path)
+    assert not (tmp_path / "media" / "objects").exists()
 
 
 def test_rejects_unsupported_mime_truncation_animation_and_limits(
