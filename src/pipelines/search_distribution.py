@@ -6,7 +6,13 @@ import re
 import zipfile
 from pathlib import Path
 
-from pipelines.distribution import SEARCH_VERSION, canonical, plain_text, sha256
+from pipelines.distribution import (
+    LEGACY_SEARCH_VERSION,
+    SEARCH_VERSION,
+    canonical,
+    plain_text,
+    sha256,
+)
 from pipelines.media import media_id
 from pipelines.media_context import eligible_reference
 from pipelines.media_pipeline import read_media
@@ -29,7 +35,7 @@ MAX_MEMBER_BYTES = 32 * 1024 * 1024
 def _policy(value: object) -> dict:
     if not isinstance(value, dict) or set(value) != {*SEARCH_POLICY, "captions"}:
         raise ValueError("Invalid search policy fields")
-    if value["version"] != SEARCH_VERSION:
+    if value["version"] not in (LEGACY_SEARCH_VERSION, SEARCH_VERSION):
         raise ValueError("Unsupported search policy version")
     for field in ("k1", "b", "lexical_weight", "semantic_weight"):
         number = value[field]

@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"unicode"
 	"unicode/utf8"
 )
 
@@ -63,7 +64,7 @@ func (d *Dataset) validateSearchPolicy() error {
 		}
 		return nil
 	}
-	if p.Version != "bm25-minilm-v1" || p.K1 != 1.2 || p.B != .75 || p.RankConstant < 1 || p.RankConstant > 1000 ||
+	if (p.Version != "bm25-minilm-v1" && p.Version != "bm25-minilm-v2") || p.K1 != 1.2 || p.B != .75 || p.RankConstant < 1 || p.RankConstant > 1000 ||
 		!(p.LexicalWeight > 0 && p.LexicalWeight <= 10) || !(p.SemanticWeight > 0 && p.SemanticWeight <= 10) || p.Captions < 0 || p.Captions > 100000 {
 		return errors.New("unsupported text search policy")
 	}
@@ -200,6 +201,73 @@ func sourceNameMatch(query string, entity Entity) bool {
 	return false
 }
 
+// Version 2 reserves overriding name priority for an explicit query subject.
+// Other name occurrences still contribute to lexical and semantic retrieval.
+func sourceNameMatchV2(query string, entity Entity) bool {
+	words := lexicalTokens(query)
+	whole := key(strings.Join(words, ""))
+	if whole == "" {
+		return false
+	}
+	names := map[string]bool{}
+	for _, name := range append([]string{entity.Title}, entity.Aliases...) {
+		tokens := lexicalTokens(name)
+		normalized := key(strings.Join(tokens, ""))
+		if normalized == "" {
+			continue
+		}
+		if normalized == whole {
+			return true
+		}
+		var letter, digit bool
+		for _, r := range normalized {
+			letter = letter || unicode.IsLetter(r)
+			digit = digit || unicode.IsDigit(r)
+		}
+		names[normalized] = names[normalized] || len(tokens) > 1 || letter && digit
+	}
+	for i := 0; i < len(words) && i < 2; i++ {
+		joined := ""
+		for _, word := range words[i:] {
+			joined += key(word)
+			if names[joined] {
+				return true
+			}
+		}
+	}
+	// Quoting permits a single-word subject without promoting that same word
+	// inside an unquoted description or a later related-entity mention.
+	consumedUntil := 0
+	for start, opening := range query {
+		if start < consumedUntil {
+			continue
+		}
+		var closing rune
+		switch opening {
+		case '"':
+			closing = '"'
+		case '“':
+			closing = '”'
+		case '«':
+			closing = '»'
+		default:
+			continue
+		}
+		if len(lexicalTokens(query[:start])) > 1 {
+			return false
+		}
+		body := query[start+utf8.RuneLen(opening):]
+		if end := strings.IndexRune(body, closing); end >= 0 {
+			consumedUntil = start + utf8.RuneLen(opening) + end + utf8.RuneLen(closing)
+			_, matched := names[key(strings.Join(lexicalTokens(body[:end]), ""))]
+			if matched {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 func (d *Dataset) rankText(results []Result, generated map[string]Match, query string, observations bool) ([]Result, error) {
 	index, err := d.loadTextIndex(observations)
 	if err != nil {
@@ -250,7 +318,11 @@ func (d *Dataset) rankText(results []Result, generated map[string]Match, query s
 	}
 	for i := range results {
 		result := &results[i]
-		result.NameMatch = sourceNameMatch(query, result.Entity)
+		if p.Version == "bm25-minilm-v2" {
+			result.NameMatch = sourceNameMatchV2(query, result.Entity)
+		} else {
+			result.NameMatch = sourceNameMatch(query, result.Entity)
+		}
 		if result.NameMatch {
 			result.Score = 2 + math.Max(-1, math.Min(1, result.Cosine))
 		}

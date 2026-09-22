@@ -98,6 +98,29 @@ func TestCalibrationSharedPythonGoldenParity(t *testing.T) {
 	}
 }
 
+func TestCalibrationBindingIncludesTextNamePolicyVersion(t *testing.T) {
+	f := calibrationGoldens(t)
+	f.Binding.Manifest["search"] = map[string]any{"version": "bm25-minilm-v1"}
+	legacy, err := calibrationRetrieval(f.Binding.Manifest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	f.Binding.Manifest["search"].(map[string]any)["version"] = "bm25-minilm-v2"
+	updated, err := calibrationRetrieval(f.Binding.Manifest)
+	if err != nil || updated == legacy {
+		t.Fatal("new name policy retained old calibration identity", err)
+	}
+	artifact := f.Golden[0].Artifact
+	artifact["retrieval_sha256"] = legacy
+	body, _ := json.Marshal(artifact)
+	if _, err := parseCalibration(body, legacy); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := parseCalibration(body, updated); err == nil {
+		t.Fatal("old name policy calibration accepted by new policy")
+	}
+}
+
 func TestCalibrationRejectsMalformedArtifacts(t *testing.T) {
 	f := calibrationGoldens(t)
 	base, _ := json.Marshal(f.Golden[0].Artifact)

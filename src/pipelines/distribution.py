@@ -13,7 +13,8 @@ from pipelines.model import response_member
 from pipelines.snapshot import load_snapshot
 
 FORMAT_VERSION = 2
-SEARCH_VERSION = "bm25-minilm-v1"
+LEGACY_SEARCH_VERSION = "bm25-minilm-v1"
+SEARCH_VERSION = "bm25-minilm-v2"
 STORAGE_VERSION = "runtime-binaries-stored-v1"
 LOCK = json.loads(Path(__file__).with_name("model.lock.json").read_text())
 

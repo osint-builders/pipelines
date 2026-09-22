@@ -86,6 +86,89 @@ func TestSourceNamesWinWithoutPromotingIncidentalOrNumericMatches(t *testing.T) 
 	}
 }
 
+func TestVersionTwoNamesRequireAnExplicitQuerySubject(t *testing.T) {
+	for _, item := range []struct {
+		query string
+		name  string
+		want  bool
+	}{
+		{"AIR", "AIR", true},
+		{"MAX", "MAX", true},
+		{"Armor", "Armor", true},
+		{"air surveillance radar", "AIR", false},
+		{"vehicle; Max Range: 550 kilometer; Combat Weight: 55,000 kilogram", "MAX", false},
+		{"a main battle tank with improved armor protection than Leopard 1 in the Italian Army", "Armor", false},
+		{"operating in the X band low observable radar installed in the US Air Force B-1B Lancer aircraft", "AIR", false},
+		{"a command and control system integrated onto the BAZ-6909 8x8 truck and associated with S-350", "BAZ6909", false},
+		{"a command and control system integrated onto the BAZ-6909 8x8 truck and associated with S-350", "S-350", false},
+		{"a main battle tank with improved protection than Leopard 1 in the Italian Army", "Leopard 1", false},
+		{"American M1A2 Abrams main battle tank", "M1A2", true},
+		{"M142 HIMARS wheeled rocket artillery launcher", "M142 HIMARS", true},
+		{"Russian T-90M main battle tank", "T-90M", true},
+		{"1B75 acoustic counter battery sensor", "1B75", true},
+		{"F 16 fighter", "F-16", true},
+		{"F-160", "F-16", false},
+		{"F-16A", "F-16", false},
+		{"prefixfalconsuffix", "Falcon", false},
+		{"russian cheeseboard", "Cheese Board", true},
+		{"Angara 1 2", "Angara 1.2", true},
+		{"Meteor", "Météor", true},
+		{"medium mine protected vehicle", "Medium Mine Protected Vehicle", true},
+		{`"AIR" radar`, "AIR", true},
+		{`find "MAX" radar`, "MAX", true},
+		{`"find" AIR "radar"`, "AIR", false},
+		{`"Russian" Armor "protection"`, "Armor", false},
+		{"“Météor” missile", "Météor", true},
+		{"«Armor» radar", "Armor", true},
+		{`a radar mounted on the "Lancer" aircraft`, "Lancer", false},
+		{"", "AIR", false},
+	} {
+		t.Run(item.query+"/"+item.name, func(t *testing.T) {
+			entity := Entity{Title: "Unrelated title", Aliases: []string{item.name}}
+			if got := sourceNameMatchV2(item.query, entity); got != item.want {
+				t.Fatalf("name priority %v, want %v", got, item.want)
+			}
+		})
+	}
+}
+
+func TestRankingVersionPreservesLegacyAndKeepsIncidentalNameAsOrdinaryEvidence(t *testing.T) {
+	for _, version := range []string{"bm25-minilm-v1", "bm25-minilm-v2"} {
+		t.Run(version, func(t *testing.T) {
+			f := newImageFixture(t)
+			withRanking(f)
+			f.manifest.Search.Version = version
+			var entities []Entity
+			_ = json.Unmarshal(f.members["index.json"], &entities)
+			entities[0].Title, entities[0].Aliases = "AIR", []string{"AIR"}
+			entities[1].Title, entities[1].Aliases = "AN/APQ-164", []string{"AN/APQ-164"}
+			f.members["index.json"], _ = json.Marshal(entities)
+			var chunks []Chunk
+			_ = json.Unmarshal(f.members["chunks.json"], &chunks)
+			chunks[2].Text = "low observable air navigation radar"
+			f.members["chunks.json"], _ = json.Marshal(chunks)
+			d := f.open(t)
+			vector := make([]float32, 384)
+			vector[1] = 1
+			results, err := d.Search(vector, "low observable air navigation radar", true, Filter{}, 2, "")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if version == "bm25-minilm-v1" {
+				if results[0].ID != firstID || !results[0].NameMatch {
+					t.Fatal("legacy ranking changed", results)
+				}
+			} else if results[0].ID != secondID || results[0].NameMatch || results[1].NameMatch || results[1].Ranking.LexicalRank == 0 {
+				t.Fatal("incidental alias either dominated or lost ordinary lexical evidence", results)
+			}
+			exact, err := d.Search(vector, "AIR", true, Filter{}, 2, "")
+			if err != nil || exact[0].ID != firstID || !exact[0].NameMatch {
+				t.Fatal("exact name priority lost", exact, err)
+			}
+		})
+	}
+}
+
 func TestSourceCaptionsHaveTheirOwnEvidenceAndDoNotLoadImages(t *testing.T) {
 	f := newImageFixture(t)
 	withRanking(f)

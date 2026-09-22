@@ -122,6 +122,16 @@ def test_shared_protocol_and_framed_binding() -> None:
     assert c.retrieval_identity(manifest) != binding["retrieval_sha256"]
 
 
+def test_search_policy_change_invalidates_fitted_calibration() -> None:
+    manifest, fixture, responses = development()
+    artifact = fitted(manifest, fixture, responses)
+    changed = deepcopy(manifest)
+    changed["search"]["version"] = "bm25-minilm-v2"
+    assert c.retrieval_identity(changed) != c.retrieval_identity(manifest)
+    with pytest.raises(ValueError, match="retrieval"):
+        c.parse_artifact(c.canonical(artifact), changed)
+
+
 @pytest.mark.parametrize("case", FIXTURE["golden"], ids=lambda case: case["id"])
 def test_shared_decision_goldens(case: dict) -> None:
     manifest = FIXTURE["binding"]["manifest"]
