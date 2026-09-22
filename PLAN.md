@@ -800,7 +800,28 @@ previews at quality 65: six previews use 66,873 bytes versus 175,190 at 512/75.
 Their original-to-preview embedding cosine averages 0.944 (minimum 0.928); this
 measures exported-preview changes, not held-out retrieval. Original media, vectors,
 and OCR inputs remain intact. Preview settings and ZIP storage enter recipe identity
-and invalidate the appropriate cached build. Full-gallery coverage is being rebuilt.
+and invalidate the appropriate cached build. The rebuilt gallery embeds 3,111 distinct
+vectors across 3,122 records and 3,102 entities, up from 1,101 entities, using
+33,554,327 preview bytes (under 32 MiB). Per-source covered entities are ArmyRecognition
+11, Commons 148, Deagel 943, Fandom 11, MilitaryPeriscope 132, RadarTutorial 1,732,
+RussianForces 7, VirtualGlobetrotting 100, and Wikipedia 18. New-view analyses are running.
+
+Frozen-seed reruns remain pilot measurements: image ranks place eight of nine positive
+queries first and combined queries two of two first, but accepted matches remain zero
+because these modes abstain. All 63 research commands pass. Observation search finds
+eight of ten within five globally and ten of ten with source filters, while abstaining.
+M7 text has one filtered specification regression from rank five to six after captions
+were added (17/18 within five, versus 18/18 before); global recall remains 18/18 and
+the original 116-case baseline is unchanged. No held-out query was used to tune a fix.
+
+Publication tooling now recomputes bound quality evidence and native resource samples
+instead of trusting pass flags. It requires all five target reports plus the original
+Windows hardware comparison, verifies exact executable/archive hashes, and defaults
+manual workflow runs to validation only. Missing review/calibration evidence blocks
+publication. Portable evidence staging retains the underlying report/query hashes.
+The root README distinguishes the current text-only public release from newer local
+multimodal builds. The current implementation passes 863 Python tests, full lint/format
+and type checks (including installed OCR/description extras), Go tests, and Go vet.
 
 - [ ] Run the frozen evaluation suite for text, image, combined, OCR, filters, and entity relationships; report results by task and source.
 - [ ] Verify top-result accuracy, recall within the first five results, confusable variants, and no-match behavior meet M1's targets.
@@ -808,11 +829,11 @@ and invalidate the appropriate cached build. Full-gallery coverage is being rebu
 - [ ] Measure cold/warm latency, peak memory, and compressed executable size on all supported targets.
 - [ ] Bring text within the frozen budgets: M9 default p95 is 2.708 s against M1's relative limit of 2.380 s and uses 960.86 MiB against 949.30 MiB; filtered text is 3.424 s against 3 s absolute; observation text is 3.938 s and uses 1,144.79 MiB.
 - [ ] Build and test one standalone executable per platform with required models, indices, evidence, and selected previews embedded.
-- [ ] Improve gallery coverage within the preview budget: M9 retains 9,696 saved records but embeds 1,455 views covering 1,101 entities; compare preview size and allocation using development data.
+- [x] Improve gallery coverage within the preview budget: development-only preview comparison and round-robin allocation increase entity coverage from 1,101 to 3,102.
 - [ ] Validate deterministic dataset identities, cached rebuilds, checksums, source exports, and operation without network access.
-- [ ] Extend release change detection and tag identity to include image artifacts; the existing gate compares text content only.
+- [x] Extend release change detection and tag identity to include image artifacts using the full deterministic dataset identity.
 - [ ] Run lint, types, unit/integration tests, Python/Go parity, and native release acceptance checks.
-- [ ] Update the root README with only shipped CLI options/API behavior and the source table.
+- [x] Update the root README with CLI options/API behavior, capability availability, and the source table.
 - [ ] Publish the verified binaries and checksums through the existing manual release process.
 
 Complete when the released CLI satisfies the agreed quality and distribution budgets

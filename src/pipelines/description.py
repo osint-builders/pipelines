@@ -200,17 +200,14 @@ class Analyzer:
             backend="pil",
             **self._manifest["preprocess"],
         )
-        model = (
-            AutoModelForImageTextToText.from_pretrained(
-                str(self._directory),
-                **common,
-                use_safetensors=True,
-                dtype=dtype,
-                attn_implementation="sdpa",
-            )
-            .to(self._device)
-            .eval()
+        model: torch.nn.Module = AutoModelForImageTextToText.from_pretrained(
+            str(self._directory),
+            **common,
+            use_safetensors=True,
+            dtype=dtype,
+            attn_implementation="sdpa",
         )
+        model = model.to(self._device).eval()
         self._processor, self._model, self._torch = processor, model, torch
 
     def analyze(self, body: bytes) -> dict:

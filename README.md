@@ -1,56 +1,82 @@
 # pipelines
 
-Search equipment by name or meaning and retrieve its archived source pages, fully offline.
-
 Download the [latest CLI](https://github.com/osint-builders/pipelines/releases/latest)
-for Windows, Linux, or macOS. Extract `pipelines` (`pipelines.exe` on Windows) and
-add it to your PATH. The single executable includes the model and dataset.
+for Windows (amd64), Linux (amd64/arm64), or macOS (Intel/Apple silicon).
+Extract `pipelines` (`pipelines.exe` on Windows), add it to your PATH, and run
+`pipelines verify`. Archives contain one executable with its dataset and models.
+`SHA256SUMS` lists download checksums.
+
+The current public release supports text search. Image, observation, and research
+commands below require a newer local build whose `info` lists those capabilities.
+
+All commands work offline. `pipelines info` reports the capabilities, sources, field
+catalog, counts, and model versions included in your download.
 
 ## CLI
 
-| Command | Description |
+Place options before the query or IDs. Use source-qualified IDs returned by a search.
+
+| Command | Output |
 | --- | --- |
-| `pipelines search [options] "query"` | Search by name or meaning |
-| `pipelines similar [options] SOURCE:ID` | Find entities similar to an existing entity |
-| `pipelines get [options] SOURCE:ID` | Retrieve an entity and its archived pages |
-| `pipelines info` | Show the bundled sources, counts, and model |
-| `pipelines version` | Show the executable version |
-| `pipelines verify` | Check dataset integrity and model output |
-| `pipelines --help` | Show help; also available as `pipelines COMMAND --help` |
+| `pipelines search [options] "query"` | Text search results |
+| `pipelines search --image FILE [options] ["query"]` | Image or combined image/text results |
+| `pipelines similar [options] SOURCE:ID` | Similar entities |
+| `pipelines list [options]` | Entities matching filters, sorted by ID |
+| `pipelines get [options] SOURCE:ID` | Entity and archived evidence |
+| `pipelines media [--id MEDIA_ID] [--output FILE] SOURCE:ID` | Media metadata, or an embedded preview written to a new file |
+| `pipelines observations [--id OBSERVATION_ID] SOURCE:ID` | Generated OCR/descriptions and their processing recipes |
+| `pipelines facts SOURCE:ID` | Source claims with normalized values and evidence |
+| `pipelines relationships [--type TYPE] SOURCE:ID` | Evidence-backed relationships |
+| `pipelines compare SOURCE:ID OTHER:ID [...]` | Field comparisons for 2–20 distinct entities |
+| `pipelines info`, `pipelines version`, `pipelines verify` | Dataset details, executable version, or integrity/model checks |
+| `pipelines --help` | Help; also available with `pipelines COMMAND --help` |
 
-Place options before the query or ID. Use IDs returned by `search` or `similar`.
-
-| Option | Commands | Description |
+| Option | Commands | Meaning |
 | --- | --- | --- |
-| `--mode hybrid\|vector` | `search` | Name and semantic matching (`hybrid`, default), or semantic matching only (`vector`) |
-| `--limit N` | `search`, `similar` | Maximum results: 1–100, default 10 |
-| `--source SOURCE`, `--kind KIND`, `--category CATEGORY` | `search`, `similar` | Filter results before applying the limit |
-| `--format json\|markdown\|html\|source` | `get` | Output format; default `json` |
-| `--evidence PAGE_ID` | `get` | Select one archived page |
+| `--mode hybrid\|vector` | `search` | Names, source captions, and semantic ranking (default `hybrid`), or semantic ranking only; unavailable with `--image` |
+| `--observations` | `search` | Include generated OCR/descriptions; requires text |
+| `--limit N` | `search`, `similar`, `list` | 1–100 results, default 10 |
+| `--source SOURCE`, `--kind KIND`, `--category CATEGORY` | `search`, `similar`, `list` | Filter before ranking or limiting |
+| `--where "FIELD OP VALUE"` | `search`, `similar`, `list` | Repeat to require every predicate; operators: `=`, `!=`, `<`, `<=`, `>`, `>=` |
+| `--format json\|markdown\|html\|source` | `get` | Default `json`; `source` preserves captured response bytes |
+| `--evidence PAGE_ID` | `get` | Select one page; required for HTML/source export when several pages exist |
+
+Image input accepts one local JPEG/PNG, up to 20 MiB and 40 million pixels. Text allows
+1,000 characters and 256 model tokens. Numeric filters require compatible units except
+for counts. Unknown, approximate, or unparsed values do not satisfy strict filters.
+Use `info` for field names. Relationship types are `equivalent`, `family_member_of`,
+`variant_of`, `component_of`, and `related_system`.
 
 ```sh
 pipelines search --source deagel --limit 5 "M142 HIMARS"
-pipelines search --mode vector --kind radar "detect aircraft approaching an airport"
+pipelines search --image equipment.jpg "tracked vehicle"
+pipelines search --observations "warning label"
+pipelines list --where "manufacturer=Thales" --where "mass>=10 t"
 pipelines get --format markdown radartutorial:8bdc6ce92fea3ca62de71395
 ```
 
 ## API
 
-Call the executable with arguments and read JSON from stdout. Errors return a
-nonzero exit code and `{"error":"message"}` on stderr.
+Run the executable as a subprocess and parse JSON on stdout. Errors return a nonzero
+exit code and `{"error":"message"}` on stderr. Help and non-JSON `get` formats return
+text or captured bytes.
 
-`search` returns `dataset_id`, `query`, `mode`, and `results`. Each result contains
-`id`, `title`, `url`, `source`, `kind`, `categories`, `aliases`, `score`, `cosine`,
-`name_match`, `snippet`, and `evidence_id`. `similar` returns the same result fields
-with `similar_to` in place of `query`. An empty `evidence_id` means the match came
-from the entity's identity. Queries allow up to 1,000 characters and 256 model tokens.
+`search` returns `dataset_id`, `query`, `query_type`, `mode`, `match_status`, and
+`results`; image queries also return `query_image_sha256`. Results retain `id`, `title`,
+`url`, `source`, `kind`, `categories`, `aliases`, `score`, `cosine`, `name_match`,
+`snippet`, and `evidence_id`. `matches` links text/image/OCR/description contributions
+to evidence and media IDs; generated matches include recipe identity. Image-only
+results use `cosine: null`; their image score is in `matches`. Scores are ranking
+signals, not probabilities.
 
-| `get` format | Output |
-| --- | --- |
-| `json` | Entity and evidence, including metadata, Markdown, and HTML |
-| `markdown` | All archived pages, or the page selected with `--evidence` |
-| `html` | Original HTML or rendered record; select `--evidence` when multiple pages exist |
-| `source` | Exact captured response; select `--evidence` when multiple pages exist |
+`match_status: no_supported_match` can include suggestions. Image and generated-text
+modes remain uncalibrated and return this status even for plausible matches.
+`similar` returns `similar_to`, `mode`, and `results`. `list` returns `total` and
+`results`; the limit applies to the latter. `get` returns the original entity and
+its evidence. `facts`, `relationships`, and `observations` return an `entity_id`
+with the corresponding records; `compare` returns `entity_ids` and `fields`.
+Claims retain their original values, units, qualifiers, and evidence; missing
+comparison values are explicit unknowns. Every entity keeps its source-qualified ID.
 
 ## Sources
 

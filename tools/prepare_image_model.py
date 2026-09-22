@@ -181,7 +181,7 @@ def prepare(directory: Path, name: str, *, download: bool = False) -> list[dict]
     full = directory / f"{name}-fp32.onnx"
     torch.onnx.export(
         model,
-        probe,
+        (probe,),
         str(full),
         input_names=["pixel_values"],
         output_names=["image_features"],

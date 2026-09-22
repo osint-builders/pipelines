@@ -8,13 +8,18 @@ import sys
 from pathlib import Path
 
 from build_cli import ROOT, run, verify_bundle
-from release import BINARY_TARGETS, prepare_assets
+from release import BINARY_TARGETS, input_tag, prepare_assets, validate_release
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--bundle", type=Path, required=True)
     parser.add_argument("--directory", type=Path, default=Path("dist/release"))
+    parser.add_argument(
+        "--validation",
+        type=Path,
+        help="Verify existing quality and native resource reports after building",
+    )
     parser.add_argument(
         "--archives-only",
         action="store_true",
@@ -28,6 +33,8 @@ def main() -> None:
         if recorded != manifest:
             parser.error("Existing release manifest differs; rebuild the binaries")
         prepare_assets(args.directory)
+        if args.validation:
+            validate_release(args.directory, args.bundle, args.validation)
         return
     host = tuple(run(["go", "env", "GOHOSTOS", "GOHOSTARCH"], capture=True).split())
     for system, architecture, name in BINARY_TARGETS:
@@ -55,8 +62,18 @@ def main() -> None:
         json.dumps(manifest, indent=2), encoding="utf-8", newline="\n"
     )
     prepare_assets(args.directory)
+    if args.validation:
+        validate_release(args.directory, args.bundle, args.validation)
     print(
-        f"Built {args.directory}. Cross-compiled targets still require runtime acceptance."
+        json.dumps(
+            {
+                "directory": str(args.directory),
+                "dataset_id": manifest["dataset_id"],
+                "input_tag": input_tag(manifest),
+                "validation": str(args.validation) if args.validation else None,
+                "publication_ready": args.validation is not None,
+            }
+        )
     )
 
 

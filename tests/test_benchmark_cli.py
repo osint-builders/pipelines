@@ -2,7 +2,9 @@ import json
 import subprocess
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 
+import benchmark_cli
 import pytest
 from benchmark_cli import benchmark, distribution, measure, summarize
 from evaluate_cli import evaluate
@@ -42,6 +44,43 @@ def test_measure_collects_json_memory_and_propagates_process_errors() -> None:
     assert error.value.returncode == 3
     with pytest.raises(subprocess.TimeoutExpired):
         measure([sys.executable, "-c", "import time; time.sleep(5)"], timeout=0.05)
+
+
+def test_macos_measure_uses_the_exact_child_peak_in_bytes(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class Child:
+        pid = 123
+        returncode = None
+
+        def __init__(self, *args: object, **kwargs: object) -> None:
+            kwargs["stdout"].write(b'{"ok":true}')  # type: ignore[attr-defined]
+
+        def __enter__(self) -> "Child":
+            return self
+
+        def __exit__(self, *args: object) -> None:
+            assert self.returncode == 0
+
+        def poll(self) -> int | None:
+            return self.returncode
+
+    calls = []
+
+    def wait4(pid: int, flags: int) -> tuple[int, int, SimpleNamespace]:
+        calls.append((pid, flags))
+        return pid, 0, SimpleNamespace(ru_maxrss=123456789)
+
+    monkeypatch.setattr(benchmark_cli.sys, "platform", "darwin")
+    monkeypatch.setattr(benchmark_cli.subprocess, "Popen", Child)
+    monkeypatch.setattr(benchmark_cli.os, "wait4", wait4, raising=False)
+    monkeypatch.setattr(benchmark_cli.os, "WNOHANG", 1, raising=False)
+    monkeypatch.setattr(benchmark_cli.os, "waitstatus_to_exitcode", lambda code: code)
+    response, sample = measure(["binary"])
+    assert response == {"ok": True}
+    assert calls == [(123, 1)]
+    assert sample["peak_rss_bytes"] == 123456789
+    assert sample["memory_method"] == "darwin_wait4_maxrss"
 
 
 def test_evaluator_preserves_filters_and_required_gate(tmp_path: Path) -> None:

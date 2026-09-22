@@ -54,6 +54,8 @@ class ProcessMemory:
             self.method = "windows_peak_working_set" if self.handle else "unavailable"
         elif sys.platform.startswith("linux"):
             self.method = "linux_vm_hwm"
+        elif sys.platform == "darwin":
+            self.method = "darwin_wait4_maxrss"
 
     def read(self) -> int | None:
         if self.handle and self.query(
@@ -87,6 +89,14 @@ def measure(command: list[str], *, timeout: float = 120) -> tuple[dict, dict]:
                         peak = max(peak or 0, value)
                     if time.perf_counter() - start > timeout:
                         raise subprocess.TimeoutExpired(command, timeout)
+                    if sys.platform == "darwin":
+                        pid, status, usage = os.wait4(process.pid, os.WNOHANG)
+                        if pid:
+                            process.returncode = os.waitstatus_to_exitcode(status)
+                            peak = int(usage.ru_maxrss)
+                            break
+                        time.sleep(0.02)
+                        continue
                     try:
                         process.wait(timeout=0.02)
                         value = memory.read()
@@ -199,6 +209,16 @@ def hardware() -> dict:
             ram = os.sysconf("SC_PHYS_PAGES") * os.sysconf("SC_PAGE_SIZE")
         except (ValueError, OSError):
             pass
+    if sys.platform == "darwin":
+        cpu = subprocess.check_output(
+            ["sysctl", "-n", "machdep.cpu.brand_string"], text=True
+        ).strip()
+        ram = int(subprocess.check_output(["sysctl", "-n", "hw.memsize"], text=True))
+    elif sys.platform.startswith("linux"):
+        for line in Path("/proc/cpuinfo").read_text().splitlines():
+            if line.startswith(("model name", "Hardware")):
+                cpu = line.partition(":")[2].strip()
+                break
     return {
         "os": platform.platform(),
         "architecture": platform.machine(),
@@ -259,7 +279,7 @@ def benchmark(binary: Path, cases: Path, releases: Path, repeats: int) -> dict:
             "latency": "Wall time from process launch through JSON output parsing; includes model and dataset loading.",
             "first_launch": "First search in this run, before info and artifact hashing. OS filesystem cache is uncontrolled; not a reboot-cold measurement.",
             "repeat_launch": "Fresh processes repeat the same query; OS file cache may be warm. There is no resident model or in-process warm query.",
-            "memory": "Native process RSS high-water counters read every 20 ms and after exit when available. Missing final counters may omit the last 20 ms; unsupported systems report null.",
+            "memory": "Per-process OS peak resident memory: Windows/Linux high-water counters sampled every 20 ms; macOS wait4 returns the completed child's maximum RSS in bytes. Missing Linux final counters may omit the last 20 ms; unsupported systems report null.",
             "percentiles": "Nearest-rank p95; probe repetitions describe one query, suite samples cover all evaluated cases once.",
             "quality": "Source-filtered fixtures with one expected entity per query; required and exploratory cases remain separate. Missing task labels use mode-based groups, not reviewed task annotations.",
         },

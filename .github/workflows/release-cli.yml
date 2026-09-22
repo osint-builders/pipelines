@@ -4,9 +4,14 @@ on:
   workflow_dispatch:
     inputs:
       input_tag:
-        description: Verified data input tag (data- followed by the full content SHA-256)
+        description: Verified input tag (data- followed by the full dataset ID)
         required: true
         type: string
+      publish:
+        description: Publish only after dataset-bound quality and resource gates pass
+        required: true
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -35,8 +40,12 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           INPUT_TAG: ${{ inputs.input_tag }}
         run: uv run --no-sync python tools/release.py gate --repo "$GITHUB_REPOSITORY" --tag "$INPUT_TAG"
-      - if: steps.gate.outputs.changed == 'true'
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      - if: inputs.publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+          INPUT_TAG: ${{ inputs.input_tag }}
+        run: gh release download "$INPUT_TAG" --repo "$GITHUB_REPOSITORY" --pattern quality.json --pattern reference.json --pattern quality-evidence.zip --dir build/release/validation
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: verified-dataset
           path: build/release/
@@ -45,26 +54,33 @@ jobs:
 
   binary:
     needs: gate
-    if: needs.gate.outputs.changed == 'true'
+    if: needs.gate.outputs.changed == 'true' || !inputs.publish
+    timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
         include:
           - runner: ubuntu-latest
             target: linux-amd64
+            binary: pipelines-linux-amd64
           - runner: ubuntu-24.04-arm
             target: linux-arm64
+            binary: pipelines-linux-arm64
           - runner: macos-15-intel
             target: darwin-amd64
+            binary: pipelines-darwin-amd64
           - runner: macos-15
             target: darwin-arm64
+            binary: pipelines-darwin-arm64
           - runner: windows-latest
-            target: windows-amd64.exe
+            target: windows-amd64
+            binary: pipelines-windows-amd64.exe
     runs-on: ${{ matrix.runner }}
     env:
       CGO_ENABLED: "0"
       EXPECTED_BUNDLE_SHA256: ${{ needs.gate.outputs.bundle_sha256 }}
       TARGET: ${{ matrix.target }}
+      BINARY: ${{ matrix.binary }}
     defaults:
       run:
         shell: bash
@@ -87,20 +103,51 @@ jobs:
       - run: python tools/check_bundle_hash.py build/release/dataset.zip
       - working-directory: cli
         run: go test -tags NODOWNLOAD ./...
-      - run: uv run --no-sync python tools/build_cli.py --bundle build/release/dataset.zip --output "dist/pipelines-$TARGET"
-      - run: python tools/accept_cli.py "dist/pipelines-$TARGET" build/release/dataset.zip
-      - run: python tools/evaluate_cli.py "dist/pipelines-$TARGET"
-      - if: matrix.target == 'linux-amd64'
-        run: docker run --rm --network none --read-only --mount "type=bind,source=$PWD/dist,target=/binaries,readonly" debian:bookworm-slim /binaries/pipelines-linux-amd64 verify
+      - run: uv run --no-sync python tools/build_cli.py --bundle build/release/dataset.zip --output "dist/$BINARY"
+      - name: Native Linux acceptance and resource gates without networking
+        if: runner.os == 'Linux'
+        run: sudo unshare --net -- "$PWD/.venv/bin/python" tools/measure_release.py "dist/$BINARY" --bundle build/release/dataset.zip --target "$TARGET" --output "build/release/validation/$TARGET.json"
+      - name: Native macOS acceptance and resource gates without networking
+        if: runner.os == 'macOS'
+        run: /usr/bin/sandbox-exec -p '(version 1)(allow default)(deny network*)' "$PWD/.venv/bin/python" tools/measure_release.py "dist/$BINARY" --bundle build/release/dataset.zip --target "$TARGET" --output "build/release/validation/$TARGET.json"
+      - name: Native Windows acceptance and resource gates with outbound traffic blocked
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $binaryPath = (Resolve-Path -LiteralPath "dist/$env:BINARY").Path
+          $ruleName = 'pipelines-release-' + [guid]::NewGuid().ToString('N')
+          $profiles = @(Get-NetFirewallProfile | Select-Object Name, Enabled)
+          try {
+            Set-NetFirewallProfile -Profile Domain,Private,Public -Enabled True
+            New-NetFirewallRule -Name $ruleName -DisplayName $ruleName -Direction Outbound -Action Block -Program $binaryPath -Profile Any -Protocol Any -Enabled True | Out-Null
+            & ./.venv/Scripts/python.exe tools/measure_release.py $binaryPath --bundle build/release/dataset.zip --target $env:TARGET --output "build/release/validation/$env:TARGET.json"
+            if ($LASTEXITCODE -ne 0) { throw 'Native release resource gates failed' }
+          } finally {
+            Remove-NetFirewallRule -Name $ruleName -ErrorAction SilentlyContinue
+            foreach ($profile in $profiles) {
+              Set-NetFirewallProfile -Profile $profile.Name -Enabled $profile.Enabled
+            }
+          }
+      - run: python tools/evaluate_cli.py "dist/$BINARY" > "build/release/validation/$TARGET-text.json"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
         with:
           name: binary-${{ matrix.target }}
           path: dist/pipelines-*
           compression-level: 0
           retention-days: 7
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: validation-${{ matrix.target }}
+          path: build/release/validation/${{ matrix.target }}*.json
+          if-no-files-found: error
+          retention-days: 14
 
   publish:
     needs: [gate, binary]
+    if: inputs.publish && needs.gate.outputs.changed == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -116,7 +163,18 @@ jobs:
           name: verified-dataset
           path: build/release/
       - run: cp build/release/dataset-manifest.json dist/dataset-manifest.json
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          pattern: validation-*
+          path: build/release/validation/
+          merge-multiple: true
+      - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+        with:
+          version: '0.11.21'
+          python-version: '3.13'
+          enable-cache: true
+      - run: uv sync --frozen --extra image --no-install-package onnxruntime
       - env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ needs.gate.outputs.tag }}
-        run: python tools/release.py publish --repo "$GITHUB_REPOSITORY" --tag "$RELEASE_TAG" --directory dist
+        run: uv run --no-sync python tools/release.py publish --repo "$GITHUB_REPOSITORY" --tag "$RELEASE_TAG" --directory dist --bundle build/release/dataset.zip --validation build/release/validation
