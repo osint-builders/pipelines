@@ -15,6 +15,7 @@ jobs:
     timeout-minutes: 35
     env:
       CGO_ENABLED: "0"
+      EXPECTED_BUNDLE_SHA256: 48fbe108afcfa2a3294e8f29707695d362f515186b86b20c41c9e1a57f0e7165
     defaults:
       run:
         shell: bash
@@ -42,7 +43,7 @@ jobs:
       # Uses unchanged dataset/model bytes. The output is diagnostics, never release acceptance.
       - name: Prepare Intel macOS profiling experiment
         id: prepare_intel_profile
-        if: always()
+        if: success()
         run: |
           mkdir -p build/m10/darwin-intel
           cat > build/m10/darwin-intel/profile_test.go <<'M10_DIAGNOSTIC_EOF'
@@ -240,7 +241,7 @@ jobs:
                   env.pop("GOMAXPROCS", None)
                   binary = output / ("pipelines-" + variant)
                   flags = ["-tags", "NODOWNLOAD", "-overlay", str(overlay), *extra]
-                  command(["go", "test", *flags, "./..."], env, output / (variant + "-tests.log"))
+                  command(["go", "test", *flags, "-skip", "^TestNetworkCanaryUsesSameBinaryTCPPath$", "./..."], env, output / (variant + "-tests.log"))
                   command(["go", "build", *flags, "-trimpath", "-ldflags", "-s -w -X main.version=data-" + manifest["dataset_id"][:16], "-o", str(binary), "./cmd/pipelines"], env, output / (variant + "-build.log"))
                   command(["go", "version", "-m", str(binary)], env, output / (variant + "-build-info.txt"))
                   command(["go", "list", *extra, "-json", "github.com/gomlx/compute/internal/gobackend/dot/matmul"], env, output / (variant + "-matmul.json"))
@@ -297,6 +298,8 @@ jobs:
           shutil.copyfile(root / "cli/go.sum", mod.with_suffix(".sum"))
           M10_MODFILE_EOF
           cd cli
+          go test -tags NODOWNLOAD ./...
+          go test -mod=mod -tags NODOWNLOAD -modfile "$GITHUB_WORKSPACE/build/m10/darwin-intel/compute017.mod" ./...
           GOEXPERIMENT=simd go test -mod=mod -tags NODOWNLOAD -modfile "$GITHUB_WORKSPACE/build/m10/darwin-intel/compute017.mod" ./...
       - name: Profile Intel macOS default and compute v0.1.7 with and without SIMD
         if: always() && steps.prepare_intel_profile.outcome == 'success'
