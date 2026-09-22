@@ -875,8 +875,14 @@ four targets and again fails Intel macOS latency, with image p95 8.76 s and comb
 p95 8.84 s. Text-mode timings vary substantially between runs. The latency limits
 remain unchanged. Local profiling attributes most image CPU time to generic
 convolution; a compatible upstream SIMD experiment passes tests/probes but improves
-local image timings only modestly. A temporary native profiling workflow will measure
-the affected platform before runtime changes; remove it after this investigation.
+local image timings only modestly. A narrow backend adapter now expresses eligible
+single-batch 1×1 convolutions as matrix products, preserving the model and dependencies.
+It covers 50 convolutions representing 92.8% of estimated convolution work. Thirteen
+equivalence/fallback cases, the full Go suite, and frozen encoder probes pass. Local
+interleaved diagnostics improve image latency by 19% and combined latency by 15%,
+with unchanged rankings and a maximum score difference of 1.03e-7. Native performance
+validation remains required. A temporary Intel macOS profiling workflow is running;
+remove it after this investigation.
 General CI and all five native encoder-parity jobs for `ffbd1e0` pass. A fresh image export differed from the frozen
 model by 20 half-precision values despite identical graph/checkpoint metadata. Native
 parity now fetches the checksum-pinned model asset and verifies its exact bytes before
@@ -898,10 +904,12 @@ in-domain and 50 unrelated), leaving 58 groups in reserve. All 135 selected nega
 query wordings were reviewed against their source captions/titles. These negatives
 cluster in 18 broad subject categories, limiting conclusions about general no-match
 performance. Source pointers/hashes and archive/seed duplicate checks are recorded.
-Text review now supplies 20 development and 100 evaluation cases per task, with 712
-checked source citations. Incorrect cross-reference aliases and homonyms were
-rejected; Dnestr/Dnepr/Hen House remains entirely in development. Additional variant
-review is underway. Eight reviewed diagram/photo pairs are available; twelve more
+Text review now supplies 381 queries with 1,100 checked source citations: 20 development
+and 100 evaluation cases per task plus 21 variant cases. Sixty evaluation queries
+cover 33 conservatively defined confusable families. All query wordings are unique;
+text families remain disjoint across development, evaluation, and the frozen seed.
+Incorrect cross-reference aliases and homonyms were rejected; Dnestr/Dnepr/Hen House
+remains entirely in development. Eight reviewed diagram/photo pairs are available; twelve more
 are being sought from source-backed external drawings. No new labels or splits have
 been frozen, and no real calibration or held-out evaluation has run.
 

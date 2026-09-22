@@ -135,6 +135,7 @@ func newModel(ctx context.Context, contents []byte, spec Spec) (encoder *Encoder
 	if err != nil {
 		return nil, err
 	}
+	e.backend = pointwiseBackend{e.backend}
 	e.exec, err = model.NewExec(e.backend, e.store, func(scope *model.Scope, input *graph.Node) *graph.Node {
 		return e.parsed.CallGraph(scope, input.Graph(), map[string]*graph.Node{spec.InputName: input}, spec.OutputName)[0]
 	})
