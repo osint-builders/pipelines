@@ -52,6 +52,14 @@ Validation: 1,147 Python tests, full Ruff/mypy, Go tests/vet, CLI integrity and 
 checks, and four ODIN query/export checks passed. Final source/media audit:
 `build/odin/audit.json`; generated artifacts remain outside version control.
 
+The user requested direct GitHub publication of the current text/research CLI after
+the ODIN capture. Packages target Windows amd64, Linux amd64/arm64, and macOS
+Intel/Apple silicon, with a matching dataset manifest and checksums. Windows and
+Linux acceptance passed; all 73 required retrieval cases passed (110/116 overall).
+The README reports the release's full counts and distinguishes the shared image
+archive from the data embedded in these binaries. This publication does not
+complete M10's image, observation, calibration, or resource-quality gates.
+
 Existing foundation: 11 source adapters, shared crawl/extract/audit commands, archived
 evidence, offline text search, and standalone CLI releases.
 

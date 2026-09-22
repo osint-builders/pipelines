@@ -2,15 +2,16 @@
 
 Download the [latest CLI](https://github.com/osint-builders/pipelines/releases/latest)
 for Windows (amd64), Linux (amd64/arm64), or macOS (Intel/Apple silicon).
-Extract `pipelines` (`pipelines.exe` on Windows), add it to your PATH, and run
-`pipelines verify`. Archives contain one executable with its dataset and models.
-`SHA256SUMS` lists download checksums.
+Extract the `.zip` or `.tar.xz`, add `pipelines` (`pipelines.exe` on Windows) to your
+PATH, and run `pipelines verify`. Each archive contains one executable with the
+dataset and text model. `SHA256SUMS` contains download checksums;
+`dataset-manifest.json` describes the bundled data.
 
-The current public release supports text search. Image, observation, and research
-commands below require a newer local build whose `info` lists those capabilities.
-
-All commands work offline. `pipelines info` reports the capabilities, sources, field
-catalog, counts, and model versions included in your download.
+This release supports offline text search, structured filters, evidence exports,
+facts, relationships, and comparisons. `pipelines info` reports the capabilities,
+sources, field catalog, counts, and model version in your download. Original images
+are stored in the local archive; this release has no embedded images, image search,
+or generated OCR/descriptions.
 
 ## CLI
 
@@ -18,14 +19,11 @@ Place options before the query or IDs. Use source-qualified IDs returned by a se
 
 | Command | Output |
 | --- | --- |
-| `pipelines search [options] "query"` | Text search results |
-| `pipelines search --image FILE [options] ["query"]` | Image or combined image/text results |
-| `pipelines similar [options] SOURCE:ID` | Similar entities |
+| `pipelines search [options] "query"` | Ranked text search results |
+| `pipelines similar [options] SOURCE:ID` | Semantically similar entities |
 | `pipelines list [options]` | Entities matching filters, sorted by ID |
-| `pipelines get [options] SOURCE:ID` | Entity and archived evidence |
-| `pipelines media [--id MEDIA_ID] [--output FILE] SOURCE:ID` | Media metadata, or an embedded preview written to a new file |
-| `pipelines observations [--id OBSERVATION_ID] SOURCE:ID` | Generated OCR/descriptions and their processing recipes |
-| `pipelines facts SOURCE:ID` | Source claims with normalized values and evidence |
+| `pipelines get [options] SOURCE:ID` | Entity, original source facts, and archived evidence |
+| `pipelines facts SOURCE:ID` | Indexed claims, parsed values, and source evidence |
 | `pipelines relationships [--type TYPE] SOURCE:ID` | Evidence-backed relationships |
 | `pipelines compare SOURCE:ID OTHER:ID [...]` | Field comparisons for 2–20 distinct entities |
 | `pipelines info`, `pipelines version`, `pipelines verify` | Dataset details, executable version, or integrity/model checks |
@@ -33,69 +31,70 @@ Place options before the query or IDs. Use source-qualified IDs returned by a se
 
 | Option | Commands | Meaning |
 | --- | --- | --- |
-| `--mode hybrid\|vector` | `search` | Names, source captions, and semantic ranking (default `hybrid`), or semantic ranking only; unavailable with `--image` |
-| `--observations` | `search` | Include generated OCR/descriptions; requires text |
+| `--mode hybrid\|vector` | `search` | Names, source captions, and semantic ranking (default `hybrid`), or semantic ranking only |
 | `--limit N` | `search`, `similar`, `list` | 1–100 results, default 10 |
 | `--source SOURCE`, `--kind KIND`, `--category CATEGORY` | `search`, `similar`, `list` | Filter before ranking or limiting |
 | `--where "FIELD OP VALUE"` | `search`, `similar`, `list` | Repeat to require every predicate; operators: `=`, `!=`, `<`, `<=`, `>`, `>=` |
 | `--format json\|markdown\|html\|source` | `get` | Default `json`; `source` preserves captured response bytes |
 | `--evidence PAGE_ID` | `get` | Select one page; required for HTML/source export when several pages exist |
 
-Image input accepts one local JPEG/PNG, up to 20 MiB and 40 million pixels. Text allows
-1,000 characters and 256 model tokens. Numeric filters require compatible units except
-for counts. Unknown, approximate, or unparsed values do not satisfy strict filters.
-Use `info` for field names. Relationship types are `equivalent`, `family_member_of`,
-`variant_of`, `component_of`, and `related_system`.
+Text queries allow 1,000 characters and 256 model tokens. Structured filters use
+indexed claims; unknown, approximate, or unparsed values do not satisfy strict
+filters. Numeric filters require compatible units except for counts. Use `info`
+for field names and `get` for all original specifications. Relationship types are
+`equivalent`, `family_member_of`, `variant_of`, `component_of`, and `related_system`.
 
 ```sh
-pipelines search --source deagel --limit 5 "M142 HIMARS"
-pipelines search --image equipment.jpg "tracked vehicle"
-pipelines search --observations "warning label"
-pipelines list --where "manufacturer=Thales" --where "mass>=10 t"
-pipelines get --format markdown radartutorial:8bdc6ce92fea3ca62de71395
+pipelines search --source odin --limit 5 "HIMARS"
+pipelines list --source odin --where "origin_country=United States" --limit 5
+pipelines get --format markdown odin:0a50e596d1ad19fa32b0521d94bb31a8
+pipelines facts odin:0a50e596d1ad19fa32b0521d94bb31a8
 ```
 
 ## API
 
 Run the executable as a subprocess and parse JSON on stdout. Errors return a nonzero
 exit code and `{"error":"message"}` on stderr. Help and non-JSON `get` formats return
-text or captured bytes.
+text or captured bytes. Data responses include `dataset_id` so callers can identify the
+data used.
 
-`search` returns `dataset_id`, `query`, `query_type`, `mode`, `match_status`, and
-`results`; image queries also return `query_image_sha256`. Results retain `id`, `title`,
-`url`, `source`, `kind`, `categories`, `aliases`, `score`, `cosine`, `name_match`,
-`snippet`, and `evidence_id`. `matches` links text/image/OCR/description contributions
-to evidence and media IDs; generated matches include recipe identity. Image-only
-results use `cosine: null`; their image score is in `matches`. Scores are ranking
-signals, not probabilities.
+`search` returns `query`, `query_type`, `mode`, `match_status`, and `results`.
+Results include `id`, `title`, `url`, `source`, `kind`, `categories`, `aliases`,
+`score`, `cosine`, `name_match`, `snippet`, and `evidence_id`. `matches` explains
+lexical and semantic contributions and links them to evidence. Scores are ranking
+signals, not probabilities. `no_supported_match` may still include ranked suggestions.
 
-`match_status: no_supported_match` can include suggestions. Image and generated-text
-modes return this status unless the bundle contains calibration for the query mode
-and exact filtered entity pool. Calibrated responses include `calibration_status:
-calibrated` and `decision` with the artifact hash, profile, reason, and measured
-signals/thresholds. Current local datasets have no fitted calibration.
 `similar` returns `similar_to`, `mode`, and `results`. `list` returns `total` and
-`results`; the limit applies to the latter. `get` returns the original entity and
-its evidence. `facts`, `relationships`, and `observations` return an `entity_id`
-with the corresponding records; `compare` returns `entity_ids` and `fields`.
-Claims retain their original values, units, qualifiers, and evidence; missing
-comparison values are explicit unknowns. Every entity keeps its source-qualified ID.
+`results`; the limit applies to the latter. `get` returns the entity, source facts,
+and evidence. `facts` returns `entity_id` and `claims`; `relationships` returns
+`entity_id` and `relationships`; `compare` returns `entity_ids` and `fields`.
+Claims preserve their raw values, parsing status, and evidence alongside parsed
+values. Missing comparison values are explicit unknowns.
 
-## Sources
+## Sources and counts
 
-Use `pipelines info` to see which sources are included in your binary.
+The bundled dataset contains **8,455 entities**, **9,208 evidence pages**, and
+**268,972 source facts** from 12 sources. Search indexes 53,535 text chunks and
+18,205 source captions. Research includes 49,093 indexed claims across 29 fields
+and 13 relationships.
 
-| Source (`--source`) | Description |
-| --- | --- |
-| [radartutorial](https://www.radartutorial.eu/index.en.html) | English radar and equipment pages |
-| [deagel](https://www.deagel.com/Armies/) | Military equipment families and variants |
-| [virtualglobetrotting](https://virtualglobetrotting.com/category/buildings/radar-sites/rss.xml) | Radar-site feed and linked records |
-| [russianforces](https://russianforces.org/atom.xml) | Russian strategic forces articles and equipment |
-| [wikipedia](https://en.wikipedia.org/wiki/Category:Military_radars_of_China) | English military-radar category articles |
-| [commons](https://commons.wikimedia.org/wiki/Category:Military_radars_of_Russia) | Equipment categories and file descriptions |
-| [armyrecognition](https://www.armyrecognition.com/military-products/army/radars/air-defense-radars) | Air-defense radar product pages |
-| [fandom](https://military-history.fandom.com/wiki/Category:Russian_and_Soviet_military_radars) | Military Wiki category membership and articles |
-| [climateviewer](https://climateviewer.org/layers/geojson/2018/Fortress-Russia-SAM-Sites-ClimateViewer-3D.geojson) | Site records from the Fortress Russia GeoJSON |
-| [cambridgepixel](https://cambridgepixel.com/resources/radar-database/) | Radar database records |
-| [militaryperiscope](https://militaryperiscope.com/) | Weapons, armed forces, defense companies, and militant organizations |
-| [odin](https://odin.t2com.army.mil/WEG/List) | Worldwide Equipment Guide records, specifications, equipment types, and pictures |
+The current local archives contain 21,514 saved image URLs representing 21,391
+distinct original files (5.32 GB). Other image outcomes: 68 failed, 9,283 excluded,
+348 unassociated, and 0 pending. The image counts below describe those local
+archives; image files are separate from the CLI download.
+
+| Source (`--source`) | Entities | Evidence pages | Saved image URLs (local) | Description |
+| --- | ---: | ---: | ---: | --- |
+| [radartutorial](https://www.radartutorial.eu/index.en.html) | 1,735 | 1,735 | 3,745 | English radar and equipment pages |
+| [deagel](https://www.deagel.com/Armies/) | 1,285 | 797 | 2,615 | Military equipment families and variants |
+| [virtualglobetrotting](https://virtualglobetrotting.com/category/buildings/radar-sites/rss.xml) | 100 | 100 | 204 | Radar-site feed and linked records |
+| [russianforces](https://russianforces.org/atom.xml) | 57 | 15 | 16 | Russian strategic forces articles and equipment |
+| [wikipedia](https://en.wikipedia.org/wiki/Category:Military_radars_of_China) | 41 | 41 | 31 | English military-radar category articles |
+| [commons](https://commons.wikimedia.org/wiki/Category:Military_radars_of_Russia) | 151 | 1,406 | 2,372 | Equipment categories and file descriptions |
+| [armyrecognition](https://www.armyrecognition.com/military-products/army/radars/air-defense-radars) | 11 | 11 | 241 | Air-defense radar product pages |
+| [fandom](https://military-history.fandom.com/wiki/Category:Russian_and_Soviet_military_radars) | 46 | 53 | 45 | Military Wiki category membership and articles |
+| [climateviewer](https://climateviewer.org/layers/geojson/2018/Fortress-Russia-SAM-Sites-ClimateViewer-3D.geojson) | 383 | 383 | 0 | Site records from the Fortress Russia GeoJSON |
+| [cambridgepixel](https://cambridgepixel.com/resources/radar-database/) | 385 | 385 | 0 | Radar database records |
+| [militaryperiscope](https://militaryperiscope.com/) | 143 | 164 | 427 | Weapons, armed forces, defense companies, and militant organizations |
+| [odin](https://odin.t2com.army.mil/WEG/List) | 4,118 | 4,118 | 11,818 | Worldwide Equipment Guide records and specifications |
+| **Total** | **8,455** | **9,208** | **21,514** | |
