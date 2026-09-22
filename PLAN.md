@@ -880,9 +880,13 @@ single-batch 1×1 convolutions as matrix products, preserving the model and depe
 It covers 50 convolutions representing 92.8% of estimated convolution work. Thirteen
 equivalence/fallback cases, the full Go suite, and frozen encoder probes pass. Local
 interleaved diagnostics improve image latency by 19% and combined latency by 15%,
-with unchanged rankings and a maximum score difference of 1.03e-7. Native performance
-validation remains required. A temporary Intel macOS profiling workflow is running;
-remove it after this investigation.
+with unchanged rankings and a maximum score difference of 1.03e-7. The paired native
+Intel macOS diagnostic also improves image median latency from 4.570 to 3.400 s and
+combined latency from 6.843 to 4.664 s. All 96 responses retain their ranked IDs;
+text controls are byte-equivalent JSON, and both builds pass frozen verification.
+Three samples per setting do not establish p95 compliance; the full native resource
+gate remains pending. The temporary profiling workflow was removed after collecting
+the evidence. General CI and all five encoder-parity targets pass for `04e6d89`.
 General CI and all five native encoder-parity jobs for `ffbd1e0` pass. A fresh image export differed from the frozen
 model by 20 half-precision values despite identical graph/checkpoint metadata. Native
 parity now fetches the checksum-pinned model asset and verifies its exact bytes before
@@ -909,9 +913,17 @@ and 100 evaluation cases per task plus 21 variant cases. Sixty evaluation querie
 cover 33 conservatively defined confusable families. All query wordings are unique;
 text families remain disjoint across development, evaluation, and the frozen seed.
 Incorrect cross-reference aliases and homonyms were rejected; Dnestr/Dnepr/Hen House
-remains entirely in development. Eight reviewed diagram/photo pairs are available; twelve more
-are being sought from source-backed external drawings. No new labels or splits have
-been frozen, and no real calibration or held-out evaluation has run.
+remains entirely in development. Twenty reviewed diagram/photo pairs are available:
+eight archived diagrams and twelve external source-backed drawings. Eight of twenty
+external candidates remain held, including a plain silhouette outside the diagram
+slice. Two transparent drawings exposed false near-duplicate matches because the
+archive's perceptual hash ignores alpha; independent visual review records exact
+hash-pair exceptions while retaining raw matches and every exact/URL/session link.
+The CLI already composites transparency correctly. Two supplemental development
+pairs now cover the ArmyRecognition and Wikipedia image filter pools, with independent
+gallery groups and six additional query/session exclusions.
+No new labels or splits have been frozen, and no real calibration or held-out
+evaluation has run.
 
 Calibration validation now uses the actual indexed-image entity pool for image-only
 queries, including source filters; text and combined modes retain their full eligible
