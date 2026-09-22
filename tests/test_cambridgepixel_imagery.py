@@ -55,7 +55,7 @@ def test_reviewed_photo_requires_exact_captured_model_and_image_evidence() -> No
     [
         f'<video poster="{IMAGE}"></video>',
         f'<div style="background-image: url({IMAGE})"></div>',
-        f'<div style="color:red; background-image: url(\'{IMAGE}\')"></div>',
+        f"<div style=\"color:red; background-image: url('{IMAGE}')\"></div>",
         f'<div role="img" data-thumbnail="{IMAGE}"></div>',
         f'<picture><source srcset="{IMAGE}"><img src="/fallback.jpg"></picture>',
         f'<a href="{IMAGE}"><img src="/thumbnail.jpg"></a>',
@@ -92,8 +92,7 @@ def test_plain_link_is_not_image_evidence() -> None:
 @pytest.mark.parametrize("property_name", ["--background-image", "content"])
 def test_non_image_css_reference_is_not_image_evidence(property_name: str) -> None:
     body = (
-        f'<p>{MATCH["quote"]}</p>'
-        f'<div style="{property_name}: url({IMAGE})"></div>'
+        f'<p>{MATCH["quote"]}</p><div style="{property_name}: url({IMAGE})"></div>'
     ).encode()
     with pytest.raises(ValueError, match="image changed"):
         validate_page(URL, body, [MATCH])
@@ -101,8 +100,37 @@ def test_non_image_css_reference_is_not_image_evidence(property_name: str) -> No
 
 def test_image_url_escaping_preserves_reserved_path_characters() -> None:
     match = {**MATCH, "image_url": "https://cdn.manufacturer.test/radar%20photo.jpg"}
-    body = BODY.replace(IMAGE.encode(), b"https://cdn.manufacturer.test/radar photo.jpg")
+    body = BODY.replace(
+        IMAGE.encode(), b"https://cdn.manufacturer.test/radar photo.jpg"
+    )
     validate_page(URL, body, [match])
     match["image_url"] = "https://cdn.manufacturer.test/radar%2Fphoto.jpg"
     with pytest.raises(ValueError, match="image changed"):
         validate_page(URL, body.replace(b"radar photo", b"radar/photo"), [match])
+
+
+def test_custom_image_css_property_requires_explicit_review() -> None:
+    body = (
+        f'<p>{MATCH["quote"]}</p><div style="--card-image:url({IMAGE})"></div>'.encode()
+    )
+    with pytest.raises(ValueError, match="image changed"):
+        validate_page(URL, body, [MATCH])
+    match = {**MATCH, "image_css_property": "--card-image"}
+    validate_page(URL, body, [match])
+    with pytest.raises(ValueError, match="image changed"):
+        validate_page(URL, body.replace(b"--card-image", b"--other-image"), [match])
+    with pytest.raises(ValueError, match="Invalid reviewed image CSS property"):
+        validate_page(URL, body, [{**match, "image_css_property": ".*"}])
+
+
+def test_relative_image_paths_preserve_empty_segments() -> None:
+    url = "https://manufacturer.test/en/products/model"
+    match = {
+        **MATCH,
+        "page_url": url,
+        "image_url": "https://manufacturer.test/images//radar.jpg?size=original",
+    }
+    body = BODY.replace(IMAGE.encode(), b"../../images//radar.jpg?size=original")
+    validate_page(url, body, [match])
+    with pytest.raises(ValueError, match="image changed"):
+        validate_page(url, body.replace(b"images//", b"images/"), [match])

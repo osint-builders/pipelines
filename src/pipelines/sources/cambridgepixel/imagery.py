@@ -18,6 +18,19 @@ def reviews() -> list[dict]:
     )
 
 
+def _image_url(base: str, value: str) -> str:
+    parts = urlsplit(value)
+    if (
+        not parts.scheme
+        and not parts.netloc
+        and parts.path
+        and not parts.path.startswith("/")
+    ):
+        path = urlsplit(base).path.rsplit("/", 1)[0] + "/" + parts.path
+        value = parts._replace(path=path).geturl()
+    return urljoin(base, value)
+
+
 def validate_page(url: str, body: bytes, matches: list[dict]) -> None:
     pdf_matches = [
         row for row in matches if row["page_url"] == url and "pdf_image" in row
@@ -38,33 +51,41 @@ def validate_page(url: str, body: bytes, matches: list[dict]) -> None:
         if not row["quote"] or row["quote"] not in visible:
             raise ValueError(f"Reviewed radar evidence changed: {row['model']}")
         images = {
-            urljoin(url, str(node.get(attribute, "")))
+            _image_url(url, str(node.get(attribute, "")))
             for node in soup.select("img, video[poster]")
             for attribute in ("src", "data-src", "data-original", "poster")
             if node.get(attribute)
         }
         images.update(
-            urljoin(url, str(node["href"]))
+            _image_url(url, str(node["href"]))
             for node in soup.select(
                 'a[href]:has(img), a[href]:has([role="img"]), img + a[href][title], '
                 'a[href][type^="image/"]'
             )
         )
         images.update(
-            urljoin(url, str(node["data-thumbnail"]))
+            _image_url(url, str(node["data-thumbnail"]))
             for node in soup.select('[role="img"][data-thumbnail]')
         )
+        css_property = row.get("image_css_property")
+        if css_property is not None and not re.fullmatch(
+            r"--[a-z][a-z0-9-]*", css_property
+        ):
+            raise ValueError("Invalid reviewed image CSS property")
+        css_properties = "background-image"
+        if css_property:
+            css_properties += "|" + re.escape(css_property)
         for node in soup.select("[style]"):
             match = re.search(
-                r"(?:^|;)\s*background-image\s*:\s*url\(\s*(['\"]?)(.*?)\1\s*\)",
+                rf"(?:^|;)\s*(?:{css_properties})\s*:\s*url\(\s*(['\"]?)(.*?)\1\s*\)",
                 str(node["style"]),
                 flags=re.IGNORECASE,
             )
             if match:
-                images.add(urljoin(url, match.group(2)))
+                images.add(_image_url(url, match.group(2)))
         for node in soup.select("img[srcset], source[srcset]"):
             images.update(
-                urljoin(url, match.group(1))
+                _image_url(url, match.group(1))
                 for match in re.finditer(
                     r"(\S+?)(?:\s+\d+(?:\.\d+)?[wx])?(?:\s*,\s*|$)",
                     str(node["srcset"]),
@@ -74,7 +95,7 @@ def validate_page(url: str, body: bytes, matches: list[dict]) -> None:
             parts = urlsplit(image)
             if parts.path == "/_next/image":
                 images.update(
-                    urljoin(url, value)
+                    _image_url(url, value)
                     for value in parse_qs(parts.query).get("url", [])
                 )
         safe = ":/?#[]@!$&'()*+,;=%"

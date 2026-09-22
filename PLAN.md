@@ -27,16 +27,17 @@ cause false table/schema disagreements; functional URL differences still fail.
 Catalog archive: `20260922T142532Z-932ca3c5`. Image reviews are stored beside the
 adapter in `image_reviews.json`; matched originals use the shared media archive,
 with separate captured source evidence. Browser DOM captures are explicitly labelled.
-The first 192 models have been reviewed and audited: 180 image URLs saved for 186
-matched records, six unresolved matches, and one failed museum download recovered
-through its browser page for the next capture. No downloads remain pending.
-Ten associations are explicitly marked ambiguous. Individual review has continued
-through RAT-31DL/M (196 decisions). Garmin images retain selected part
+The latest audited batch covers 250 models: 241 matched records, nine unresolved
+matches, and 13 explicitly ambiguous associations. It saved 233 image URLs; three
+PIT-RADWAR downloads need browser-asset recovery, with none pending or unassociated.
+Individual review has continued through Quantum 2 (259 decisions, ten unresolved).
+Garmin images retain selected part
 numbers, sizes, and power configurations; GC's X5-21FH was verified in its hardware
 catalog after Google returned unrelated vehicle parts. SuperNet and SuperNet SSR
 retain separate identities and image evidence despite sharing a manufacturer page.
 Easat's inconsistent EA40575/EA45075 designation remains explicit. Four BAE, three
-BEL, one Foxtrack, four ICS, two IAI, and two Indra images were exported from browser assets and
+BEL, one Foxtrack, four ICS, two IAI, two Indra, MPN-14K, TPY-4, three Meteksan,
+and BYSTRA images were exported from browser assets and
 validated by the shared image store. Foxtrack's public article capture excludes
 account controls. Source URL spaces and encoded spaces compare correctly without
 collapsing reserved path characters.
@@ -57,7 +58,16 @@ Reviewed PDF photographs now use the shared media store as document previews, wi
 the original PDF, page, image name, exact quote, and document/image hashes retained.
 The ATCR-44S ENH datasheet resolves its earlier ambiguous family image. E-SATR,
 Kronos Land, and Kronos Naval also retain independently inspected datasheet images.
-Validation: 114 focused tests passed, including PDF evidence, offline embedded
+Magos image URLs preserve significant double path separators. Manufacturer pages
+retain their model variants: GA1360LH and GA7360LR are explicitly related-family
+illustrations, while GA3360, GA4120 and GA9000 have independently checked images.
+The misleading GA7360 reseller page describes GA3360 and was rejected. Navtech
+models retain separate photographs and drawings. RushLight uses its individually
+reviewed CSS image property; unreviewed custom properties still fail validation.
+Pro Patria Dobermann II and Rawenstvo Obzor 100 remain unresolved. Numerica and
+Anduril Spyglass captures remain separate. Raymarine models retain individually
+inspected product images rather than vessel banners or navigation thumbnails.
+Validation: 116 focused tests passed, including PDF evidence, offline embedded
 previews, source content-type opt-in, poster images, linked
 originals, responsive images, gallery thumbnails, CSS backgrounds, and ambiguous associations.
 Explicit image download types are supported; ordinary links and non-image CSS fail.
