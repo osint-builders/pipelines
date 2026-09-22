@@ -3,6 +3,7 @@ import re
 import zipfile
 from pathlib import Path
 from types import SimpleNamespace
+from typing import Any
 
 import numpy as np
 import pytest
@@ -274,3 +275,87 @@ def test_format4_preserves_every_existing_source_and_image_member(
         )["changed"]
         is False
     )
+
+
+def test_calibration_changes_only_decision_artifact_and_identity(
+    gallery: Gallery, text_model: Path
+) -> None:
+    from pipelines.calibration import retrieval_identity, scope_identity
+
+    analyze(gallery)
+    arguments = (
+        gallery.root,
+        [gallery.entities[0]["source"]],
+        text_model,
+        gallery.root / "package-cache",
+    )
+    options: dict[str, Any] = {
+        "image_model": gallery.model,
+        "observations": gallery.root / "analysis.json",
+    }
+    base_path = gallery.root / "uncalibrated.zip"
+    distribution.package(*arguments, base_path, **options)
+    with zipfile.ZipFile(base_path) as archive:
+        base = json.loads(archive.read("manifest.json"))
+    fixture = json.loads(Path("tests/fixtures/calibration.json").read_bytes())
+    artifact = fixture["golden"][0]["artifact"]
+    artifact["retrieval_sha256"] = retrieval_identity(base)
+    artifact["profiles"][0]["eligible_entities_sha256"] = scope_identity(
+        entity["id"] for entity in gallery.entities
+    )
+    calibration = gallery.root / "calibration.json"
+    calibration.write_bytes(distribution.canonical(artifact))
+    target = gallery.root / "calibrated.zip"
+    extended = distribution.package(
+        *arguments, target, **options, calibration=calibration
+    )
+    extended = {
+        key: value
+        for key, value in extended.items()
+        if key not in {"changed", "output"}
+    }
+    assert base["format_version"] == 4 and extended["format_version"] == 5
+    assert base["dataset_id"] != extended["dataset_id"]
+    assert base["content_sha256"] == extended["content_sha256"]
+    assert retrieval_identity(base) == retrieval_identity(extended)
+    with zipfile.ZipFile(base_path) as before, zipfile.ZipFile(target) as after:
+        assert set(after.namelist()) - set(before.namelist()) == {"calibration.json"}
+        for name in before.namelist():
+            if name != "manifest.json":
+                assert before.read(name) == after.read(name)
+        distribution.validate_calibration_bundle(after, extended)
+    original_bytes = target.read_bytes()
+    assert not distribution.package(
+        *arguments, target, **options, calibration=calibration
+    )["changed"]
+    assert target.read_bytes() == original_bytes
+    artifact["profiles"][0]["minimums"]["ranking_margin"] += 1
+    calibration.write_bytes(distribution.canonical(artifact))
+    next_build = distribution.package(
+        *arguments, target, **options, calibration=calibration
+    )
+    next_build = {
+        key: value
+        for key, value in next_build.items()
+        if key not in {"changed", "output"}
+    }
+    assert next_build["dataset_id"] != extended["dataset_id"]
+    assert retrieval_identity(next_build) == retrieval_identity(base)
+    artifact["retrieval_sha256"] = "0" * 64
+    calibration.write_bytes(distribution.canonical(artifact))
+    with pytest.raises(ValueError, match="binding"):
+        distribution.package(*arguments, target, **options, calibration=calibration)
+
+
+def test_calibration_requires_a_complete_gallery_and_observations(
+    gallery: Gallery, text_model: Path
+) -> None:
+    with pytest.raises(ValueError, match="gallery and observations"):
+        distribution.package(
+            gallery.root,
+            [gallery.entities[0]["source"]],
+            text_model,
+            gallery.root / "package-cache",
+            gallery.root / "invalid.zip",
+            calibration=gallery.root / "missing.json",
+        )

@@ -553,7 +553,7 @@ def validate_image_bundle(
     from pipelines.image_preprocess import MAX_IMAGE_BYTES, MAX_IMAGE_PIXELS, Recipe
     from pipelines.media import media_id
 
-    if manifest.get("format_version") not in {3, 4}:
+    if manifest.get("format_version") not in {3, 4, 5}:
         raise ValueError("Image extension requires bundle format 3 or 4")
     metadata = manifest.get("image", {})
     lock = json.loads(IMAGE_LOCK_PATH.read_bytes())

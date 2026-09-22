@@ -176,7 +176,7 @@ def validate_search_bundle(
         if declared or actual:
             raise ValueError("Search members require a search policy")
         return {}
-    if manifest.get("format_version") not in {2, 3, 4}:
+    if manifest.get("format_version") not in {2, 3, 4, 5}:
         raise ValueError("Search extension requires bundle format 2, 3 or 4")
     metadata = _policy(manifest["search"])
     if declared != {CAPTIONS_MEMBER} or actual != [CAPTIONS_MEMBER]:

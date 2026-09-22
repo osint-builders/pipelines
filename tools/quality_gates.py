@@ -11,7 +11,9 @@ from typing import Any
 
 from accept_cli import (
     accept_research,
+    bundle_calibration,
     bundle_evidence,
+    validate_calibration_response,
     validate_image_response,
     validate_observation_response,
 )
@@ -329,6 +331,7 @@ def response_integrity(evaluation: dict, fixture: dict, bundle: Path) -> int:
         recipes = (
             checked("observations/recipes.json") if "observations" in manifest else {}
         )
+        calibration = bundle_calibration(archive, manifest)
         count = 0
         for row in evaluation["cases"]:
             case = cases[row["id"]]
@@ -339,6 +342,11 @@ def response_integrity(evaluation: dict, fixture: dict, bundle: Path) -> int:
                 else ""
             )
             picture = pictures.get(case["query"].get("image_id"))
+            eligible_ids = [
+                key
+                for key, entity in entities.items()
+                if not source or entity["source"] == source
+            ]
             if response.get("observations"):
                 validate_observation_response(
                     response,
@@ -350,6 +358,8 @@ def response_integrity(evaluation: dict, fixture: dict, bundle: Path) -> int:
                     source=source,
                     image_sha256=picture["sha256"] if picture else None,
                     images=images,
+                    calibration=calibration,
+                    eligible_ids=eligible_ids,
                 )
             elif picture:
                 validate_image_response(
@@ -359,8 +369,16 @@ def response_integrity(evaluation: dict, fixture: dict, bundle: Path) -> int:
                     mode(case) == "image_text",
                     source=source,
                     limit=20,
+                    calibration=calibration,
+                    eligible_ids=eligible_ids,
                 )
             else:
+                validate_calibration_response(
+                    response,
+                    manifest,
+                    calibration=calibration,
+                    eligible_ids=eligible_ids,
+                )
                 validate_text_response(response, entities, archive, manifest, source)
             for result in response["results"]:
                 if (
@@ -392,6 +410,279 @@ def response_integrity(evaluation: dict, fixture: dict, bundle: Path) -> int:
                             )
                 count += 1
         return count
+
+
+def calibration_separation(development: dict, fixture: dict) -> dict:
+    """Keep development inputs separate from held-out queries and frozen pilots."""
+    media = {
+        row["sha256"]: row
+        for row in fixture.get("media", [])
+        if row.get("status") == "captured"
+    }
+    held = [case for case in fixture["cases"] if case["split"] == "evaluation"]
+    protected_groups = {
+        row["photo_group"] for row in media.values() if row["split"] != "development"
+    }
+    protected_groups.update(
+        case.get("entity_group", case.get("group_id")) for case in held
+    )
+    protected_hashes = {
+        row["sha256"] for row in media.values() if row["split"] != "development"
+    }
+    protected_ids = {
+        key
+        for case in held
+        if mode(case) == "text"
+        for key in case["expected_ids"] + case.get("confusable_ids", [])
+    }
+    protected_text = {
+        " ".join(case["query"].get("text", "").casefold().split())
+        for case in held
+        if case["query"].get("text")
+    }
+    seed_hashes = {}
+    for name in (
+        "multimodal.json",
+        "ranking.json",
+        "ranking_combined.json",
+        "retrieval.json",
+    ):
+        path = ROOT / "tests/fixtures" / name
+        seed_hashes[name] = sha256(path)
+        seed = json.loads(path.read_bytes())
+        if isinstance(seed, list):
+            protected_ids.update(case["expected"] for case in seed)
+            protected_text.update(
+                " ".join(case["query"].casefold().split()) for case in seed
+            )
+            continue
+        if seed.get("status") == "development_frozen_before_retrieval":
+            continue
+        for picture in seed.get("media", []):
+            if picture.get("split") == "evaluation":
+                protected_groups.add(picture["photo_group"])
+                if picture.get("sha256"):
+                    protected_hashes.add(picture["sha256"])
+        for case in seed["cases"]:
+            if case["split"] != "evaluation":
+                continue
+            protected_groups.add(case.get("entity_group", case.get("group_id")))
+            query = case["query"]
+            text = query if isinstance(query, str) else query.get("text", "")
+            if text:
+                protected_text.add(" ".join(text.casefold().split()))
+            if isinstance(query, str) or not query.get("image_id"):
+                protected_ids.update(
+                    case["expected_ids"] + case.get("confusable_ids", [])
+                )
+    checked_photos: set[str] = set()
+    for case in development["cases"]:
+        query = case["query"]
+        if case["group_id"] in protected_groups:
+            raise ValueError(
+                "Calibration development photo group overlaps held-out/gallery inputs"
+            )
+        if query.get("image_sha256"):
+            checksum = query["image_sha256"]
+            picture = media.get(checksum)
+            if (
+                checksum in protected_hashes
+                or picture is None
+                or picture["split"] != "development"
+                or picture["photo_group"] != case["group_id"]
+            ):
+                raise ValueError(
+                    "Calibration image must have a separate registered development photo group"
+                )
+            checked_photos.add(checksum)
+        else:
+            if (
+                set(case["expected_ids"] + case.get("confusable_ids", []))
+                & protected_ids
+            ):
+                raise ValueError(
+                    "Calibration development text entity overlaps held-out/frozen seed labels"
+                )
+        text = " ".join((query.get("text") or "").casefold().split())
+        if text and text in protected_text:
+            raise ValueError(
+                "Calibration development query repeats a held-out/frozen seed query"
+            )
+    return {
+        "development_photos": len(checked_photos),
+        "frozen_seed_sha256": seed_hashes,
+    }
+
+
+def calibration_proof(paths: dict[str, Path], fixture: dict, evaluation: dict) -> dict:
+    """Refit development evidence and replay every held-out acceptance decision."""
+    from pipelines.calibration import (
+        canonical,
+        digest,
+        retrieval_identity,
+        scope_identity,
+        verify_fit,
+    )
+
+    required = {
+        "development_fixture",
+        "development_responses",
+        "development_binary",
+        "development_bundle",
+    }
+    if not required <= paths.keys():
+        raise ValueError(
+            "Calibration proof requires hashed development fixture, responses, binary, and bundle"
+        )
+    with zipfile.ZipFile(paths["bundle"]) as archive:
+        manifest = json.loads(archive.read("manifest.json"))
+        fitted = bundle_calibration(archive, manifest)
+        if manifest.get("format_version") != 5 or fitted is None:
+            raise ValueError(
+                "Calibration proof requires an embedded fitted format-5 artifact"
+            )
+        raw_index = archive.read("index.json")
+        if digest(raw_index) != manifest["files"].get("index.json"):
+            raise ValueError("Calibration entity index checksum mismatch")
+        entities = {row["id"]: row for row in json.loads(raw_index)}
+    with zipfile.ZipFile(paths["development_bundle"]) as archive:
+        base = json.loads(archive.read("manifest.json"))
+        if (
+            base.get("format_version") != 4
+            or base.get("calibration")
+            or retrieval_identity(base) != retrieval_identity(manifest)
+        ):
+            raise ValueError(
+                "Calibration development bundle retrieval identity differs from release"
+            )
+        for name, checksum in base["files"].items():
+            if digest(archive.read(name)) != checksum:
+                raise ValueError(
+                    "Calibration development bundle member checksum mismatch"
+                )
+    fixture_bytes = paths["development_fixture"].read_bytes()
+    responses_bytes = paths["development_responses"].read_bytes()
+    verify_fit(
+        fitted,
+        base,
+        fixture_bytes,
+        responses_bytes,
+        binary_sha256=sha256(paths["development_binary"]),
+        contract_bytes=paths["contract"].read_bytes(),
+    )
+    development = json.loads(fixture_bytes)
+    raw_responses = json.loads(responses_bytes)
+    if raw_responses.get("dataset_id") != base["dataset_id"]:
+        raise ValueError("Calibration development responses use a different dataset")
+    binding = {
+        "artifact_sha256": digest(canonical(fitted)),
+        "development_fixture_sha256": digest(fixture_bytes),
+        "development_responses_sha256": digest(responses_bytes),
+    }
+    if (
+        fixture.get("status") != "frozen_before_retrieval"
+        or fixture.get("calibration") != binding
+        or evaluation.get("fixture_sha256") != sha256(paths["fixture"])
+        or evaluation.get("calibration_sha256") != binding["artifact_sha256"]
+    ):
+        raise ValueError(
+            "Held-out fixture/evaluation does not bind frozen calibration parameters"
+        )
+    separation = calibration_separation(development, fixture)
+    labeled = {
+        "cases": [
+            {
+                **case,
+                "status": "ready",
+                "query": {"text": case["query"].get("text", "")},
+            }
+            for case in development["cases"]
+        ]
+    }
+    if not reviewed_labels(labeled, {}, paths["bundle"]):
+        raise ValueError(
+            "Calibration development labels require archived evidence and review rationale"
+        )
+    for ids in development["scopes"].values():
+        if not set(ids) <= entities.keys():
+            raise ValueError("Calibration scope includes absent entities")
+    development_cases = {case["id"]: case for case in development["cases"]}
+    for row in raw_responses["cases"]:
+        case = development_cases[row["case_id"]]
+        eligible = development["scopes"][case["scope"]]
+        if not {item["id"] for item in row["response"]["results"]} <= set(eligible):
+            raise ValueError("Calibration development response leaks its eligible pool")
+    raw_fixture = {
+        "cases": [
+            {
+                **case,
+                "query": {
+                    "text": case["query"].get("text", ""),
+                    "image_id": case["query"].get("image_sha256"),
+                },
+            }
+            for case in development["cases"]
+        ],
+        "media": [
+            {
+                "id": picture["sha256"],
+                **{key: value for key, value in picture.items() if key != "id"},
+            }
+            for picture in fixture.get("media", [])
+            if picture.get("status") == "captured"
+        ],
+    }
+    response_integrity(
+        {
+            "cases": [
+                {"id": row["case_id"], "scope": "global", "response": row["response"]}
+                for row in raw_responses["cases"]
+            ]
+        },
+        raw_fixture,
+        paths["development_bundle"],
+    )
+    cases = {
+        case["id"]: case
+        for case in fixture["cases"]
+        if case["split"] == "evaluation" and case["status"] == "ready"
+    }
+    profiles: set[str] = set()
+    for row in evaluation["cases"]:
+        case = cases[row["id"]]
+        source = (
+            case["query"].get("source") if row["scope"] == "source_filtered" else None
+        )
+        eligible = [
+            key
+            for key, entity in entities.items()
+            if not source or entity["source"] == source
+        ]
+        response = row["response"]
+        if not validate_calibration_response(
+            response, manifest, calibration=fitted, eligible_ids=eligible
+        ):
+            raise ValueError(
+                "Held-out evaluation has no fitted profile for its exact eligible pool"
+            )
+        if response["results"] and len(response["results"]) < min(2, len(eligible)):
+            raise ValueError(
+                "Calibration proof requires uncropped first-two response candidates"
+            )
+        if row.get("eligible_entities_sha256") != scope_identity(eligible):
+            raise ValueError(
+                "Held-out response eligible pool binding differs from its actual filters"
+            )
+        profiles.add(response["decision"]["profile_id"])
+    if not evaluation["cases"]:
+        raise ValueError("Calibration proof requires held-out decisions")
+    return {
+        **binding,
+        **separation,
+        "development_cases": len(development["cases"]),
+        "held_out_decisions": len(evaluation["cases"]),
+        "profiles_evaluated": len(profiles),
+    }
 
 
 def evaluate(evidence: dict) -> dict:
@@ -775,6 +1066,15 @@ def evaluate(evidence: dict) -> dict:
         False,
         "Development-only fitted and frozen calibration proof required",
     )
+    if (
+        rows
+        and checks["frozen_evaluation_identity"]["passed"]
+        and checks["photo_group_separation"]["passed"]
+    ):
+        try:
+            check("calibration", True, calibration_proof(paths, fixture, evaluation))
+        except (AssertionError, KeyError, ValueError, OSError, TypeError) as error:
+            check("calibration", False, {"error": str(error) or type(error).__name__})
     result = {
         "schema_version": 1,
         "dataset_id": manifest["dataset_id"],
@@ -827,6 +1127,13 @@ def main() -> None:
     parser.add_argument("--baseline", type=Path)
     parser.add_argument("--query-media", type=Path)
     parser.add_argument("--research", type=Path)
+    for name in (
+        "development-fixture",
+        "development-responses",
+        "development-binary",
+        "development-bundle",
+    ):
+        parser.add_argument("--" + name, type=Path)
     parser.add_argument("--capture-research", type=Path)
     parser.add_argument(
         "--contract", type=Path, default=ROOT / "tests/fixtures/search_acceptance.json"
@@ -848,6 +1155,10 @@ def main() -> None:
             "baseline",
             "query_media",
             "research",
+            "development_fixture",
+            "development_responses",
+            "development_binary",
+            "development_bundle",
         )
         if (path := getattr(args, name)) is not None
     }

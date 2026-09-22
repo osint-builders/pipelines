@@ -70,7 +70,10 @@ results use `cosine: null`; their image score is in `matches`. Scores are rankin
 signals, not probabilities.
 
 `match_status: no_supported_match` can include suggestions. Image and generated-text
-modes remain uncalibrated and return this status even for plausible matches.
+modes return this status unless the bundle contains calibration for the query mode
+and exact filtered entity pool. Calibrated responses include `calibration_status:
+calibrated` and `decision` with the artifact hash, profile, reason, and measured
+signals/thresholds. Current local datasets have no fitted calibration.
 `similar` returns `similar_to`, `mode`, and `results`. `list` returns `total` and
 `results`; the limit applies to the latter. `get` returns the original entity and
 its evidence. `facts`, `relationships`, and `observations` return an `entity_id`

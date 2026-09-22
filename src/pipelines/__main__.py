@@ -45,6 +45,9 @@ def main() -> None:
     package.add_argument(
         "--observations", type=Path, help="Cached image observation analysis"
     )
+    package.add_argument(
+        "--calibration", type=Path, help="Frozen development-fitted search decisions"
+    )
     observe = commands.add_parser(
         "observe", help="Analyze indexed images from the local archive"
     )
@@ -135,6 +138,7 @@ def main() -> None:
             image_model=args.image_model,
             image_selection=args.image_selection,
             observations=args.observations,
+            calibration=args.calibration,
         )
         output = {
             key: value for key, value in result.items() if key not in {"files", "model"}

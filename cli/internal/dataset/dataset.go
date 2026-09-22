@@ -38,6 +38,7 @@ type Manifest struct {
 	Observations  *ObservationManifest `json:"observations,omitempty"`
 	Search        *SearchPolicy        `json:"search,omitempty"`
 	Research      *ResearchManifest    `json:"research,omitempty"`
+	Calibration   *CalibrationManifest `json:"calibration,omitempty"`
 }
 type Entity struct {
 	ID         string   `json:"id"`
@@ -82,6 +83,7 @@ type Dataset struct {
 	observations    *observationData
 	lexical         [2]*textIndex
 	research        *researchData
+	calibration     *calibrationArtifact
 }
 
 func Open(data []byte) (*Dataset, error) {
@@ -124,11 +126,11 @@ func OpenReader(reader io.ReaderAt, size int64) (*Dataset, error) {
 			}
 		}
 	}
-	if (d.Manifest.FormatVersion < 2 || d.Manifest.FormatVersion > 4) || d.Manifest.Model.Dimensions != 384 {
+	if (d.Manifest.FormatVersion < 2 || d.Manifest.FormatVersion > 5) || d.Manifest.Model.Dimensions != 384 {
 		return nil, errors.New("unsupported dataset format or embedding dimensions")
 	}
 	if (d.Manifest.FormatVersion >= 3) != (d.Manifest.Image != nil) ||
-		(d.Manifest.FormatVersion == 4) != (d.Manifest.Observations != nil) {
+		(d.Manifest.FormatVersion >= 4) != (d.Manifest.Observations != nil) {
 		return nil, errors.New("dataset format does not match image extension")
 	}
 	if len(d.Manifest.DatasetID) != 64 {
@@ -163,6 +165,9 @@ func OpenReader(reader io.ReaderAt, size int64) (*Dataset, error) {
 	if err := d.validateResearchManifest(manifestFields); err != nil {
 		return nil, err
 	}
+	if err := d.loadCalibration(manifestFields); err != nil {
+		return nil, err
+	}
 	return d, nil
 }
 
@@ -195,6 +200,9 @@ func (d *Dataset) Read(name string) ([]byte, error) {
 }
 
 func (d *Dataset) Verify() error {
+	if err := d.verifyCalibration(); err != nil {
+		return err
+	}
 	for name := range d.Manifest.Files {
 		if _, err := d.Read(name); err != nil {
 			return err

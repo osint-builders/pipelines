@@ -31,11 +31,11 @@ def verify_bundle(bundle: Path) -> dict:
     with zipfile.ZipFile(bundle) as archive:
         manifest = json.loads(archive.read("manifest.json"))
         lock = json.loads((ROOT / "src/pipelines/model.lock.json").read_text())
-        if manifest["format_version"] not in {2, 3, 4} or manifest["model"] != lock:
+        if manifest["format_version"] not in {2, 3, 4, 5} or manifest["model"] != lock:
             raise ValueError("Bundle format/model does not match this CLI")
         if (manifest["format_version"] >= 3) != ("image" in manifest):
             raise ValueError("Bundle format does not match its image extension")
-        if (manifest["format_version"] == 4) != ("observations" in manifest):
+        if (manifest["format_version"] >= 4) != ("observations" in manifest):
             raise ValueError("Bundle format does not match its observation extension")
         expected = hashlib.sha256(
             (manifest["content_sha256"] + manifest["recipe_sha256"]).encode()
@@ -138,7 +138,7 @@ def verify_bundle(bundle: Path) -> dict:
             from pipelines.image_distribution import validate_image_bundle
 
             validate_image_bundle(archive, manifest, entities)
-        if manifest["format_version"] == 4:
+        if manifest["format_version"] >= 4:
             from pipelines.observation_distribution import validate_observation_bundle
 
             validate_observation_bundle(archive, manifest)
@@ -148,6 +148,9 @@ def verify_bundle(bundle: Path) -> dict:
         from pipelines.research_distribution import validate_research_bundle
 
         validate_research_bundle(archive, manifest, entities)
+        from pipelines.distribution import validate_calibration_bundle
+
+        validate_calibration_bundle(archive, manifest)
         return manifest
 
 

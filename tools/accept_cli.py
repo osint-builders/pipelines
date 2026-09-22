@@ -22,6 +22,85 @@ def finite(value: object) -> bool:
     )
 
 
+def validate_calibration_response(
+    response: dict,
+    manifest: dict,
+    *,
+    calibration: dict | None = None,
+    eligible_ids: list[str] | None = None,
+) -> bool:
+    """Recompute a supported profile's decision from returned ranking evidence."""
+    if not manifest.get("calibration"):
+        if (
+            calibration is not None
+            or response.get("decision") is not None
+            or response.get("calibration_status") == "calibrated"
+        ):
+            raise ValueError("Uncalibrated bundle cannot claim a calibrated decision")
+        return False
+    if calibration is None or eligible_ids is None:
+        raise ValueError(
+            "Calibrated acceptance requires the artifact and exact eligible entity pool"
+        )
+    from pipelines.calibration import (
+        canonical,
+        decide,
+        digest,
+        response_context,
+        scope_identity,
+        validate_artifact,
+    )
+
+    validate_artifact(calibration, manifest)
+    if digest(canonical(calibration)) != manifest["calibration"]["sha256"]:
+        raise ValueError("Acceptance calibration artifact checksum mismatch")
+    context = response_context(response, scope_identity(eligible_ids))
+    decision = decide(calibration, context, response)
+    if decision is None:
+        if (
+            response.get("decision") is not None
+            or response.get("calibration_status") == "calibrated"
+        ):
+            raise ValueError("Unsupported calibration profile changed legacy behavior")
+        return False
+    if any(response.get(key) != value for key, value in decision.items()):
+        raise ValueError("Calibrated response does not match its recomputed decision")
+    return True
+
+
+def bundle_calibration(archive: zipfile.ZipFile, manifest: dict) -> dict | None:
+    descriptor = manifest.get("calibration")
+    if descriptor is None:
+        if manifest.get("format_version") == 5:
+            raise ValueError("Format-5 acceptance requires embedded calibration")
+        return None
+    from pipelines.calibration import parse_artifact, retrieval_identity
+
+    if (
+        manifest.get("format_version") != 5
+        or descriptor.get("member") != "calibration.json"
+    ):
+        raise ValueError("Calibration acceptance requires its format-5 member")
+    body = archive.read(descriptor["member"])
+    checksum = hashlib.sha256(body).hexdigest()
+    if checksum != descriptor["sha256"] or checksum != manifest["files"].get(
+        descriptor["member"]
+    ):
+        raise ValueError("Acceptance calibration member checksum mismatch")
+    calibration = parse_artifact(body, manifest)
+    if descriptor != {
+        "schema_version": 1,
+        "member": "calibration.json",
+        "sha256": checksum,
+        "profiles": len(calibration["profiles"]),
+        "retrieval_sha256": retrieval_identity(manifest),
+    }:
+        raise ValueError(
+            "Acceptance calibration descriptor does not match its artifact"
+        )
+    return calibration
+
+
 def bundle_evidence(archive: zipfile.ZipFile) -> dict[str, dict[str, str]]:
     return {
         item["id"]: {
@@ -103,18 +182,27 @@ def validate_text_ranking(item: dict, manifest: dict) -> float:
     return score
 
 
-def accept_search_policy(run: Callable[..., bytes], manifest: dict) -> None:
+def accept_search_policy(
+    run: Callable[..., bytes],
+    manifest: dict,
+    *,
+    calibration: dict | None = None,
+    eligible_ids: list[str] | None = None,
+) -> None:
     if "search" not in manifest:
         return
     response = json.loads(run("search", "--limit", "3", "zzqvxjknobberplux"))
+    calibrated = validate_calibration_response(
+        response, manifest, calibration=calibration, eligible_ids=eligible_ids
+    )
     if (
         response.get("dataset_id") != manifest["dataset_id"]
         or response.get("query_type") != "text"
         or response.get("mode") != "hybrid"
         or response.get("ranking_policy") != manifest["search"]
         or response.get("score_kind") != "ranking_signal"
-        or response.get("match_status") != "no_supported_match"
-        or response.get("calibration_status") != "uncalibrated"
+        or (not calibrated and response.get("match_status") != "no_supported_match")
+        or (not calibrated and response.get("calibration_status") != "uncalibrated")
         or response.get("observations")
     ):
         raise ValueError("Unsupported text query changed its ranking policy or status")
@@ -152,6 +240,8 @@ def validate_observation_response(
     limit: int = 20,
     image_sha256: str | None = None,
     images: dict | None = None,
+    calibration: dict | None = None,
+    eligible_ids: list[str] | None = None,
 ) -> list[dict]:
     if response.get("dataset_id") != manifest["dataset_id"] or response.get(
         "query_type"
@@ -159,11 +249,14 @@ def validate_observation_response(
         raise ValueError("Invalid observation query envelope")
     if response.get("match_status") not in {"candidates", "no_supported_match"}:
         raise ValueError("Invalid observation match status")
+    calibrated = validate_calibration_response(
+        response, manifest, calibration=calibration, eligible_ids=eligible_ids
+    )
     if enabled:
         if (
             response.get("observations") is not True
-            or response.get("match_status") != "no_supported_match"
-            or response.get("calibration_status") != "uncalibrated"
+            or (not calibrated and response.get("match_status") != "no_supported_match")
+            or (not calibrated and response.get("calibration_status") != "uncalibrated")
         ):
             raise ValueError(
                 "Generated observations must remain explicit uncalibrated suggestions"
@@ -349,7 +442,11 @@ def source_probe_scores(archive: zipfile.ZipFile, manifest: dict) -> dict[str, f
 
 
 def accept_observations(
-    run: Callable[..., bytes], archive: zipfile.ZipFile, manifest: dict
+    run: Callable[..., bytes],
+    archive: zipfile.ZipFile,
+    manifest: dict,
+    *,
+    calibration: dict | None = None,
 ) -> None:
     rows = {
         row["id"]: row for row in json.loads(archive.read("observations/index.json"))
@@ -360,7 +457,15 @@ def accept_observations(
     baseline_args = ("search", "--mode", "vector", "--limit", "3", probe)
     baseline = json.loads(run(*baseline_args))
     found = validate_observation_response(
-        baseline, manifest, rows, recipes, evidence, enabled=False, limit=3
+        baseline,
+        manifest,
+        rows,
+        recipes,
+        evidence,
+        enabled=False,
+        limit=3,
+        calibration=calibration,
+        eligible_ids=list(evidence),
     )
     expected_scores = source_probe_scores(archive, manifest)
     if (
@@ -400,7 +505,15 @@ def accept_observations(
             raise ValueError("Empty observation inspection mismatch")
         response = json.loads(run("search", "--observations", "--limit", "3", probe))
         validate_observation_response(
-            response, manifest, rows, recipes, evidence, enabled=True, limit=3
+            response,
+            manifest,
+            rows,
+            recipes,
+            evidence,
+            enabled=True,
+            limit=3,
+            calibration=calibration,
+            eligible_ids=list(evidence),
         )
     chunks = json.loads(archive.read("observations/chunks.json"))
     images = {row["id"]: row for row in json.loads(archive.read("image/index.json"))}
@@ -436,6 +549,12 @@ def accept_observations(
             enabled=True,
             source=source,
             limit=3,
+            calibration=calibration,
+            eligible_ids=[
+                identifier
+                for identifier in evidence
+                if identifier.startswith(source + ":")
+            ],
         )
         if not matches:
             raise ValueError("Generated text self-query returned no results")
@@ -472,6 +591,12 @@ def accept_observations(
                 limit=3,
                 image_sha256=hashlib.sha256(body).hexdigest(),
                 images=images,
+                calibration=calibration,
+                eligible_ids=[
+                    identifier
+                    for identifier in evidence
+                    if identifier.startswith(source + ":")
+                ],
             )
             if contains_query_path(response, str(path)):
                 raise ValueError("Generated combined search leaked the query path")
@@ -503,6 +628,8 @@ def validate_image_response(
     *,
     source: str = "",
     limit: int = 10,
+    calibration: dict | None = None,
+    eligible_ids: list[str] | None = None,
 ) -> list[dict]:
     def finite(value: object) -> bool:
         return (
@@ -518,9 +645,16 @@ def validate_image_response(
         or response.get("match_status") not in {"candidates", "no_supported_match"}
     ):
         raise ValueError("Invalid image query envelope")
-    if manifest["image"]["search"]["calibration"] is None and (
-        response.get("match_status") != "no_supported_match"
-        or response.get("calibration_status") != "uncalibrated"
+    calibrated = validate_calibration_response(
+        response, manifest, calibration=calibration, eligible_ids=eligible_ids
+    )
+    if (
+        not calibrated
+        and manifest["image"]["search"]["calibration"] is None
+        and (
+            response.get("match_status") != "no_supported_match"
+            or response.get("calibration_status") != "uncalibrated"
+        )
     ):
         raise ValueError("An uncalibrated image query cannot accept an identity")
     items = response["results"]
@@ -574,7 +708,12 @@ def validate_image_response(
 
 
 def accept_empty_gallery(
-    run: Callable[..., bytes], archive: zipfile.ZipFile, manifest: dict
+    run: Callable[..., bytes],
+    archive: zipfile.ZipFile,
+    manifest: dict,
+    *,
+    calibration: dict | None = None,
+    eligible_ids: list[str] | None = None,
 ) -> None:
     assert manifest["image"]["vectors"] == 0
     probes = json.loads(archive.read("image/probes.json"))
@@ -584,7 +723,12 @@ def accept_empty_gallery(
         picture.write_bytes(probe)
         response = json.loads(run("search", "--image", str(picture)))
         found = validate_image_response(
-            response, manifest, hashlib.sha256(probe).hexdigest(), False
+            response,
+            manifest,
+            hashlib.sha256(probe).hexdigest(),
+            False,
+            calibration=calibration,
+            eligible_ids=eligible_ids,
         )
         assert not found and not contains_query_path(response, str(picture))
 
@@ -758,13 +902,18 @@ def accept(binary: Path, bundle: Path) -> None:
     info = json.loads(run("info"))
     with zipfile.ZipFile(bundle) as archive:
         manifest = json.loads(archive.read("manifest.json"))
+        calibration = bundle_calibration(archive, manifest)
+        index = json.loads(archive.read("index.json"))
+        eligible_ids = [item["id"] for item in index]
         assert info["dataset_id"] == manifest["dataset_id"]
         accept_research(run, archive, manifest, info)
-        accept_search_policy(run, manifest)
+        accept_search_policy(
+            run, manifest, calibration=calibration, eligible_ids=eligible_ids
+        )
         if manifest.get("observations"):
             assert info.get("observations_available") is True
             assert info.get("observations") == manifest["observations"]
-            accept_observations(run, archive, manifest)
+            accept_observations(run, archive, manifest, calibration=calibration)
         else:
             assert not info.get("observations_available")
         search = json.loads(
@@ -778,9 +927,11 @@ def accept(binary: Path, bundle: Path) -> None:
             )
         )
         assert search["mode"] == "vector" and search["results"]
+        validate_calibration_response(
+            search, manifest, calibration=calibration, eligible_ids=eligible_ids
+        )
         assert not any(result["name_match"] for result in search["results"])
         identifier = search["results"][0]["id"]
-        index = json.loads(archive.read("index.json"))
         example = "radartutorial:8bdc6ce92fea3ca62de71395"
         if any(document["id"] == example for document in index):
             search = json.loads(
@@ -794,6 +945,14 @@ def accept(binary: Path, bundle: Path) -> None:
                 )
             )
             assert search["results"][0]["id"] == example, search["results"]
+            validate_calibration_response(
+                search,
+                manifest,
+                calibration=calibration,
+                eligible_ids=[
+                    item["id"] for item in index if item["source"] == "radartutorial"
+                ],
+            )
             identifier = example
         assert info["entities"] == len(index)
         assert all(item["kind"] != "article" for item in index)
@@ -868,7 +1027,13 @@ def accept(binary: Path, bundle: Path) -> None:
                 None,
             )
             if record is None:
-                accept_empty_gallery(run, archive, manifest)
+                accept_empty_gallery(
+                    run,
+                    archive,
+                    manifest,
+                    calibration=calibration,
+                    eligible_ids=eligible_ids,
+                )
             else:
                 entity_id = record["references"][0]["entity_id"]
                 expected = archive.read(record["preview"]["member"])
@@ -924,6 +1089,12 @@ def accept(binary: Path, bundle: Path) -> None:
                             hashlib.sha256(expected).hexdigest(),
                             bool(extra),
                             source=record["source"],
+                            calibration=calibration,
+                            eligible_ids=[
+                                item["id"]
+                                for item in index
+                                if item["source"] == record["source"]
+                            ],
                         )
                         assert not contains_query_path(response, str(preview))
                         assert found

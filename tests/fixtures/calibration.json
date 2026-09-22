@@ -1,0 +1,1225 @@
+{
+  "schema_version": 1,
+  "protocol": {
+    "schema_version": 1,
+    "feature_version": "candidate-signals-v1",
+    "fit_version": "bounded-threshold-grid-v1",
+    "member": "calibration.json",
+    "scale": 1000000,
+    "rounding": "half-away-from-zero",
+    "score_bounds": {
+      "cosine": [
+        -1000000,
+        1000000
+      ],
+      "ranking_margin": [
+        0,
+        4000000
+      ]
+    },
+    "threshold_grid": {
+      "maximum_values_per_feature": 64,
+      "selection": "sorted unique observed integers and their successors plus lower bound; if over 64 select floor(i*(n-1)/63), i=0..63"
+    },
+    "features": {
+      "text": [
+        "semantic_cosine",
+        "ranking_margin"
+      ],
+      "image": [
+        "image_cosine",
+        "ranking_margin"
+      ],
+      "image_text": [
+        "image_cosine",
+        "semantic_cosine",
+        "ranking_margin"
+      ]
+    },
+    "profiles": [
+      {
+        "query_type": "text",
+        "text_mode": "hybrid",
+        "observations": false
+      },
+      {
+        "query_type": "text",
+        "text_mode": "vector",
+        "observations": false
+      },
+      {
+        "query_type": "text",
+        "text_mode": "hybrid",
+        "observations": true
+      },
+      {
+        "query_type": "text",
+        "text_mode": "vector",
+        "observations": true
+      },
+      {
+        "query_type": "image",
+        "text_mode": null,
+        "observations": false
+      },
+      {
+        "query_type": "image_text",
+        "text_mode": "hybrid",
+        "observations": false
+      },
+      {
+        "query_type": "image_text",
+        "text_mode": "hybrid",
+        "observations": true
+      }
+    ],
+    "binding": "SHA-256(prefix calibration-retrieval-v1 followed by LF, then framed manifest); remove dataset_id, recipe_sha256, calibration and files/calibration.json; normalize format_version5 to4",
+    "scope": "SHA-256(prefix calibration-scope-v1 followed by LF, then framed sorted unique eligible source-qualified entity IDs)",
+    "margin": "max(0, first score minus second score); zero if no second result; extract before user limit",
+    "support": "semantic_cosine is first result cosine; image_cosine is maximum first-result image match score; clamp cosine to [-1,1] before rounding",
+    "missing_features": "abstain; empty result also abstains; missing profile preserves legacy behavior",
+    "rule": "accept iff all integer feature values >= their integer minimums",
+    "objective": [
+      "maximum accepted correct top1",
+      "maximum accepted correct top5",
+      "minimum accepted negative groups",
+      "minimum accepted confusable wrong-top1",
+      "lexicographically greatest minimums in declared feature order"
+    ],
+    "negative_unit": "case.group_id; all correlated cases in a group must be negative and the group is falsely accepted if any member is accepted",
+    "positive_unit": "case.group_id; every case in a group must be accepted and correct to count for the objective",
+    "constraints": "tracked M1 no_match_per_modality and confusable_variant thresholds; each profile needs positive and negative groups and at least one accepted correct positive group",
+    "fit_input_status": "reviewed_frozen_development",
+    "response_protocol": "calibration-development-responses-v1",
+    "framing": {
+      "null": "n",
+      "false": "f",
+      "true": "t",
+      "number": "d + 16 lowercase hexadecimal IEEE754 binary64 big-endian bytes + semicolon; normalize negative zero; finite abs<=2^53-1",
+      "string": "s + ASCII decimal UTF8 byte length + colon + raw UTF8",
+      "array": "a + ASCII decimal item count + colon + item frames",
+      "object": "o + ASCII decimal key count + colon + key/value frames; UTF8-byte-sorted string keys"
+    },
+    "limits": {
+      "member_bytes": 65536,
+      "profiles": 256,
+      "threshold_successor_above_feature_max": 1
+    },
+    "artifact_fields": [
+      "schema_version",
+      "feature_version",
+      "fit_version",
+      "protocol_sha256",
+      "retrieval_sha256",
+      "development",
+      "profiles"
+    ],
+    "development_fields": [
+      "fixture_sha256",
+      "responses_sha256",
+      "binary_sha256",
+      "contract_sha256"
+    ],
+    "profile_fields": [
+      "query_type",
+      "text_mode",
+      "observations",
+      "eligible_entities_sha256",
+      "minimums"
+    ],
+    "decision": "matching profile returns match_status candidates or no_supported_match, calibration_status calibrated, decision artifact_sha256/profile_id/reason/features/minimums; absent profile returns no override",
+    "development_fixture": {
+      "schema_version": 1,
+      "status": "reviewed_frozen_development",
+      "retrieval_sha256": "required",
+      "scopes": "map scope name to sorted unique eligible entity IDs; must be subsets of bundle entities",
+      "cases": "id,split=development,reviewed=true,label_basis,group_id,scope,query_type,text_mode,observations,query{text,image_sha256},expected_ids,confusable_ids; reviewed negatives have empty expected_ids"
+    },
+    "development_responses": {
+      "schema_version": 1,
+      "protocol": "calibration-development-responses-v1",
+      "split": "development",
+      "fixture_sha256": "raw fixture bytes",
+      "binary_sha256": "actual calibration runner executable",
+      "dataset_id": "uncalibrated input bundle ID",
+      "retrieval_sha256": "required",
+      "cases": "one case_id,eligible_entities_sha256,response per fixture case; complete uncropped first two candidates (or full population if smaller), never calibrated response"
+    }
+  },
+  "protocol_sha256": "ccf9e230ab553430ebacc320fed8413ba7e137a459fdfd8fe8e470a0e1e69849",
+  "golden": [
+    {
+      "id": "mode-0",
+      "context": {
+        "query_type": "text",
+        "text_mode": "hybrid",
+        "observations": false,
+        "eligible_entities_sha256": "9d91103eb2a25166fa5696c6bd98ff51ba826aaaf6fb6e1717ca559af325144e"
+      },
+      "response": {
+        "dataset_id": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "query": "synthetic",
+        "query_type": "text",
+        "mode": "hybrid",
+        "results": [
+          {
+            "id": "test:one",
+            "score": 0.75,
+            "cosine": 0.625,
+            "matches": []
+          },
+          {
+            "id": "test:two",
+            "score": 0.5,
+            "cosine": 0.1,
+            "matches": []
+          }
+        ]
+      },
+      "artifact": {
+        "schema_version": 1,
+        "feature_version": "candidate-signals-v1",
+        "fit_version": "bounded-threshold-grid-v1",
+        "protocol_sha256": "ccf9e230ab553430ebacc320fed8413ba7e137a459fdfd8fe8e470a0e1e69849",
+        "retrieval_sha256": "2e2bf046ae69f2292b1b14073eafc7c11874e645ac1ca7683f986d51c9fd6307",
+        "development": {
+          "fixture_sha256": "5555555555555555555555555555555555555555555555555555555555555555",
+          "responses_sha256": "5555555555555555555555555555555555555555555555555555555555555555",
+          "binary_sha256": "5555555555555555555555555555555555555555555555555555555555555555",
+          "contract_sha256": "3460166733affac363e071d5b8fbb7f8ae267d7c2ff323a033ae2356a83c63f9"
+        },
+        "profiles": [
+          {
+            "query_type": "text",
+            "text_mode": "hybrid",
+            "observations": false,
+            "eligible_entities_sha256": "9d91103eb2a25166fa5696c6bd98ff51ba826aaaf6fb6e1717ca559af325144e",
+            "minimums": {
+              "semantic_cosine": 500000,
+              "ranking_margin": 100000
+            }
+          }
+        ]
+      },
+      "features": {
+        "ranking_margin": 250000,
+        "semantic_cosine": 625000
+      },
+      "decision": {
+        "match_status": "candidates",
+        "calibration_status": "calibrated",
+        "decision": {
+          "artifact_sha256": "e345426b084cc788e5b7b76eb5f01f4bdf6a6cf4cd07658e7f1ec725fe0f89b0",
+          "profile_id": "fe4acba1d9795541945a528565bf98f6003c71269849e1e7beaa8f5cbecd8b52",
+          "reason": "accepted",
+          "features": {
+            "ranking_margin": 250000,
+            "semantic_cosine": 625000
+          },
+          "minimums": {
+            "semantic_cosine": 500000,
+            "ranking_margin": 100000
+          }
+        }
+      }
+    },
+    {
+      "id": "mode-1",
+      "context": {
+        "query_type": "text",
+        "text_mode": "vector",
+        "observations": false,
+        "eligible_entities_sha256": "9d91103eb2a25166fa5696c6bd98ff51ba826aaaf6fb6e1717ca559af325144e"
+      },
+      "response": {
+        "dataset_id": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "query": "synthetic",
+        "query_type": "text",
+        "mode": "vector",
+        "results": [
+          {
+            "id": "test:one",
+            "score": 0.75,
+            "cosine": 0.625,
+            "matches": []
+          },
+          {
+            "id": "test:two",
+            "score": 0.5,
+            "cosine": 0.1,
+            "matches": []
+          }
+        ]
+      },
+      "artifact": {
+        "schema_version": 1,
+        "feature_version": "candidate-signals-v1",
+        "fit_version": "bounded-threshold-grid-v1",
+        "protocol_sha256": "ccf9e230ab553430ebacc320fed8413ba7e137a459fdfd8fe8e470a0e1e69849",
+        "retrieval_sha256": "2e2bf046ae69f2292b1b14073eafc7c11874e645ac1ca7683f986d51c9fd6307",
+        "development": {
+          "fixture_sha256": "5555555555555555555555555555555555555555555555555555555555555555",
+          "responses_sha256": "5555555555555555555555555555555555555555555555555555555555555555",
+          "binary_sha256": "5555555555555555555555555555555555555555555555555555555555555555",
+          "contract_sha256": "3460166733affac363e071d5b8fbb7f8ae267d7c2ff323a033ae2356a83c63f9"
+        },
+        "profiles": [
+          {
+            "query_type": "text",
+            "text_mode": "vector",
+            "observations": false,
+            "eligible_entities_sha256": "9d91103eb2a25166fa5696c6bd98ff51ba826aaaf6fb6e1717ca559af325144e",
+            "minimums": {
+              "semantic_cosine": 500000,
+              "ranking_margin": 100000
+            }
+          }
+        ]
+      },
+      "features": {
+        "ranking_margin": 250000,
+        "semantic_cosine": 625000
+      },
+      "decision": {
+        "match_status": "candidates",
+        "calibration_status": "calibrated",
+        "decision": {
+          "artifact_sha256": "8bc2d6ac4d5533969d7dbcaf6dcaedabbc29972676ca93d438f9ca13b67a86f9",
+          "profile_id": "dcedba81fb740416a865d4dbc6cca79bf93bbe01fa250c9677e7793c4aebc754",
+          "reason": "accepted",
+          "features": {
+            "ranking_margin": 250000,
+            "semantic_cosine": 625000
+          },
+          "minimums": {
+            "semantic_cosine": 500000,
+            "ranking_margin": 100000
+          }
+        }
+      }
+    },
+    {
+      "id": "mode-2",
+      "context": {
+        "query_type": "text",
+        "text_mode": "hybrid",
+        "observations": true,
+        "eligible_entities_sha256": "9d91103eb2a25166fa5696c6bd98ff51ba826aaaf6fb6e1717ca559af325144e"
+      },
+      "response": {
+        "dataset_id": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "query": "synthetic",
+        "query_type": "text",
+        "mode": "hybrid",
+        "results": [
+          {
+            "id": "test:one",
+            "score": 0.75,
+            "cosine": 0.625,
+            "matches": []
+          },
+          {
+            "id": "test:two",
+            "score": 0.5,
+            "cosine": 0.1,
+            "matches": []
+          }
+        ],
+        "observations": true
+      },
+      "artifact": {
+        "schema_version": 1,
+        "feature_version": "candidate-signals-v1",
+        "fit_version": "bounded-threshold-grid-v1",
+        "protocol_sha256": "ccf9e230ab553430ebacc320fed8413ba7e137a459fdfd8fe8e470a0e1e69849",
+        "retrieval_sha256": "2e2bf046ae69f2292b1b14073eafc7c11874e645ac1ca7683f986d51c9fd6307",
+        "development": {
+          "fixture_sha256": "5555555555555555555555555555555555555555555555555555555555555555",
+          "responses_sha256": "5555555555555555555555555555555555555555555555555555555555555555",
+          "binary_sha256": "5555555555555555555555555555555555555555555555555555555555555555",
+          "contract_sha256": "3460166733affac363e071d5b8fbb7f8ae267d7c2ff323a033ae2356a83c63f9"
+        },
+        "profiles": [
+          {
+            "query_type": "text",
+            "text_mode": "hybrid",
+            "observations": true,
+            "eligible_entities_sha256": "9d91103eb2a25166fa5696c6bd98ff51ba826aaaf6fb6e1717ca559af325144e",
+            "minimums": {
+              "semantic_cosine": 500000,
+              "ranking_margin": 100000
+            }
+          }
+        ]
+      },
+      "features": {
+        "ranking_margin": 250000,
+        "semantic_cosine": 625000
+      },
+      "decision": {
+        "match_status": "candidates",
+        "calibration_status": "calibrated",
+        "decision": {
+          "artifact_sha256": "9f1f348b443a3f212b930b1ef999b5b37a0faa03d8ae52fc5b6b8df6265dac8a",
+          "profile_id": "e904ba458cfb47f359c56f491b6beb64004045fb1c02e218191d6d9f2873dc43",
+          "reason": "accepted",
+          "features": {
+            "ranking_margin": 250000,
+            "semantic_cosine": 625000
+          },
+          "minimums": {
+            "semantic_cosine": 500000,
+            "ranking_margin": 100000
+          }
+        }
+      }
+    },
+    {
+      "id": "mode-3",
+      "context": {
+        "query_type": "text",
+        "text_mode": "vector",
+        "observations": true,
+        "eligible_entities_sha256": "9d91103eb2a25166fa5696c6bd98ff51ba826aaaf6fb6e1717ca559af325144e"
+      },
+      "response": {
+        "dataset_id": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "query": "synthetic",
+        "query_type": "text",
+        "mode": "vector",
+        "results": [
+          {
+            "id": "test:one",
+            "score": 0.75,
+            "cosine": 0.625,
+            "matches": []
+          },
+          {
+            "id": "test:two",
+            "score": 0.5,
+            "cosine": 0.1,
+            "matches": []
+          }
+        ],
+        "observations": true
+      },
+      "artifact": {
+        "schema_version": 1,
+        "feature_version": "candidate-signals-v1",
+        "fit_version": "bounded-threshold-grid-v1",
+        "protocol_sha256": "ccf9e230ab553430ebacc320fed8413ba7e137a459fdfd8fe8e470a0e1e69849",
+        "retrieval_sha256": "2e2bf046ae69f2292b1b14073eafc7c11874e645ac1ca7683f986d51c9fd6307",
+        "development": {
+          "fixture_sha256": "5555555555555555555555555555555555555555555555555555555555555555",
+          "responses_sha256": "5555555555555555555555555555555555555555555555555555555555555555",
+          "binary_sha256": "5555555555555555555555555555555555555555555555555555555555555555",
+          "contract_sha256": "3460166733affac363e071d5b8fbb7f8ae267d7c2ff323a033ae2356a83c63f9"
+        },
+        "profiles": [
+          {
+            "query_type": "text",
+            "text_mode": "vector",
+            "observations": true,
+            "eligible_entities_sha256": "9d91103eb2a25166fa5696c6bd98ff51ba826aaaf6fb6e1717ca559af325144e",
+            "minimums": {
+              "semantic_cosine": 500000,
+              "ranking_margin": 100000
+            }
+          }
+        ]
+      },
+      "features": {
+        "ranking_margin": 250000,
+        "semantic_cosine": 625000
+      },
+      "decision": {
+        "match_status": "candidates",
+        "calibration_status": "calibrated",
+        "decision": {
+          "artifact_sha256": "d9ff5b579ea6fb41092d991066edfb4effe548075cbe906dc0839dcad4e75219",
+          "profile_id": "c1dc1c043e8a90d07f5915d3e8371bf49f519db15681840cd83c72e9a00725ee",
+          "reason": "accepted",
+          "features": {
+            "ranking_margin": 250000,
+            "semantic_cosine": 625000
+          },
+          "minimums": {
+            "semantic_cosine": 500000,
+            "ranking_margin": 100000
+          }
+        }
+      }
+    },
+    {
+      "id": "mode-4",
+      "context": {
+        "query_type": "image",
+        "text_mode": null,
+        "observations": false,
+        "eligible_entities_sha256": "9d91103eb2a25166fa5696c6bd98ff51ba826aaaf6fb6e1717ca559af325144e"
+      },
+      "response": {
+        "dataset_id": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "query": "",
+        "query_type": "image",
+        "mode": "image",
+        "results": [
+          {
+            "id": "test:one",
+            "score": 0.75,
+            "cosine": null,
+            "matches": [
+              {
+                "channel": "image",
+                "score": 0.8125
+              }
+            ]
+          },
+          {
+            "id": "test:two",
+            "score": 0.5,
+            "cosine": 0.1,
+            "matches": []
+          }
+        ]
+      },
+      "artifact": {
+        "schema_version": 1,
+        "feature_version": "candidate-signals-v1",
+        "fit_version": "bounded-threshold-grid-v1",
+        "protocol_sha256": "ccf9e230ab553430ebacc320fed8413ba7e137a459fdfd8fe8e470a0e1e69849",
+        "retrieval_sha256": "2e2bf046ae69f2292b1b14073eafc7c11874e645ac1ca7683f986d51c9fd6307",
+        "development": {
+          "fixture_sha256": "5555555555555555555555555555555555555555555555555555555555555555",
+          "responses_sha256": "5555555555555555555555555555555555555555555555555555555555555555",
+          "binary_sha256": "5555555555555555555555555555555555555555555555555555555555555555",
+          "contract_sha256": "3460166733affac363e071d5b8fbb7f8ae267d7c2ff323a033ae2356a83c63f9"
+        },
+        "profiles": [
+          {
+            "query_type": "image",
+            "text_mode": null,
+            "observations": false,
+            "eligible_entities_sha256": "9d91103eb2a25166fa5696c6bd98ff51ba826aaaf6fb6e1717ca559af325144e",
+            "minimums": {
+              "image_cosine": 500000,
+              "ranking_margin": 100000
+            }
+          }
+        ]
+      },
+      "features": {
+        "ranking_margin": 250000,
+        "image_cosine": 812500
+      },
+      "decision": {
+        "match_status": "candidates",
+        "calibration_status": "calibrated",
+        "decision": {
+          "artifact_sha256": "e13fd2cb4f1428b7d5283252d2eff662357608c1939216fcdf9aaec35b5a5ce4",
+          "profile_id": "e5848703f4f1b2560f08627fe615e14d9c97ccba2af3e78224e67e7f95ca9031",
+          "reason": "accepted",
+          "features": {
+            "ranking_margin": 250000,
+            "image_cosine": 812500
+          },
+          "minimums": {
+            "image_cosine": 500000,
+            "ranking_margin": 100000
+          }
+        }
+      }
+    },
+    {
+      "id": "mode-5",
+      "context": {
+        "query_type": "image_text",
+        "text_mode": "hybrid",
+        "observations": false,
+        "eligible_entities_sha256": "9d91103eb2a25166fa5696c6bd98ff51ba826aaaf6fb6e1717ca559af325144e"
+      },
+      "response": {
+        "dataset_id": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "query": "synthetic",
+        "query_type": "image_text",
+        "mode": "image_text",
+        "results": [
+          {
+            "id": "test:one",
+            "score": 0.75,
+            "cosine": 0.625,
+            "matches": [
+              {
+                "channel": "image",
+                "score": 0.8125
+              }
+            ]
+          },
+          {
+            "id": "test:two",
+            "score": 0.5,
+            "cosine": 0.1,
+            "matches": []
+          }
+        ]
+      },
+      "artifact": {
+        "schema_version": 1,
+        "feature_version": "candidate-signals-v1",
+        "fit_version": "bounded-threshold-grid-v1",
+        "protocol_sha256": "ccf9e230ab553430ebacc320fed8413ba7e137a459fdfd8fe8e470a0e1e69849",
+        "retrieval_sha256": "2e2bf046ae69f2292b1b14073eafc7c11874e645ac1ca7683f986d51c9fd6307",
+        "development": {
+          "fixture_sha256": "5555555555555555555555555555555555555555555555555555555555555555",
+          "responses_sha256": "5555555555555555555555555555555555555555555555555555555555555555",
+          "binary_sha256": "5555555555555555555555555555555555555555555555555555555555555555",
+          "contract_sha256": "3460166733affac363e071d5b8fbb7f8ae267d7c2ff323a033ae2356a83c63f9"
+        },
+        "profiles": [
+          {
+            "query_type": "image_text",
+            "text_mode": "hybrid",
+            "observations": false,
+            "eligible_entities_sha256": "9d91103eb2a25166fa5696c6bd98ff51ba826aaaf6fb6e1717ca559af325144e",
+            "minimums": {
+              "image_cosine": 500000,
+              "semantic_cosine": 500000,
+              "ranking_margin": 100000
+            }
+          }
+        ]
+      },
+      "features": {
+        "ranking_margin": 250000,
+        "semantic_cosine": 625000,
+        "image_cosine": 812500
+      },
+      "decision": {
+        "match_status": "candidates",
+        "calibration_status": "calibrated",
+        "decision": {
+          "artifact_sha256": "59e810a068d0b86cd6ec4b595b7f3e7195a3820ffa7378bcc7c770f3aeec3e7f",
+          "profile_id": "56d9a85bb4d4c68c7b57b6cb060b733b8850ffbbe7576f090095e869d14f5ffe",
+          "reason": "accepted",
+          "features": {
+            "ranking_margin": 250000,
+            "semantic_cosine": 625000,
+            "image_cosine": 812500
+          },
+          "minimums": {
+            "image_cosine": 500000,
+            "semantic_cosine": 500000,
+            "ranking_margin": 100000
+          }
+        }
+      }
+    },
+    {
+      "id": "mode-6",
+      "context": {
+        "query_type": "image_text",
+        "text_mode": "hybrid",
+        "observations": true,
+        "eligible_entities_sha256": "9d91103eb2a25166fa5696c6bd98ff51ba826aaaf6fb6e1717ca559af325144e"
+      },
+      "response": {
+        "dataset_id": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "query": "synthetic",
+        "query_type": "image_text",
+        "mode": "image_text",
+        "results": [
+          {
+            "id": "test:one",
+            "score": 0.75,
+            "cosine": 0.625,
+            "matches": [
+              {
+                "channel": "image",
+                "score": 0.8125
+              }
+            ]
+          },
+          {
+            "id": "test:two",
+            "score": 0.5,
+            "cosine": 0.1,
+            "matches": []
+          }
+        ],
+        "observations": true
+      },
+      "artifact": {
+        "schema_version": 1,
+        "feature_version": "candidate-signals-v1",
+        "fit_version": "bounded-threshold-grid-v1",
+        "protocol_sha256": "ccf9e230ab553430ebacc320fed8413ba7e137a459fdfd8fe8e470a0e1e69849",
+        "retrieval_sha256": "2e2bf046ae69f2292b1b14073eafc7c11874e645ac1ca7683f986d51c9fd6307",
+        "development": {
+          "fixture_sha256": "5555555555555555555555555555555555555555555555555555555555555555",
+          "responses_sha256": "5555555555555555555555555555555555555555555555555555555555555555",
+          "binary_sha256": "5555555555555555555555555555555555555555555555555555555555555555",
+          "contract_sha256": "3460166733affac363e071d5b8fbb7f8ae267d7c2ff323a033ae2356a83c63f9"
+        },
+        "profiles": [
+          {
+            "query_type": "image_text",
+            "text_mode": "hybrid",
+            "observations": true,
+            "eligible_entities_sha256": "9d91103eb2a25166fa5696c6bd98ff51ba826aaaf6fb6e1717ca559af325144e",
+            "minimums": {
+              "image_cosine": 500000,
+              "semantic_cosine": 500000,
+              "ranking_margin": 100000
+            }
+          }
+        ]
+      },
+      "features": {
+        "ranking_margin": 250000,
+        "semantic_cosine": 625000,
+        "image_cosine": 812500
+      },
+      "decision": {
+        "match_status": "candidates",
+        "calibration_status": "calibrated",
+        "decision": {
+          "artifact_sha256": "4a3680bcb0ab14112729bfb21ec021ba0788b23dcddf50065da5213fc7f70c55",
+          "profile_id": "6ffcd1a3828540a7eb1ae03118fcb15baebadb37f52facd917b8f07ca2e7b06b",
+          "reason": "accepted",
+          "features": {
+            "ranking_margin": 250000,
+            "semantic_cosine": 625000,
+            "image_cosine": 812500
+          },
+          "minimums": {
+            "image_cosine": 500000,
+            "semantic_cosine": 500000,
+            "ranking_margin": 100000
+          }
+        }
+      }
+    },
+    {
+      "id": "below-threshold",
+      "context": {
+        "query_type": "image",
+        "text_mode": null,
+        "observations": false,
+        "eligible_entities_sha256": "9d91103eb2a25166fa5696c6bd98ff51ba826aaaf6fb6e1717ca559af325144e"
+      },
+      "response": {
+        "dataset_id": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "query": "",
+        "query_type": "image",
+        "mode": "image",
+        "results": [
+          {
+            "id": "test:one",
+            "score": 0.75,
+            "cosine": null,
+            "matches": [
+              {
+                "channel": "image",
+                "score": 0.25
+              }
+            ]
+          },
+          {
+            "id": "test:two",
+            "score": 0.5,
+            "cosine": 0.1,
+            "matches": []
+          }
+        ]
+      },
+      "artifact": {
+        "schema_version": 1,
+        "feature_version": "candidate-signals-v1",
+        "fit_version": "bounded-threshold-grid-v1",
+        "protocol_sha256": "ccf9e230ab553430ebacc320fed8413ba7e137a459fdfd8fe8e470a0e1e69849",
+        "retrieval_sha256": "2e2bf046ae69f2292b1b14073eafc7c11874e645ac1ca7683f986d51c9fd6307",
+        "development": {
+          "fixture_sha256": "5555555555555555555555555555555555555555555555555555555555555555",
+          "responses_sha256": "5555555555555555555555555555555555555555555555555555555555555555",
+          "binary_sha256": "5555555555555555555555555555555555555555555555555555555555555555",
+          "contract_sha256": "3460166733affac363e071d5b8fbb7f8ae267d7c2ff323a033ae2356a83c63f9"
+        },
+        "profiles": [
+          {
+            "query_type": "image",
+            "text_mode": null,
+            "observations": false,
+            "eligible_entities_sha256": "9d91103eb2a25166fa5696c6bd98ff51ba826aaaf6fb6e1717ca559af325144e",
+            "minimums": {
+              "image_cosine": 500000,
+              "ranking_margin": 100000
+            }
+          }
+        ]
+      },
+      "features": {
+        "ranking_margin": 250000,
+        "image_cosine": 250000
+      },
+      "decision": {
+        "match_status": "no_supported_match",
+        "calibration_status": "calibrated",
+        "decision": {
+          "artifact_sha256": "e13fd2cb4f1428b7d5283252d2eff662357608c1939216fcdf9aaec35b5a5ce4",
+          "profile_id": "e5848703f4f1b2560f08627fe615e14d9c97ccba2af3e78224e67e7f95ca9031",
+          "reason": "below_threshold",
+          "features": {
+            "ranking_margin": 250000,
+            "image_cosine": 250000
+          },
+          "minimums": {
+            "image_cosine": 500000,
+            "ranking_margin": 100000
+          }
+        }
+      }
+    },
+    {
+      "id": "equal-threshold",
+      "context": {
+        "query_type": "image",
+        "text_mode": null,
+        "observations": false,
+        "eligible_entities_sha256": "9d91103eb2a25166fa5696c6bd98ff51ba826aaaf6fb6e1717ca559af325144e"
+      },
+      "response": {
+        "dataset_id": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "query": "",
+        "query_type": "image",
+        "mode": "image",
+        "results": [
+          {
+            "id": "test:one",
+            "score": 0.75,
+            "cosine": null,
+            "matches": [
+              {
+                "channel": "image",
+                "score": 0.5
+              }
+            ]
+          },
+          {
+            "id": "test:two",
+            "score": 0.5,
+            "cosine": 0.1,
+            "matches": []
+          }
+        ]
+      },
+      "artifact": {
+        "schema_version": 1,
+        "feature_version": "candidate-signals-v1",
+        "fit_version": "bounded-threshold-grid-v1",
+        "protocol_sha256": "ccf9e230ab553430ebacc320fed8413ba7e137a459fdfd8fe8e470a0e1e69849",
+        "retrieval_sha256": "2e2bf046ae69f2292b1b14073eafc7c11874e645ac1ca7683f986d51c9fd6307",
+        "development": {
+          "fixture_sha256": "5555555555555555555555555555555555555555555555555555555555555555",
+          "responses_sha256": "5555555555555555555555555555555555555555555555555555555555555555",
+          "binary_sha256": "5555555555555555555555555555555555555555555555555555555555555555",
+          "contract_sha256": "3460166733affac363e071d5b8fbb7f8ae267d7c2ff323a033ae2356a83c63f9"
+        },
+        "profiles": [
+          {
+            "query_type": "image",
+            "text_mode": null,
+            "observations": false,
+            "eligible_entities_sha256": "9d91103eb2a25166fa5696c6bd98ff51ba826aaaf6fb6e1717ca559af325144e",
+            "minimums": {
+              "image_cosine": 500000,
+              "ranking_margin": 100000
+            }
+          }
+        ]
+      },
+      "features": {
+        "ranking_margin": 250000,
+        "image_cosine": 500000
+      },
+      "decision": {
+        "match_status": "candidates",
+        "calibration_status": "calibrated",
+        "decision": {
+          "artifact_sha256": "e13fd2cb4f1428b7d5283252d2eff662357608c1939216fcdf9aaec35b5a5ce4",
+          "profile_id": "e5848703f4f1b2560f08627fe615e14d9c97ccba2af3e78224e67e7f95ca9031",
+          "reason": "accepted",
+          "features": {
+            "ranking_margin": 250000,
+            "image_cosine": 500000
+          },
+          "minimums": {
+            "image_cosine": 500000,
+            "ranking_margin": 100000
+          }
+        }
+      }
+    },
+    {
+      "id": "missing-image",
+      "context": {
+        "query_type": "image",
+        "text_mode": null,
+        "observations": false,
+        "eligible_entities_sha256": "9d91103eb2a25166fa5696c6bd98ff51ba826aaaf6fb6e1717ca559af325144e"
+      },
+      "response": {
+        "dataset_id": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "query": "",
+        "query_type": "image",
+        "mode": "image",
+        "results": [
+          {
+            "id": "test:one",
+            "score": 0.75,
+            "cosine": null,
+            "matches": []
+          },
+          {
+            "id": "test:two",
+            "score": 0.5,
+            "cosine": 0.1,
+            "matches": []
+          }
+        ]
+      },
+      "artifact": {
+        "schema_version": 1,
+        "feature_version": "candidate-signals-v1",
+        "fit_version": "bounded-threshold-grid-v1",
+        "protocol_sha256": "ccf9e230ab553430ebacc320fed8413ba7e137a459fdfd8fe8e470a0e1e69849",
+        "retrieval_sha256": "2e2bf046ae69f2292b1b14073eafc7c11874e645ac1ca7683f986d51c9fd6307",
+        "development": {
+          "fixture_sha256": "5555555555555555555555555555555555555555555555555555555555555555",
+          "responses_sha256": "5555555555555555555555555555555555555555555555555555555555555555",
+          "binary_sha256": "5555555555555555555555555555555555555555555555555555555555555555",
+          "contract_sha256": "3460166733affac363e071d5b8fbb7f8ae267d7c2ff323a033ae2356a83c63f9"
+        },
+        "profiles": [
+          {
+            "query_type": "image",
+            "text_mode": null,
+            "observations": false,
+            "eligible_entities_sha256": "9d91103eb2a25166fa5696c6bd98ff51ba826aaaf6fb6e1717ca559af325144e",
+            "minimums": {
+              "image_cosine": 500000,
+              "ranking_margin": 100000
+            }
+          }
+        ]
+      },
+      "features": null,
+      "decision": {
+        "match_status": "no_supported_match",
+        "calibration_status": "calibrated",
+        "decision": {
+          "artifact_sha256": "e13fd2cb4f1428b7d5283252d2eff662357608c1939216fcdf9aaec35b5a5ce4",
+          "profile_id": "e5848703f4f1b2560f08627fe615e14d9c97ccba2af3e78224e67e7f95ca9031",
+          "reason": "missing_features",
+          "features": null,
+          "minimums": {
+            "image_cosine": 500000,
+            "ranking_margin": 100000
+          }
+        }
+      }
+    },
+    {
+      "id": "empty",
+      "context": {
+        "query_type": "image",
+        "text_mode": null,
+        "observations": false,
+        "eligible_entities_sha256": "9d91103eb2a25166fa5696c6bd98ff51ba826aaaf6fb6e1717ca559af325144e"
+      },
+      "response": {
+        "dataset_id": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "query": "",
+        "query_type": "image",
+        "mode": "image",
+        "results": []
+      },
+      "artifact": {
+        "schema_version": 1,
+        "feature_version": "candidate-signals-v1",
+        "fit_version": "bounded-threshold-grid-v1",
+        "protocol_sha256": "ccf9e230ab553430ebacc320fed8413ba7e137a459fdfd8fe8e470a0e1e69849",
+        "retrieval_sha256": "2e2bf046ae69f2292b1b14073eafc7c11874e645ac1ca7683f986d51c9fd6307",
+        "development": {
+          "fixture_sha256": "5555555555555555555555555555555555555555555555555555555555555555",
+          "responses_sha256": "5555555555555555555555555555555555555555555555555555555555555555",
+          "binary_sha256": "5555555555555555555555555555555555555555555555555555555555555555",
+          "contract_sha256": "3460166733affac363e071d5b8fbb7f8ae267d7c2ff323a033ae2356a83c63f9"
+        },
+        "profiles": [
+          {
+            "query_type": "image",
+            "text_mode": null,
+            "observations": false,
+            "eligible_entities_sha256": "9d91103eb2a25166fa5696c6bd98ff51ba826aaaf6fb6e1717ca559af325144e",
+            "minimums": {
+              "image_cosine": 500000,
+              "ranking_margin": 100000
+            }
+          }
+        ]
+      },
+      "features": null,
+      "decision": {
+        "match_status": "no_supported_match",
+        "calibration_status": "calibrated",
+        "decision": {
+          "artifact_sha256": "e13fd2cb4f1428b7d5283252d2eff662357608c1939216fcdf9aaec35b5a5ce4",
+          "profile_id": "e5848703f4f1b2560f08627fe615e14d9c97ccba2af3e78224e67e7f95ca9031",
+          "reason": "no_results",
+          "features": null,
+          "minimums": {
+            "image_cosine": 500000,
+            "ranking_margin": 100000
+          }
+        }
+      }
+    },
+    {
+      "id": "singleton-margin-zero",
+      "context": {
+        "query_type": "image",
+        "text_mode": null,
+        "observations": false,
+        "eligible_entities_sha256": "9d91103eb2a25166fa5696c6bd98ff51ba826aaaf6fb6e1717ca559af325144e"
+      },
+      "response": {
+        "dataset_id": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "query": "",
+        "query_type": "image",
+        "mode": "image",
+        "results": [
+          {
+            "id": "test:one",
+            "score": 0.75,
+            "cosine": null,
+            "matches": [
+              {
+                "channel": "image",
+                "score": 0.8125
+              }
+            ]
+          }
+        ]
+      },
+      "artifact": {
+        "schema_version": 1,
+        "feature_version": "candidate-signals-v1",
+        "fit_version": "bounded-threshold-grid-v1",
+        "protocol_sha256": "ccf9e230ab553430ebacc320fed8413ba7e137a459fdfd8fe8e470a0e1e69849",
+        "retrieval_sha256": "2e2bf046ae69f2292b1b14073eafc7c11874e645ac1ca7683f986d51c9fd6307",
+        "development": {
+          "fixture_sha256": "5555555555555555555555555555555555555555555555555555555555555555",
+          "responses_sha256": "5555555555555555555555555555555555555555555555555555555555555555",
+          "binary_sha256": "5555555555555555555555555555555555555555555555555555555555555555",
+          "contract_sha256": "3460166733affac363e071d5b8fbb7f8ae267d7c2ff323a033ae2356a83c63f9"
+        },
+        "profiles": [
+          {
+            "query_type": "image",
+            "text_mode": null,
+            "observations": false,
+            "eligible_entities_sha256": "9d91103eb2a25166fa5696c6bd98ff51ba826aaaf6fb6e1717ca559af325144e",
+            "minimums": {
+              "image_cosine": 500000,
+              "ranking_margin": 100000
+            }
+          }
+        ]
+      },
+      "features": {
+        "ranking_margin": 0,
+        "image_cosine": 812500
+      },
+      "decision": {
+        "match_status": "no_supported_match",
+        "calibration_status": "calibrated",
+        "decision": {
+          "artifact_sha256": "e13fd2cb4f1428b7d5283252d2eff662357608c1939216fcdf9aaec35b5a5ce4",
+          "profile_id": "e5848703f4f1b2560f08627fe615e14d9c97ccba2af3e78224e67e7f95ca9031",
+          "reason": "below_threshold",
+          "features": {
+            "ranking_margin": 0,
+            "image_cosine": 812500
+          },
+          "minimums": {
+            "image_cosine": 500000,
+            "ranking_margin": 100000
+          }
+        }
+      }
+    },
+    {
+      "id": "unmatched-pool",
+      "context": {
+        "query_type": "image",
+        "text_mode": null,
+        "observations": false,
+        "eligible_entities_sha256": "8888888888888888888888888888888888888888888888888888888888888888"
+      },
+      "response": {
+        "dataset_id": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "query": "",
+        "query_type": "image",
+        "mode": "image",
+        "results": [
+          {
+            "id": "test:one",
+            "score": 0.75,
+            "cosine": null,
+            "matches": [
+              {
+                "channel": "image",
+                "score": 0.8125
+              }
+            ]
+          },
+          {
+            "id": "test:two",
+            "score": 0.5,
+            "cosine": 0.1,
+            "matches": []
+          }
+        ]
+      },
+      "artifact": {
+        "schema_version": 1,
+        "feature_version": "candidate-signals-v1",
+        "fit_version": "bounded-threshold-grid-v1",
+        "protocol_sha256": "ccf9e230ab553430ebacc320fed8413ba7e137a459fdfd8fe8e470a0e1e69849",
+        "retrieval_sha256": "2e2bf046ae69f2292b1b14073eafc7c11874e645ac1ca7683f986d51c9fd6307",
+        "development": {
+          "fixture_sha256": "5555555555555555555555555555555555555555555555555555555555555555",
+          "responses_sha256": "5555555555555555555555555555555555555555555555555555555555555555",
+          "binary_sha256": "5555555555555555555555555555555555555555555555555555555555555555",
+          "contract_sha256": "3460166733affac363e071d5b8fbb7f8ae267d7c2ff323a033ae2356a83c63f9"
+        },
+        "profiles": [
+          {
+            "query_type": "image",
+            "text_mode": null,
+            "observations": false,
+            "eligible_entities_sha256": "9d91103eb2a25166fa5696c6bd98ff51ba826aaaf6fb6e1717ca559af325144e",
+            "minimums": {
+              "image_cosine": 500000,
+              "ranking_margin": 100000
+            }
+          }
+        ]
+      },
+      "features": {
+        "ranking_margin": 250000,
+        "image_cosine": 812500
+      },
+      "decision": null
+    }
+  ],
+  "binding": {
+    "manifest": {
+      "format_version": 4,
+      "content_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "recipe_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "dataset_id": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "entities": 2,
+      "evidence_pages": 2,
+      "chunks": 2,
+      "sources": [
+        "test"
+      ],
+      "model": {
+        "id": "<model & café>\n雷达",
+        "revision": "dddddddddddddddddddddddddddddddddddddddd",
+        "dimensions": 384
+      },
+      "image": {
+        "gallery_sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+        "model_sha256": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+        "search": {
+          "fusion": "rrf-v1",
+          "rank_constant": 60,
+          "calibration": null
+        }
+      },
+      "observations": {
+        "index_sha256": "9999999999999999999999999999999999999999999999999999999999999999"
+      },
+      "search": {
+        "version": "test-policy",
+        "lexical_weight": 2.0,
+        "semantic_weight": 1.0
+      },
+      "research": {
+        "version": "test-research"
+      },
+      "files": {
+        "entities/test/one.json": "1111111111111111111111111111111111111111111111111111111111111111",
+        "entities/test/two.json": "2222222222222222222222222222222222222222222222222222222222222222",
+        "image/index.json": "3333333333333333333333333333333333333333333333333333333333333333",
+        "observations/index.json": "4444444444444444444444444444444444444444444444444444444444444444"
+      }
+    },
+    "retrieval_sha256": "2e2bf046ae69f2292b1b14073eafc7c11874e645ac1ca7683f986d51c9fd6307",
+    "entity_ids": [
+      "test:two",
+      "test:one",
+      "test:one"
+    ],
+    "eligible_entities_sha256": "9d91103eb2a25166fa5696c6bd98ff51ba826aaaf6fb6e1717ca559af325144e"
+  },
+  "framing_cases": [
+    {
+      "value": null,
+      "frame_hex": "6e"
+    },
+    {
+      "value": false,
+      "frame_hex": "66"
+    },
+    {
+      "value": true,
+      "frame_hex": "74"
+    },
+    {
+      "value": 1,
+      "frame_hex": "64336666303030303030303030303030303b"
+    },
+    {
+      "value": 1.0,
+      "frame_hex": "64336666303030303030303030303030303b"
+    },
+    {
+      "value": -0.0,
+      "frame_hex": "64303030303030303030303030303030303b"
+    },
+    {
+      "value": 1e-06,
+      "frame_hex": "64336562306336663761306235656438643b"
+    },
+    {
+      "value": {
+        "b": 1.0,
+        "a": "<& café>\n雷达",
+        "empty": []
+      },
+      "frame_hex": "6f333a73313a617331363a3c2620636166c3a93e0ae99bb7e8bebe73313a6264336666303030303030303030303030303b73353a656d70747961303a"
+    },
+    {
+      "value": [
+        true,
+        null,
+        2.5,
+        "é"
+      ],
+      "frame_hex": "61343a746e64343030343030303030303030303030303b73323ac3a9"
+    }
+  ]
+}

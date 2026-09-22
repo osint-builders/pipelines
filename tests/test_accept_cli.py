@@ -13,11 +13,126 @@ from accept_cli import (
     accept_search_policy,
     contains_query_path,
     source_probe_scores,
+    validate_calibration_response,
     validate_image_response,
     validate_observation_export,
     validate_observation_response,
     validate_text_ranking,
 )
+
+
+def test_calibrated_acceptance_recomputes_shared_protocol_goldens() -> None:
+    from pipelines.calibration import canonical, digest
+
+    fixture = json.loads(
+        (Path(__file__).parent / "fixtures/calibration.json").read_bytes()
+    )
+    for case in fixture["golden"]:
+        if case["decision"] is None:
+            continue
+        manifest = deepcopy(fixture["binding"]["manifest"])
+        manifest["format_version"] = 5
+        manifest["calibration"] = {"sha256": digest(canonical(case["artifact"]))}
+        response = {**deepcopy(case["response"]), **case["decision"]}
+        assert validate_calibration_response(
+            response,
+            manifest,
+            calibration=case["artifact"],
+            eligible_ids=["test:one", "test:two"],
+        )
+        changed = deepcopy(response)
+        changed["decision"]["reason"] = "unsupported assertion"
+        with pytest.raises(ValueError, match="recomputed decision"):
+            validate_calibration_response(
+                changed,
+                manifest,
+                calibration=case["artifact"],
+                eligible_ids=["test:one", "test:two"],
+            )
+
+
+def test_calibration_acceptance_keeps_unsupported_pools_and_base_bundles_strict() -> (
+    None
+):
+    from pipelines.calibration import canonical, digest
+
+    fixture = json.loads(
+        (Path(__file__).parent / "fixtures/calibration.json").read_bytes()
+    )
+    case = fixture["golden"][4]
+    manifest = deepcopy(fixture["binding"]["manifest"])
+    response = {**deepcopy(case["response"]), **case["decision"]}
+    with pytest.raises(ValueError, match="Uncalibrated bundle"):
+        validate_calibration_response(response, manifest)
+    manifest["format_version"] = 5
+    manifest["calibration"] = {"sha256": digest(canonical(case["artifact"]))}
+    with pytest.raises(ValueError, match="Unsupported calibration profile"):
+        validate_calibration_response(
+            response, manifest, calibration=case["artifact"], eligible_ids=["test:one"]
+        )
+    response.pop("decision")
+    response.update(
+        match_status="no_supported_match", calibration_status="uncalibrated"
+    )
+    assert not validate_calibration_response(
+        response, manifest, calibration=case["artifact"], eligible_ids=["test:one"]
+    )
+    manifest["calibration"]["sha256"] = "0" * 64
+    with pytest.raises(ValueError, match="checksum mismatch"):
+        validate_calibration_response(
+            response, manifest, calibration=case["artifact"], eligible_ids=["test:one"]
+        )
+
+
+def test_observation_acceptance_allows_only_recomputed_calibrated_decisions() -> None:
+    from pipelines.calibration import (
+        canonical,
+        decide,
+        digest,
+        retrieval_identity,
+        scope_identity,
+    )
+
+    manifest, response = ranked_response(enabled=True)
+    _, rows, recipes, evidence, images = observation_contract()
+    manifest.update(format_version=5, files={})
+    golden = json.loads(
+        (Path(__file__).parent / "fixtures/calibration.json").read_bytes()
+    )["golden"][2]
+    fitted = deepcopy(golden["artifact"])
+    fitted["retrieval_sha256"] = retrieval_identity(manifest)
+    fitted["profiles"][0]["eligible_entities_sha256"] = scope_identity(evidence)
+    fitted["profiles"][0]["minimums"] = {"semantic_cosine": 500000, "ranking_margin": 0}
+    manifest["calibration"] = {"sha256": digest(canonical(fitted))}
+    context = {
+        key: value for key, value in fitted["profiles"][0].items() if key != "minimums"
+    }
+    response.update(decide(fitted, context, response) or {})
+    assert response["match_status"] == "candidates"
+    assert validate_observation_response(
+        response,
+        manifest,
+        rows,
+        recipes,
+        evidence,
+        enabled=True,
+        images=images,
+        calibration=fitted,
+        eligible_ids=list(evidence),
+    )
+    response["decision"]["features"]["semantic_cosine"] = 999999
+    with pytest.raises(ValueError, match="recomputed decision"):
+        validate_observation_response(
+            response,
+            manifest,
+            rows,
+            recipes,
+            evidence,
+            enabled=True,
+            images=images,
+            calibration=fitted,
+            eligible_ids=list(evidence),
+        )
 
 
 def contract() -> dict:

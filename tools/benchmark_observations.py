@@ -83,7 +83,10 @@ def benchmark(
         raise ValueError("The frozen image fixture changed")
     with zipfile.ZipFile(bundle) as archive:
         manifest, _ = gallery_contract(archive, json.loads(gallery_body))
-        if manifest.get("format_version") != 4 or "observations" not in manifest:
+        if (
+            manifest.get("format_version") not in {4, 5}
+            or "observations" not in manifest
+        ):
             raise ValueError("The benchmark requires an observation bundle")
         artifacts = {}
         for name in ("observations/index.json", "observations/recipes.json"):

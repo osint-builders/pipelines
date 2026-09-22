@@ -292,7 +292,7 @@ def observe(
         raise ValueError("Select at least one OCR or description model")
     with zipfile.ZipFile(bundle) as archive:
         manifest = json.loads(archive.read("manifest.json"))
-        if manifest.get("format_version") not in {3, 4} or "image" not in manifest:
+        if manifest.get("format_version") not in {3, 4, 5} or "image" not in manifest:
             raise ValueError("Observation analysis requires an image bundle")
         entities = [
             json.loads(

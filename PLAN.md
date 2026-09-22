@@ -28,7 +28,7 @@ commands and the source table.
 | M7 — Better text and combined ranking | M1, M5, M6 | Verified by user; `0d20f4a`, CI and offline acceptance pass; 116 baseline ranks preserved, new text 18/18 within five; latency and calibration gaps tracked in M10 |
 | M8 — Entity relationships and precise filters | M1, M7 | Verified by user; `beafc67b`, CI and offline acceptance pass; 63 evidence checks, 116 unchanged baseline ranks; resource gaps tracked in M10 |
 | M9 — Media coverage across all sources | M3, M5, M6 | Verified by user; `62d438c`, 822 tests and CI pass; all 11 sources audited, 9,696 saved media records, deterministic offline rebuild and Windows/Linux CLI acceptance |
-| M10 — Quality gates and compact releases | M4–M9 | In progress; runtime profiling, compact gallery allocation, evaluation coverage, and release identity/validation |
+| M10 — Quality gates and compact releases | M4–M9 | In progress; compact gallery rebuilt, scoped calibration implemented, reviewed benchmark candidates and final resource validation underway |
 
 Advance in milestone order and stop for user verification between milestones.
 Agents may work concurrently within the active milestone; dependencies do not authorize
@@ -804,7 +804,32 @@ and invalidate the appropriate cached build. The rebuilt gallery embeds 3,111 di
 vectors across 3,122 records and 3,102 entities, up from 1,101 entities, using
 33,554,327 preview bytes (under 32 MiB). Per-source covered entities are ArmyRecognition
 11, Commons 148, Deagel 943, Fandom 11, MilitaryPeriscope 132, RadarTutorial 1,732,
-RussianForces 7, VirtualGlobetrotting 100, and Wikipedia 18. New-view analyses are running.
+RussianForces 7, VirtualGlobetrotting 100, and Wikipedia 18. All indexed records now
+have completed description/OCR outcomes: 3,122 descriptions, 648 OCR observations,
+and 2,474 empty OCR outcomes, with no failed or pending analyses. Shared image bytes
+produce 3,756 unique observations and 3,780 chunks. A strict cached analysis rerun
+made no fresh inference or network attempts. The full-bundle audit passes all 13
+checks, including 9,442 source/text/research members unchanged from M9.
+
+Full candidate dataset: `dabb846669424a7ea4b8b381d9011948f8ee6da185d60a528c9375b7df1164e7`.
+Bundle SHA-256: `48fbe108afcfa2a3294e8f29707695d362f515186b86b20c41c9e1a57f0e7165`.
+This complete gallery is for coverage/resource validation; benchmark query photo
+groups still need exclusion before calibration or held-out quality measurement.
+
+Optional format-5 calibration now binds an acceptance rule to the exact retrieval
+artifacts, mode, observation setting, and eligible entity pool. Python fits deterministic
+thresholds from frozen reviewed development captures; Go applies the same integer
+features before trimming results. Existing formats retain their responses. Thirteen
+shared decision cases and framing/binding checks agree across languages. Packaging
+preserves source and retrieval members, and publication checks reproduce thresholds
+from hashed development evidence. No real thresholds have been fitted. Hashes/refitting
+check evidence consistency; captured responses still require a trusted capture process.
+
+Ignored review packets contain 360 text candidates with 587 checked source citations,
+261 visually inspected archived images, and 284 inspected external negative-image
+candidates. Duplicates, components, illustrations, and ambiguous variants remain
+flagged. These are candidates, with no new accepted or frozen benchmark labels.
+The user confirmed there is no existing reviewed image set to import.
 
 Frozen-seed reruns remain pilot measurements: image ranks place eight of nine positive
 queries first and combined queries two of two first, but accepted matches remain zero
@@ -820,8 +845,9 @@ Windows hardware comparison, verifies exact executable/archive hashes, and defau
 manual workflow runs to validation only. Missing review/calibration evidence blocks
 publication. Portable evidence staging retains the underlying report/query hashes.
 The root README distinguishes the current text-only public release from newer local
-multimodal builds. The current implementation passes 863 Python tests, full lint/format
+multimodal builds. The calibration integration passes 931 Python tests, full lint/format
 and type checks (including installed OCR/description extras), Go tests, and Go vet.
+Nine default-bundle JSON responses match the prior implementation exactly.
 
 - [ ] Run the frozen evaluation suite for text, image, combined, OCR, filters, and entity relationships; report results by task and source.
 - [ ] Verify top-result accuracy, recall within the first five results, confusable variants, and no-match behavior meet M1's targets.

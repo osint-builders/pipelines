@@ -62,9 +62,9 @@ func searchImage(ctx context.Context, d *dataset.Dataset, filename, query string
 	}
 	var results []dataset.VisualResult
 	if observations {
-		results, err = d.SearchImagesWithObservations(encoded.Normalized, textVector, query, filter, limit)
+		results, err = d.SearchImagesWithObservations(encoded.Normalized, textVector, query, filter, calibrationLimit(d, limit))
 	} else {
-		results, err = d.SearchImages(encoded.Normalized, textVector, query, filter, limit)
+		results, err = d.SearchImages(encoded.Normalized, textVector, query, filter, calibrationLimit(d, limit))
 	}
 	if err != nil {
 		return err
@@ -78,6 +78,9 @@ func searchImage(ctx context.Context, d *dataset.Dataset, filename, query string
 	}
 	if query != "" && d.Manifest.Search != nil {
 		response["ranking_policy"], response["score_kind"] = d.Manifest.Search, "ranking_signal"
+	}
+	if err := completeSearch(d, response, queryType, "hybrid", observations, filter, results, visualCalibrationCandidates(results), limit); err != nil {
+		return err
 	}
 	return output.Encode(response)
 }

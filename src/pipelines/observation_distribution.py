@@ -160,7 +160,7 @@ def build_observation_members(
 def validate_observation_bundle(archive: zipfile.ZipFile, manifest: dict) -> dict:
     metadata = manifest.get("observations", {})
     if (
-        manifest.get("format_version") != 4
+        manifest.get("format_version") not in {4, 5}
         or "image" not in manifest
         or metadata.get("schema_version") != 1
         or metadata.get("dimensions") != LOCK["dimensions"]

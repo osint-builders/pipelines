@@ -48,8 +48,8 @@ Compare accepts 2 to 20 unique IDs and preserves each source claim.
 Place flags before the query or ID. Every search returns stable, source-qualified IDs.
 JSON is the default output. Source export preserves the archived response bytes.
 Image queries accept local JPEG/PNG files up to 20 MiB and 40 million pixels.
-Image suggestions are uncalibrated. Media export writes the embedded preview.
-Generated OCR/descriptions are searched only with --observations and remain uncalibrated.
+Image suggestions abstain unless this bundle has calibration for the query's search scope.
+Generated OCR/descriptions are searched only with --observations. Media export writes the embedded preview.
 All commands work offline. This executable never scrapes or downloads models.
 `
 
@@ -221,6 +221,9 @@ func runWithFiles(ctx context.Context, args []string, out io.Writer, files fs.FS
 		if d.Manifest.Research != nil {
 			response["research_available"], response["research"] = true, d.Manifest.Research
 		}
+		if d.HasCalibration() {
+			response["calibration"] = d.Manifest.Calibration
+		}
 		return output.Encode(response)
 	case "get":
 		raw, err := d.Export(value, format, evidence)
@@ -308,7 +311,7 @@ func runWithFiles(ctx context.Context, args []string, out io.Writer, files fs.FS
 		return closeErr
 	}
 	if useObservations {
-		results, err := d.SearchObservations(vector, value, mode == "hybrid", filter, limit)
+		results, err := d.SearchObservations(vector, value, mode == "hybrid", filter, calibrationLimit(d, limit))
 		if err != nil {
 			return err
 		}
@@ -316,9 +319,12 @@ func runWithFiles(ctx context.Context, args []string, out io.Writer, files fs.FS
 		if mode == "hybrid" && d.Manifest.Search != nil {
 			response["ranking_policy"], response["score_kind"] = d.Manifest.Search, "ranking_signal"
 		}
+		if err := completeSearch(d, response, "text", mode, true, filter, results, visualCalibrationCandidates(results), limit); err != nil {
+			return err
+		}
 		return output.Encode(response)
 	}
-	results, err := d.Search(vector, value, mode == "hybrid", filter, limit, "")
+	results, err := d.Search(vector, value, mode == "hybrid", filter, calibrationLimit(d, limit), "")
 	if err != nil {
 		return err
 	}
@@ -346,6 +352,13 @@ func runWithFiles(ctx context.Context, args []string, out io.Writer, files fs.FS
 		if len(results) == 0 || (!results[0].NameMatch && results[0].Ranking.LexicalRank == 0) {
 			response["match_status"] = "no_supported_match"
 		}
+	}
+	candidates := make([]dataset.CalibrationCandidate, len(results))
+	for i := range results {
+		candidates[i] = dataset.CalibrationCandidate{Score: results[i].Score, Cosine: &results[i].Cosine, Matches: contributions[i].Matches}
+	}
+	if err := completeSearch(d, response, "text", mode, false, filter, contributions, candidates, limit); err != nil {
+		return err
 	}
 	return output.Encode(response)
 }

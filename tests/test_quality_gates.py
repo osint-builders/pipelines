@@ -9,6 +9,8 @@ import quality_gates
 from quality_gates import (
     REQUIRED_RELEASE_CHECKS,
     artifact,
+    calibration_proof,
+    calibration_separation,
     evaluate,
     metrics,
     passing,
@@ -17,6 +19,356 @@ from quality_gates import (
     text_regression,
     validate_report,
 )
+
+
+def calibration_inputs(
+    tmp_path: Path, *, review_quote: str = "Archived source identity for test:one"
+) -> tuple[dict, dict, dict]:
+    from pipelines.calibration import (
+        canonical,
+        decide,
+        digest,
+        fit,
+        retrieval_identity,
+        scope_identity,
+    )
+
+    ids = ["test:one", "test:three", "test:two"]
+    values: dict = {
+        "index.json": [{"id": key, "source": "test"} for key in ids],
+        "image/index.json": [],
+        "observations/index.json": [],
+        "observations/recipes.json": {},
+    }
+    for key in ids:
+        values["entities/" + key.replace(":", "/") + ".json"] = {
+            "id": key,
+            "evidence": [
+                {
+                    "id": "page",
+                    "url": "https://example.test/" + key,
+                    "markdown": "Archived source identity for " + key,
+                }
+            ],
+        }
+    members = {name: canonical(value) for name, value in values.items()}
+    base: dict = {
+        "format_version": 4,
+        "dataset_id": "base-dataset",
+        "files": {name: digest(raw) for name, raw in members.items()},
+        "image": {"search": {"calibration": None}},
+        "observations": {},
+    }
+    binding = retrieval_identity(base)
+    executable = tmp_path / "development-cli"
+    executable.write_bytes(b"synthetic development executable identity")
+    contract = quality_gates.ROOT / "tests/fixtures/search_acceptance.json"
+    cases = []
+    captures = []
+
+    def result(key: str, score: float) -> dict:
+        return {
+            "id": key,
+            "source": "test",
+            "score": score,
+            "cosine": score,
+            "evidence_id": "page",
+            "matches": [
+                {
+                    "channel": "text",
+                    "score": score,
+                    "evidence_id": "page",
+                    "url": "https://example.test/" + key,
+                }
+            ],
+        }
+
+    for number in range(41):
+        expected = ["test:one"] if number == 0 else []
+        query = "Synthetic development input " + str(number)
+        review = {
+            "reviewer": "synthetic unit test",
+            "rationale": "Synthetic fixture validates proof mechanics only",
+            "evidence": [
+                {
+                    "entity_id": "test:one",
+                    "evidence_id": "page",
+                    "quote": review_quote,
+                }
+            ]
+            if expected
+            else [],
+        }
+        cases.append(
+            {
+                "id": str(number),
+                "split": "development",
+                "reviewed": True,
+                "label_basis": "Synthetic source-grounded test",
+                "group_id": "development-" + str(number),
+                "scope": "global",
+                "query_type": "text",
+                "text_mode": "vector",
+                "observations": False,
+                "query": {"text": query, "image_sha256": None},
+                "expected_ids": expected,
+                "confusable_ids": [],
+                "review": review,
+                "negative_domain": "unrelated",
+            }
+        )
+        response = {
+            "dataset_id": base["dataset_id"],
+            "query_type": "text",
+            "mode": "vector",
+            "query": query,
+            "match_status": "candidates",
+            "results": [
+                result("test:one", 0.8 if expected else 0.1),
+                result("test:two", 0.0),
+            ],
+        }
+        captures.append(
+            {
+                "case_id": str(number),
+                "eligible_entities_sha256": scope_identity(ids),
+                "response": response,
+            }
+        )
+    development = {
+        "schema_version": 1,
+        "status": "reviewed_frozen_development",
+        "retrieval_sha256": binding,
+        "scopes": {"global": ids},
+        "cases": cases,
+    }
+    fixture_bytes = canonical(development)
+    responses = {
+        "schema_version": 1,
+        "protocol": "calibration-development-responses-v1",
+        "split": "development",
+        "fixture_sha256": digest(fixture_bytes),
+        "binary_sha256": digest(executable.read_bytes()),
+        "dataset_id": base["dataset_id"],
+        "retrieval_sha256": binding,
+        "cases": captures,
+    }
+    responses_bytes = canonical(responses)
+    fitted = fit(
+        base,
+        fixture_bytes,
+        responses_bytes,
+        binary_sha256=digest(executable.read_bytes()),
+        contract_bytes=contract.read_bytes(),
+    )
+    body = canonical(fitted)
+    final = {
+        **base,
+        "format_version": 5,
+        "dataset_id": "final-dataset",
+        "files": {**base["files"], "calibration.json": digest(body)},
+        "calibration": {
+            "schema_version": 1,
+            "member": "calibration.json",
+            "sha256": digest(body),
+            "profiles": len(fitted["profiles"]),
+            "retrieval_sha256": binding,
+        },
+    }
+    paths = {"development_binary": executable, "contract": contract}
+    for name, manifest, content in (
+        ("development_bundle", base, members),
+        ("bundle", final, {**members, "calibration.json": body}),
+    ):
+        path = tmp_path / (name + ".zip")
+        with zipfile.ZipFile(path, "w") as archive:
+            archive.writestr("manifest.json", canonical(manifest))
+            for member, raw in content.items():
+                archive.writestr(member, raw)
+        paths[name] = path
+    for name, raw in (
+        ("development_fixture", fixture_bytes),
+        ("development_responses", responses_bytes),
+    ):
+        paths[name] = tmp_path / (name + ".json")
+        paths[name].write_bytes(raw)
+    fixture = {
+        "status": "frozen_before_retrieval",
+        "calibration": {
+            "artifact_sha256": digest(body),
+            "development_fixture_sha256": digest(fixture_bytes),
+            "development_responses_sha256": digest(responses_bytes),
+        },
+        "media": [],
+        "cases": [
+            {
+                "id": "held-out",
+                "split": "evaluation",
+                "status": "ready",
+                "query": {"text": "Separate held-out query", "source": "test"},
+                "expected_ids": ["test:three"],
+                "confusable_ids": [],
+            }
+        ],
+    }
+    paths["fixture"] = tmp_path / "evaluation-fixture.json"
+    paths["fixture"].write_bytes(canonical(fixture))
+    response = {
+        "dataset_id": final["dataset_id"],
+        "query_type": "text",
+        "mode": "vector",
+        "query": "Separate held-out query",
+        "results": [result("test:three", 0.9), result("test:one", 0.0)],
+    }
+    context = {
+        "query_type": "text",
+        "text_mode": "vector",
+        "observations": False,
+        "eligible_entities_sha256": scope_identity(ids),
+    }
+    response.update(decide(fitted, context, response) or {})
+    evaluation = {
+        "fixture_sha256": digest(paths["fixture"].read_bytes()),
+        "calibration_sha256": digest(body),
+        "cases": [
+            {
+                "id": "held-out",
+                "scope": "global",
+                "eligible_entities_sha256": scope_identity(ids),
+                "response": response,
+            }
+        ],
+    }
+    return paths, fixture, evaluation
+
+
+def test_calibration_proof_refits_and_replays_captured_decisions(
+    tmp_path: Path,
+) -> None:
+    paths, fixture, evaluation = calibration_inputs(tmp_path)
+    report = calibration_proof(paths, fixture, evaluation)
+    assert report["development_cases"] == 41
+    assert report["held_out_decisions"] == 1
+    assert len(report["frozen_seed_sha256"]) == 4
+
+
+def test_calibration_proof_rejects_review_claim_without_archived_quote(
+    tmp_path: Path,
+) -> None:
+    paths, fixture, evaluation = calibration_inputs(
+        tmp_path, review_quote="An invented source claim"
+    )
+    with pytest.raises(ValueError, match="archived evidence"):
+        calibration_proof(paths, fixture, evaluation)
+
+
+def test_calibration_proof_rejects_rehashed_threshold_change(tmp_path: Path) -> None:
+    from pipelines.calibration import canonical, digest
+
+    paths, fixture, evaluation = calibration_inputs(tmp_path)
+    with zipfile.ZipFile(paths["bundle"]) as archive:
+        members = {name: archive.read(name) for name in archive.namelist()}
+    manifest = json.loads(members["manifest.json"])
+    fitted = json.loads(members["calibration.json"])
+    fitted["profiles"][0]["minimums"]["semantic_cosine"] -= 1
+    members["calibration.json"] = canonical(fitted)
+    checksum = digest(members["calibration.json"])
+    manifest["files"]["calibration.json"] = checksum
+    manifest["calibration"]["sha256"] = checksum
+    members["manifest.json"] = canonical(manifest)
+    with zipfile.ZipFile(paths["bundle"], "w") as archive:
+        for name, raw in members.items():
+            archive.writestr(name, raw)
+    with pytest.raises(ValueError, match="does not reproduce"):
+        calibration_proof(paths, fixture, evaluation)
+
+
+@pytest.mark.parametrize(
+    "damage", ["decision", "scope", "selection", "executable", "response", "missing"]
+)
+def test_calibration_proof_rejects_changed_or_missing_evidence(
+    tmp_path: Path, damage: str
+) -> None:
+    paths, fixture, evaluation = calibration_inputs(tmp_path)
+    if damage == "decision":
+        evaluation["cases"][0]["response"]["decision"]["features"][
+            "semantic_cosine"
+        ] += 1
+    elif damage == "scope":
+        evaluation["cases"][0]["eligible_entities_sha256"] = "0" * 64
+    elif damage == "selection":
+        fixture["calibration"]["artifact_sha256"] = "0" * 64
+    elif damage == "executable":
+        paths["development_binary"].write_bytes(b"changed executable")
+    elif damage == "response":
+        captured = json.loads(paths["development_responses"].read_bytes())
+        captured["cases"][0]["response"]["results"][0]["cosine"] = 0.7
+        paths["development_responses"].write_text(
+            json.dumps(captured), encoding="utf-8"
+        )
+    else:
+        paths.pop("development_responses")
+    with pytest.raises(ValueError):
+        calibration_proof(paths, fixture, evaluation)
+
+
+@pytest.mark.parametrize(
+    "damage", ["photo_group", "photo_bytes", "text_entity", "text_query", "frozen_seed"]
+)
+def test_calibration_separation_rejects_held_out_and_seed_reuse(damage: str) -> None:
+    development: dict = {
+        "cases": [
+            {
+                "group_id": "dev-photo",
+                "query": {"text": "independent query", "image_sha256": "a" * 64},
+                "expected_ids": ["test:one"],
+                "confusable_ids": [],
+            }
+        ]
+    }
+    fixture = {
+        "media": [
+            {
+                "status": "captured",
+                "split": "development",
+                "sha256": "a" * 64,
+                "photo_group": "dev-photo",
+            },
+            {
+                "status": "captured",
+                "split": "evaluation",
+                "sha256": "b" * 64,
+                "photo_group": "eval-photo",
+            },
+        ],
+        "cases": [
+            {
+                "split": "evaluation",
+                "query": {"text": "held-out phrase"},
+                "expected_ids": ["test:held"],
+                "confusable_ids": [],
+            }
+        ],
+    }
+    assert calibration_separation(development, fixture)["development_photos"] == 1
+    case = development["cases"][0]
+    if damage == "photo_group":
+        case["group_id"] = "eval-photo"
+    elif damage == "photo_bytes":
+        case["query"]["image_sha256"] = "b" * 64
+    elif damage == "text_entity":
+        case["query"]["image_sha256"] = None
+        case["expected_ids"] = ["test:held"]
+    elif damage == "text_query":
+        case["query"]["text"] = "  HELD-out phrase  "
+    else:
+        seed = json.loads(
+            (quality_gates.ROOT / "tests/fixtures/retrieval.json").read_bytes()
+        )
+        case["query"]["image_sha256"] = None
+        case["expected_ids"] = [seed[0]["expected"]]
+    with pytest.raises(ValueError):
+        calibration_separation(development, fixture)
 
 
 def test_abstained_suggestions_count_as_positive_misses() -> None:

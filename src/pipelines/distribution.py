@@ -265,6 +265,41 @@ def write_bundle(output: Path, members: dict[str, bytes]) -> None:
     temporary.replace(output)
 
 
+def validate_calibration_bundle(archive: zipfile.ZipFile, manifest: dict) -> None:
+    member = "calibration.json"
+    descriptor = manifest.get("calibration")
+    present = member in archive.namelist() or member in manifest["files"]
+    if manifest["format_version"] != 5:
+        if "calibration" in manifest or present:
+            raise ValueError("Calibration requires bundle format 5")
+        return
+    from pipelines.calibration import MAX_BYTES, parse_artifact
+
+    if (
+        not isinstance(descriptor, dict)
+        or set(descriptor)
+        != {"member", "sha256", "schema_version", "profiles", "retrieval_sha256"}
+        or descriptor["member"] != member
+        or archive.namelist().count(member) != 1
+        or archive.getinfo(member).file_size > MAX_BYTES
+    ):
+        raise ValueError("Invalid calibration extension")
+    body = archive.read(member)
+    if sha256(body) != descriptor["sha256"] or sha256(body) != manifest["files"].get(
+        member
+    ):
+        raise ValueError("Calibration checksum mismatch")
+    artifact = parse_artifact(body, manifest)
+    if (
+        type(descriptor["profiles"]) is not int
+        or descriptor["profiles"] != len(artifact["profiles"])
+        or type(descriptor["schema_version"]) is not int
+        or descriptor["schema_version"] != artifact["schema_version"]
+        or descriptor["retrieval_sha256"] != artifact["retrieval_sha256"]
+    ):
+        raise ValueError("Calibration descriptor mismatch")
+
+
 def package(
     root: Path,
     sources: list[str],
@@ -275,6 +310,7 @@ def package(
     image_model: Path | None = None,
     image_selection: Path | None = None,
     observations: Path | None = None,
+    calibration: Path | None = None,
 ) -> dict:
     from filelock import FileLock
 
@@ -293,6 +329,7 @@ def package(
             image_model=image_model,
             image_selection=image_selection,
             observations=observations,
+            calibration=calibration,
         )
 
 
@@ -306,6 +343,7 @@ def _package(
     image_model: Path | None = None,
     image_selection: Path | None = None,
     observations: Path | None = None,
+    calibration: Path | None = None,
 ) -> dict:
     from pipelines.research_distribution import (
         build_research_members,
@@ -320,10 +358,14 @@ def _package(
         raise ValueError("Image selection requires an image model")
     if observations is not None and image_model is None:
         raise ValueError("Observations require an image model and gallery")
+    if calibration is not None and (image_model is None or observations is None):
+        raise ValueError("Calibration requires an image gallery and observations")
     entities, html, responses = collect_artifacts(root, sources)
     digest = content_digest(entities)
     format_version = (
-        4
+        5
+        if calibration is not None
+        else 4
         if observations is not None
         else (3 if image_model is not None else FORMAT_VERSION)
     )
@@ -332,6 +374,9 @@ def _package(
         "model": LOCK,
         "storage": STORAGE_VERSION,
     }
+    calibration_body = calibration.read_bytes() if calibration is not None else None
+    if calibration_body is not None:
+        recipe_spec["calibration"] = sha256(calibration_body)
     image_members: dict[str, bytes] = {}
     image_metadata: dict = {}
     observation_members: dict[str, bytes] = {}
@@ -395,6 +440,7 @@ def _package(
                     raise ValueError("Existing bundle failed integrity check")
                 validate_search_bundle(previous, manifest, entities)
                 validate_research_bundle(previous, manifest, entities)
+                validate_calibration_bundle(previous, manifest)
                 if image_model is not None:
                     from pipelines.image_distribution import validate_image_bundle
 
@@ -493,6 +539,19 @@ def _package(
         manifest["image"] = image_metadata
     if observations is not None:
         manifest["observations"] = observation_metadata
+    if calibration_body is not None:
+        from pipelines.calibration import parse_artifact
+
+        artifact = parse_artifact(calibration_body, manifest)
+        members["calibration.json"] = calibration_body
+        manifest["files"]["calibration.json"] = sha256(calibration_body)
+        manifest["calibration"] = {
+            "member": "calibration.json",
+            "sha256": sha256(calibration_body),
+            "schema_version": artifact["schema_version"],
+            "profiles": len(artifact["profiles"]),
+            "retrieval_sha256": artifact["retrieval_sha256"],
+        }
     members["manifest.json"] = canonical(manifest)
     pending = output.with_suffix(".pending.zip")
     try:
@@ -500,6 +559,7 @@ def _package(
         with zipfile.ZipFile(pending) as archive:
             validate_search_bundle(archive, manifest, entities)
             validate_research_bundle(archive, manifest, entities)
+            validate_calibration_bundle(archive, manifest)
             if image_model is not None:
                 from pipelines.image_distribution import validate_image_bundle
 
