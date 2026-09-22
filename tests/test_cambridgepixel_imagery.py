@@ -54,6 +54,7 @@ def test_reviewed_photo_requires_exact_captured_model_and_image_evidence() -> No
     "markup",
     [
         f'<video poster="{IMAGE}"></video>',
+        f'<div role="img" data-thumbnail="{IMAGE}"></div>',
         f'<picture><source srcset="{IMAGE}"><img src="/fallback.jpg"></picture>',
         f'<a href="{IMAGE}"><img src="/thumbnail.jpg"></a>',
         f'<picture><source srcset="/small.jpg 800w, {IMAGE} 1600w"><img src="/fallback.jpg"></picture>',
@@ -75,3 +76,12 @@ def test_family_illustration_keeps_ambiguous_association() -> None:
     candidate = discover(URL, BODY, [entity.metadata(source.id)], [match])[0]
     assert candidate.references[0].ambiguous
     assert candidate.references[0].association == "reviewed_family_context"
+
+
+def test_image_url_escaping_preserves_reserved_path_characters() -> None:
+    match = {**MATCH, "image_url": "https://cdn.manufacturer.test/radar%20photo.jpg"}
+    body = BODY.replace(IMAGE.encode(), b"https://cdn.manufacturer.test/radar photo.jpg")
+    validate_page(URL, body, [match])
+    match["image_url"] = "https://cdn.manufacturer.test/radar%2Fphoto.jpg"
+    with pytest.raises(ValueError, match="image changed"):
+        validate_page(URL, body.replace(b"radar photo", b"radar/photo"), [match])

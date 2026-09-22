@@ -403,7 +403,8 @@
     "image_url": "https://bel-india.in/wp-content/uploads/2022/12/Battle-Field-Surveillance-Radar-Medium-Range-1200x750.jpg",
     "caption": "BEL BFSR-MR radar on a tripod with cable reel and terminal",
     "quote": "Battlefield Surveillance Radar Medium Range (BFSR- MR)",
-    "notes": "Google Images includes both medium and short range systems. Selected the exact BEL medium-range page and inspected its photograph: broad curved antenna on a green tripod with cable reel and terminal."
+    "notes": "Google Images includes both medium and short range systems. Selected the exact BEL medium-range page and inspected its photograph: broad curved antenna on a green tripod with cable reel and terminal.",
+    "media_capture_method": "browser-asset"
   },
   {
     "manufacturer": "BEL (Bharat Electronics Limited)",
@@ -414,7 +415,8 @@
     "image_url": "https://bel-india.in/wp-content/uploads/2022/12/Battle-Field-Surveillance-Radar-Short-Range-1200x750.jpg",
     "caption": "BEL BFSR-SR rectangular radar antenna on a tripod",
     "quote": "BFSR-SR is a man portable, battery powered surveillance and acquisition radar",
-    "notes": "Google Images returns the exact BEL short-range page. Inspected its labelled product photograph, showing a flat rectangular antenna and tripod with a ground terminal. The curved BFSR-MR antenna from other results is excluded."
+    "notes": "Google Images returns the exact BEL short-range page. Inspected its labelled product photograph, showing a flat rectangular antenna and tripod with a ground terminal. The curved BFSR-MR antenna from other results is excluded.",
+    "media_capture_method": "browser-asset"
   },
   {
     "manufacturer": "BEL (Bharat Electronics Limited)",
@@ -425,7 +427,8 @@
     "image_url": "https://bel-india.in/wp-content/uploads/2022/12/BFSR-XR20221012142005946-1200x750.jpg",
     "caption": "BEL BFSR-XR radar with a separate optical sensor on a hillside",
     "quote": "BFSR XR is a man portable, battery powered state-of-the-art Pulse Doppler Surveillance Radar",
-    "notes": "Exact BEL extended-range page found via Google Images. Inspected its product photograph: radar on the right tripod and separate optical sensor on the left, overlooking a mountain valley. Preserved installation context in the caption."
+    "notes": "Exact BEL extended-range page found via Google Images. Inspected its product photograph: radar on the right tripod and separate optical sensor on the left, overlooking a mountain valley. Preserved installation context in the caption.",
+    "media_capture_method": "browser-asset"
   },
   {
     "manufacturer": "Blighter",
@@ -530,5 +533,200 @@
     "caption": "CEATAC radar mounted on a Hawkei vehicle at Land Forces 2018",
     "quote": "CEATAC and CEAOPS radars for Land 19 Phase 7B",
     "notes": "The article explicitly captions the photograph as CEATAC at Land Forces 2018, credited to Julian Kerr. Visually inspected the compact faceted radar raised above the Hawkei display vehicle; distinct from the larger trailer-mounted CEAOPS."
+  },
+  {
+    "manufacturer": "CHAOS Industries",
+    "model": "Astria (CH002)",
+    "status": "matched",
+    "search_url": "https://www.google.com/search?udm=2&q=CHAOS+Industries+Astria+CH002+radar",
+    "page_url": "https://www.axios.com/2025/09/17/chaos-industries-astria-elgin-airforce",
+    "image_url": "https://images.axios.com/6ZtXWKWZyTctGxQCagiLKD7uL7k=/0x314:3000x2001/1920x1080/2025/09/16/1758058238537.jpeg?w=3840",
+    "caption": "Astria multi-antenna tower photographed at night",
+    "quote": "A peek at Astria, part of the Chaos Industries suite of sensing and networking gear.",
+    "notes": "Axios explicitly identifies Astria in the figure caption and credits CHAOS Industries. Visually inspected the guyed tower with multiple antennas; low-light silhouette limits fine hardware detail. The manufacturer CDN image could not be accessed under the browser site-safety policy; used this independently published, captioned source.",
+    "capture_method": "browser-dom"
+  },
+  {
+    "manufacturer": "CHAOS Industries",
+    "model": "Vanquish (CH001)",
+    "status": "matched",
+    "search_url": "https://www.google.com/search?udm=2&q=CHAOS+Industries+Vanquish+CH001+radar",
+    "page_url": "https://www.defensedaily.com/army-adds-chaos-industries-radar-technology-to-acquisition-marketplace/unmanned-systems/",
+    "image_url": "https://www.defensedaily.com/wp-content/uploads/2025/11/69156065219de2cb79253442-vanquish-p-2000.webp",
+    "caption": "Vanquish radar mast with four vertical antennas against a cloudy night sky",
+    "quote": "Vanquish distributed early warning radar.",
+    "notes": "The publicly visible figure caption explicitly identifies Vanquish and credits CHAOS. Visually inspected the mast and four slender antennas; selected the 2000-pixel original exposed in srcset. Excluded the newer Vanquish Prime partner announcement as a different model designation."
+  },
+  {
+    "manufacturer": "Consilium (now Simrad)",
+    "model": "Argus",
+    "status": "matched",
+    "search_url": "https://www.google.com/search?udm=2&q=Consilium+Simrad+Argus+radar",
+    "page_url": "https://www.mackaycomm.com/products/navigation/radar/simrad-argus-x-band-radar-pro-series/",
+    "image_url": "https://static.mackaycomm.com/wp-content/uploads/2016/12/simrad_argus-1_radar.png",
+    "caption": "Simrad ARGUS radar display console and control panel",
+    "quote": "Simrad ARGUS X-Band Radar Pro-Series",
+    "notes": "Mackay names the ARGUS product and labels this image specifically. Visually inspected the console with radar screen and controls; this is the operator display, not an antenna or emitter photograph. Retained the catalog manufacturer lineage."
+  },
+  {
+    "manufacturer": "Consilium (now Simrad)",
+    "model": "Selux ST",
+    "status": "matched",
+    "search_url": "https://www.google.com/search?udm=2&q=Consilium+Selux+ST+radar",
+    "page_url": "https://bosforelektronik.com/product/consilium-selux-st-arpa/",
+    "image_url": "https://bosforelektronik.com/wp-content/uploads/2019/03/bosfor-92.jpg",
+    "caption": "Consilium Selux ST radar console and separate display configurations",
+    "quote": "Consilium SeLux ST ARPA",
+    "notes": "The supplier product page identifies Selux ST and links this original image. Visually inspected the three display configurations; this is a low-detail console illustration, not an antenna photograph. Excluded individual salvage switch components."
+  },
+  {
+    "manufacturer": "DeTect",
+    "model": "DroneWatcher DSR-200d",
+    "status": "matched",
+    "ambiguous": true,
+    "search_url": "https://www.google.com/search?udm=2&q=DeTect+DroneWatcher+DSR-200d+radar",
+    "page_url": "https://www.unmannedsystemstechnology.com/2017/11/florida-airport-installs-dual-bird-drone-detection-radar-system/",
+    "image_url": "https://www.unmannedsystemstechnology.com/wp-content/uploads/2017/11/DeTect-DroneWatcher-system.jpg",
+    "caption": "DroneWatcher DSR family installation at Northwest Florida Beaches International Airport; exact 200d variant unconfirmed",
+    "quote": "DroneWatcher Drone Detection and Defense system called DroneWatcher DSR.",
+    "notes": "Visually inspected the open-array radar and separate sensors on the airport mast. The installation report identifies DroneWatcher DSR but omits the 200d suffix, so this is retained only as an ambiguous family illustration. The manufacturer 2021 DroneWatcher 200 C-UAS PDF explicitly names DSR-200d, but does not establish that this airport image is that variant.",
+    "capture_method": "browser-dom"
+  },
+  {
+    "manufacturer": "DeTect",
+    "model": "Harrier SS200 ASR",
+    "status": "matched",
+    "ambiguous": true,
+    "capture_method": "browser-dom",
+    "search_url": "https://www.google.com/search?udm=2&q=DeTect+Harrier+SS200+ASR+radar",
+    "page_url": "https://detect-inc.com/security-surveillance-systems/",
+    "image_url": "https://detect-inc.com/wp-content/uploads/2021/05/Security-and-surveillance-1-002.jpg",
+    "caption": "HARRIER surveillance radar on a lattice tower; exact SS200 ASR configuration unconfirmed",
+    "quote": "HARRIER Airspace Surveillance Radar (ASR)",
+    "notes": "The manufacturer discusses ASR and MSR base configurations on one page and illustrates a fenced tower installation. Visually inspected its open-array antenna. The gallery caption does not name SS200 ASR, so retained as an ambiguous HARRIER family illustration rather than an exact variant photograph."
+  },
+  {
+    "manufacturer": "DeTect",
+    "model": "Harrier SS200 MSR",
+    "status": "matched",
+    "ambiguous": true,
+    "capture_method": "browser-dom",
+    "search_url": "https://www.google.com/search?udm=2&q=DeTect+Harrier+SS200+MSR+radar",
+    "page_url": "https://detect-inc.com/security-surveillance-systems/",
+    "image_url": "https://detect-inc.com/wp-content/uploads/2021/05/Security-and-surveillance-1-002.jpg",
+    "caption": "HARRIER surveillance radar tower from the shared ASR/MSR product page; exact SS200 MSR configuration unconfirmed",
+    "quote": "Marine Surveillance Radar (MSR)",
+    "notes": "Reviewed the MSR search separately. The manufacturer describes ASR and MSR operating from a common radar sensor; its SS200 datasheet on AeroExpo also identifies dual-function systems. The inspected manufacturer tower photograph has a generic surveillance caption, so the model association remains explicitly ambiguous. The AeroExpo datasheet thumbnail was too small for a useful hardware image and its full viewer failed to render."
+  },
+  {
+    "manufacturer": "DMT Radar",
+    "model": "IDAR",
+    "status": "matched",
+    "search_url": "https://www.google.com/search?udm=2&q=DMT+Radar+IDAR+intrusion+detection+radar",
+    "page_url": "https://www.dmtradar.com/products/radar/idar/",
+    "image_url": "https://www.dmtradar.com/wp-content/uploads/2023/08/image.png",
+    "caption": "DMT IDAR radome with pole-mount bracket",
+    "quote": "IDAR with pole mount",
+    "notes": "Visually inspected the pale cylindrical radome and mounting bracket. The dedicated manufacturer page captions this figure as IDAR with pole mount and supplies the IDAR specification table. Used the current embedded image rather than the old Internet Archive link."
+  },
+  {
+    "manufacturer": "DMT Radar",
+    "model": "Marlin",
+    "status": "matched",
+    "search_url": "https://www.google.com/search?udm=2&q=DMT+Radar+Marlin+radar",
+    "page_url": "https://www.dmtradar.com/products/radar/marlin/",
+    "image_url": "https://www.dmtradar.com/wp-content/uploads/2023/08/IMG_7752-Marlin-225x300-1.jpg",
+    "caption": "DMT Marlin radar radome on a tripod with separate optical sensors above",
+    "quote": "Marlin (Black & Blue)",
+    "notes": "The dedicated manufacturer page places this Marlin-named image beside the model introduction. Visually inspected the field installation. The image is only 225 by 300 pixels and the page does not distinguish Black from Blue in this figure; the catalog record covers Marlin generally."
+  },
+  {
+    "manufacturer": "DMT Radar",
+    "model": "MDR",
+    "status": "matched",
+    "search_url": "https://www.google.com/search?udm=2&q=DMT+Radar+MDR+motion+detection+radar",
+    "page_url": "https://www.dmtradar.com/products/radar/mdr/",
+    "image_url": "https://www.dmtradar.com/wp-content/uploads/2023/08/Radar-and-Camera-229x300-1.jpg",
+    "caption": "DMT MDR radome with a separate thermal camera mounted above",
+    "quote": "MDR with thermal camera mounted on top",
+    "notes": "The manufacturer figure caption explicitly identifies MDR and the camera. Visually inspected the pale domed enclosure, overhead camera and lower connections. Excluded search results for the unrelated OWL Athena-MDR."
+  },
+  {
+    "manufacturer": "DMT Radar",
+    "model": "XRDS",
+    "status": "matched",
+    "search_url": "https://www.google.com/search?udm=2&q=DMT+Radar+XRDS",
+    "page_url": "https://www.dmtradar.com/products/radar/xrds/",
+    "image_url": "https://www.dmtradar.com/wp-content/uploads/2023/08/image-12.png",
+    "caption": "DMT XRDS radome and thermal camera on a shock-mounted trailer mast",
+    "quote": "XDRS with thermal camera on top. This is shown mounted on a shock mount on a trailer mast.",
+    "notes": "Visually inspected the white cylindrical radome, camera and mast assembly. The manufacturer caption transposes the letters as XDRS, while the page heading, description and specifications consistently say XRDS. Retained the original caption as evidence and the catalog model spelling."
+  },
+  {
+    "manufacturer": "Easat Radar Systems",
+    "model": "7.5m Reflector Coastal Surveillance Radar",
+    "status": "matched",
+    "search_url": "https://www.google.com/search?udm=2&q=Easat+7.5m+reflector+coastal+surveillance+radar",
+    "page_url": "https://easat.com/coastal-radar-solutions/7-5m-reflector-antenna/",
+    "image_url": "https://easat.com/wp-content/uploads/Img-7-5m-relfector2.jpg",
+    "caption": "Easat 7.5m coastal surveillance reflector antenna beside the Dover coastguard building",
+    "quote": "The Easat 7.5m Reflector Coastal Surveillance Radar System",
+    "notes": "The dedicated manufacturer product page names the 7.5m reflector system and uses this model-named image. Visually inspected the curved horizontal white antenna carrying the Easat logo on its lattice tower. Excluded search results for passive liferaft radar reflectors."
+  },
+  {
+    "manufacturer": "Easat Radar Systems",
+    "model": "COMPASS",
+    "status": "matched",
+    "search_url": "https://www.google.com/search?udm=2&q=Easat+COMPASS+radar",
+    "page_url": "https://easat.com/defence-systems/deployed-trasportable-s-l-band-antenna/",
+    "image_url": "https://easat.com/wp-content/uploads/transportabel-full.jpg",
+    "caption": "Easat COMPASS deployable reflector antenna and support frame",
+    "quote": "The Easat COMPASS for Military & Civilian Applications Transportable Radar System",
+    "notes": "The manufacturer identifies COMPASS on the dedicated transportable-system page and links this full-size gallery photograph. Visually inspected the large curved green reflector on a deployable frame beside the equipment cabin."
+  },
+  {
+    "manufacturer": "Easat Radar Systems",
+    "model": "EA3462",
+    "status": "matched",
+    "search_url": "https://www.google.com/search?udm=2&q=Easat+EA3462+radar",
+    "page_url": "https://easat.com/coastal-radar-solutions/5-4m-reflector-x-band-coastal-radar-solution/",
+    "image_url": "https://easat.com/wp-content/uploads/Img-5-4m-Reflector.jpg",
+    "caption": "Easat EA3462 5.4m reflector antenna at a coastal installation",
+    "quote": "The EA3462 X-Band Shaped Reflector Radar System",
+    "notes": "The manufacturer explicitly identifies EA3462 on this product page. Visually inspected the white shaped reflector, elevated feed and pedestal overlooking the sea. Selected the 1200-pixel original exposed in the responsive image set."
+  },
+  {
+    "manufacturer": "Easat Radar Systems",
+    "model": "EA40575",
+    "status": "matched",
+    "ambiguous": true,
+    "search_url": "https://www.google.com/search?udm=2&q=Easat+EA40575+radar",
+    "page_url": "https://easat.com/defence-systems/close-up-of-antenna/",
+    "image_url": "https://easat.com/wp-content/uploads/NAVAL-RADAR-SENSOR.png",
+    "caption": "Easat naval reflector antenna from the EA40575/EA45075 product page; designation inconsistent",
+    "quote": "The EA40575 Reflector System",
+    "notes": "Visually inspected the grey reflector and feed on a ship mast. Cambridge and the first manufacturer paragraph say EA40575, while subsequent paragraphs say EA45075. The image belongs to the referenced product page, but the inconsistent designation is retained as an ambiguous association rather than silently correcting or merging the names."
+  },
+  {
+    "manufacturer": "Easat Radar Systems",
+    "model": "EA7401M",
+    "status": "matched",
+    "search_url": "https://www.google.com/search?udm=2&q=Easat+EA7401M+radar",
+    "page_url": "https://easat.com/coastal-radar-solutions/7-4m-linear-array-x-band-coastal-radar-solution/",
+    "image_url": "https://easat.com/wp-content/uploads/COASTAL-SMR.jpg",
+    "caption": "Easat EA7401M linear-array antenna at a clifftop coastal installation",
+    "quote": "The EA7401M printed linear array",
+    "notes": "The manufacturer product text identifies EA7401M and displays this photograph. Visually inspected the long white horizontal array and pedestal overlooking coastal cliffs. Excluded EA7401H search results as a different designation."
+  },
+  {
+    "manufacturer": "Easat Radar Systems",
+    "model": "X-Trac SMR",
+    "status": "matched",
+    "search_url": "https://www.google.com/search?udm=2&q=Easat+X-Trac+SMR+radar",
+    "page_url": "https://easat.com/easat-products/smr-sensor/",
+    "image_url": "https://easat.com/wp-content/uploads/SMR-MAIN.jpg",
+    "caption": "Easat X-Trac surface-movement radar array mounted atop a tapered tower",
+    "quote": "The Easat X-Trac Surface Movement Radar (SMR)",
+    "notes": "The manufacturer page explicitly identifies X-Trac SMR and supplies this model image. Visually inspected the horizontal array and tower installation; selected the full 1358-pixel original from srcset."
   }
 ]

@@ -2,7 +2,7 @@ import json
 import re
 from html import escape
 from pathlib import Path
-from urllib.parse import parse_qs, urljoin, urlsplit
+from urllib.parse import parse_qs, quote, urljoin, urlsplit
 
 from bs4 import BeautifulSoup
 
@@ -34,6 +34,10 @@ def validate_page(url: str, body: bytes, matches: list[dict]) -> None:
         images.update(
             urljoin(url, str(node["href"])) for node in soup.select("a[href]:has(img)")
         )
+        images.update(
+            urljoin(url, str(node["data-thumbnail"]))
+            for node in soup.select('[role="img"][data-thumbnail]')
+        )
         for node in soup.select("img[srcset], source[srcset]"):
             images.update(
                 urljoin(url, match.group(1))
@@ -49,7 +53,10 @@ def validate_page(url: str, body: bytes, matches: list[dict]) -> None:
                     urljoin(url, value)
                     for value in parse_qs(parts.query).get("url", [])
                 )
-        if row["image_url"] not in images:
+        safe = ":/?#[]@!$&'()*+,;=%"
+        if quote(row["image_url"], safe=safe) not in {
+            quote(image, safe=safe) for image in images
+        }:
             raise ValueError(f"Reviewed radar image changed: {row['model']}")
 
 
