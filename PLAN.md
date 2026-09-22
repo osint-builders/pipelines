@@ -5,9 +5,9 @@ specifications, and images, with every result linked to captured evidence.
 
 **Progress:** 9/10 milestones verified. **Active:** M10 in progress.
 
-**Branch:** `feature/multimodal-entity-search`.
+**Branch:** `main`.
 
-## Code cleanup — active
+## Code cleanup — complete
 
 Apply behavior-preserving changes in small tested commits on main. Existing release
 artifacts and M10 benchmark inputs remain unchanged.
@@ -16,7 +16,13 @@ artifacts and M10 benchmark inputs remain unchanged.
 - [x] Consolidate shared Go bundle validation and evidence ownership; all Go tests and vet passed.
 - [x] Unify repeated scraper media-owner lookup while retaining source-specific matching; affected media and pipeline tests passed.
 - [x] Consolidate repeated HTML link rewriting without changing source policies; 100 source and pipeline tests passed.
-- [ ] Run the complete checks and commit the finished cleanup.
+- [x] Run the complete checks and commit the finished cleanup.
+
+Validation: 1,150 Python tests, all Go tests/vet, full Ruff/mypy, and wheel/source
+builds passed. The released dataset still verifies with the same identity; a fresh
+CLI build passes integrity/model checks and matches the released CLI byte for byte
+on 15 commands covering search, filters, similarity, exports, facts, relationships,
+and comparisons. Reports remain in ignored `build/cleanup/`. M10 is still in progress.
 
 ## ODIN source capture — ready for verification
 
