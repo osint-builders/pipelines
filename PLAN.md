@@ -870,8 +870,13 @@ their exact prior ranks and first results (73/73 required, 101/116 first, 110/11
 within five). Native resource checks pass on Linux AMD64/ARM64, Windows AMD64, and
 macOS ARM64. macOS Intel fails latency: image p95 7.67 s, combined p95 13.32 s,
 observation text p95 6.57 s, and filtered text p95 4.00 s. Size, memory, and response
-integrity pass there. Investigation and a second native validation run are ongoing;
-the latency limits remain unchanged.
+integrity pass there. A second native validation run passes all checks on the other
+four targets and again fails Intel macOS latency, with image p95 8.76 s and combined
+p95 8.84 s. Text-mode timings vary substantially between runs. The latency limits
+remain unchanged. Local profiling attributes most image CPU time to generic
+convolution; a compatible upstream SIMD experiment passes tests/probes but improves
+local image timings only modestly. A temporary native profiling workflow will measure
+the affected platform before runtime changes; remove it after this investigation.
 General CI and all five native encoder-parity jobs for `ffbd1e0` pass. A fresh image export differed from the frozen
 model by 20 half-precision values despite identical graph/checkpoint metadata. Native
 parity now fetches the checksum-pinned model asset and verifies its exact bytes before
@@ -881,22 +886,32 @@ workflow directory-ownership issue, fixed by creating
 the output directory before privileged network-isolated measurements.
 
 Review readiness is recorded in `build/m10/review-readiness.json` and linked from
-`build/m10/review.html`. The original positive packets contain 102 provisional usable
-groups across 38 entities after conservative duplicate unions. Two expansion packets
-add 145 inspected images; their final global grouping and gallery/development/evaluation
-allocation are in progress. The two negative packets contain 193 provisional groups
-(86 in-domain, 107 unrelated), with 84 images held. Source pointers/hashes are checked
-and no exact/dHash matches were found against the archived corpus or frozen seed.
-Text-label review caught aliases extracted from cross-references, unrelated entities
-sharing a name, and a Dnestr/Dnepr family overlap between proposed splits. These need
-correction before freezing. Confusable examples, diagrams, and final labels remain
-unfinished.
+`build/m10/review.html`. The five positive packets now propose 25 development groups,
+118 evaluation groups across 43 entities, and 46 independent gallery reserves. The
+evaluation includes 98 ordinary photographs, 17 display photographs, and one each of
+aerial, night, and panoramic photographs. Global copy/session unions identify 238
+query records to exclude and 602 other same-entity records to quarantine. Cross-source
+label review adds 12 equivalent IDs for six families, with ten additional gallery
+records quarantined. Twenty reviewed crops inherit their parent evaluation groups.
+The negative packets propose 35 development groups and 100 evaluation groups (50
+in-domain and 50 unrelated), leaving 58 groups in reserve. All 135 selected negative
+query wordings were reviewed against their source captions/titles. These negatives
+cluster in 18 broad subject categories, limiting conclusions about general no-match
+performance. Source pointers/hashes and archive/seed duplicate checks are recorded.
+Text review now supplies 20 development and 100 evaluation cases per task, with 712
+checked source citations. Incorrect cross-reference aliases and homonyms were
+rejected; Dnestr/Dnepr/Hen House remains entirely in development. Additional variant
+review is underway. Eight reviewed diagram/photo pairs are available; twelve more
+are being sought from source-backed external drawings. No new labels or splits have
+been frozen, and no real calibration or held-out evaluation has run.
 
 Calibration validation now uses the actual indexed-image entity pool for image-only
 queries, including source filters; text and combined modes retain their full eligible
 pool. This matches Go's runtime scope calculation. Regression tests cover unindexed
 entities and incorrect development scopes; 158 focused tests, lint, formatting, and
-type checks pass.
+type checks pass. Independent combined-query photographs may reuse a generic text
+constraint; image/group overlap remains prohibited and text-only duplicate protection
+is unchanged. The expanded focused suite passes 159 tests.
 
 - [ ] Run the frozen evaluation suite for text, image, combined, OCR, filters, and entity relationships; report results by task and source.
 - [ ] Verify top-result accuracy, recall within the first five results, confusable variants, and no-match behavior meet M1's targets.

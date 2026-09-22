@@ -507,7 +507,7 @@ def calibration_separation(development: dict, fixture: dict) -> dict:
                     "Calibration development text entity overlaps held-out/frozen seed labels"
                 )
         text = " ".join((query.get("text") or "").casefold().split())
-        if text and text in protected_text:
+        if not query.get("image_sha256") and text and text in protected_text:
             raise ValueError(
                 "Calibration development query repeats a held-out/frozen seed query"
             )

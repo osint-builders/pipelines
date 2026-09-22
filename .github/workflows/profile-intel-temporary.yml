@@ -1,0 +1,314 @@
+name: Temporary Intel runtime profile
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  profile:
+    runs-on: macos-15-intel
+    timeout-minutes: 35
+    env:
+      CGO_ENABLED: "0"
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4
+        with:
+          version: '0.11.21'
+          python-version: '3.13'
+          enable-cache: true
+      - run: uv sync --frozen --extra image --no-install-package onnxruntime
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16
+        with:
+          go-version-file: cli/go.mod
+          cache-dependency-path: cli/go.sum
+      - name: Fetch checksum-pinned candidate bundle
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p build/release
+          gh release download data-dabb846669424a7ea4b8b381d9011948f8ee6da185d60a528c9375b7df1164e7 --repo "$GITHUB_REPOSITORY" --pattern dataset.zip --dir build/release
+          python -c "import hashlib,pathlib; assert hashlib.sha256(pathlib.Path('build/release/dataset.zip').read_bytes()).hexdigest() == '48fbe108afcfa2a3294e8f29707695d362f515186b86b20c41c9e1a57f0e7165'"
+          python tools/check_bundle_hash.py build/release/dataset.zip
+      # Temporary steps for the darwin-amd64 matrix job; insert AFTER resource/text checks, before artifact uploads.
+      # Uses unchanged dataset/model bytes. The output is diagnostics, never release acceptance.
+      - name: Prepare Intel macOS profiling experiment
+        id: prepare_intel_profile
+        if: always()
+        run: |
+          mkdir -p build/m10/darwin-intel
+          cat > build/m10/darwin-intel/profile_test.go <<'M10_DIAGNOSTIC_EOF'
+          package main
+          
+          import (
+          	"bytes"
+          	"context"
+          	"crypto/sha256"
+          	"encoding/hex"
+          	"encoding/json"
+          	"fmt"
+          	"io"
+          	"os"
+          	"runtime"
+          	"runtime/pprof"
+          	"testing"
+          	"time"
+          
+          	"github.com/osint-builders/pipelines/cli/internal/assets"
+          	"github.com/osint-builders/pipelines/cli/internal/dataset"
+          	"github.com/osint-builders/pipelines/cli/internal/embedding"
+          	"github.com/osint-builders/pipelines/cli/internal/imageembedding"
+          	"github.com/osint-builders/pipelines/cli/internal/imagepreprocess"
+          )
+          
+          // Only loaded by a temporary go -overlay invocation.
+          func TestM10NativeCLIProfile(t *testing.T) {
+          	if os.Getenv("M10_PROFILE_ARGS") == "" {
+          		t.Skip("temporary profile is opt-in")
+          	}
+          	var args []string
+          	if err := json.Unmarshal([]byte(os.Getenv("M10_PROFILE_ARGS")), &args); err != nil {
+          		t.Fatal(err)
+          	}
+          	var out bytes.Buffer
+          	if err := run(context.Background(), args, &out); err != nil {
+          		t.Fatal(err)
+          	}
+          	digest := sha256.Sum256(out.Bytes())
+          	t.Logf("response_sha256=%x GOMAXPROCS=%d NumCPU=%d", digest, runtime.GOMAXPROCS(0), runtime.NumCPU())
+          }
+          
+          func TestM10NativeStages(t *testing.T) {
+          	if os.Getenv("M10_PROFILE_IMAGE") == "" {
+          		t.Skip("temporary profile is opt-in")
+          	}
+          	ctx := context.Background()
+          	stages := []map[string]any{}
+          	stage := func(name string, fn func() error) {
+          		started := time.Now()
+          		var before, after runtime.MemStats
+          		runtime.ReadMemStats(&before)
+          		var err error
+          		pprof.Do(ctx, pprof.Labels("stage", name), func(context.Context) { err = fn() })
+          		runtime.ReadMemStats(&after)
+          		stages = append(stages, map[string]any{"name": name, "seconds": time.Since(started).Seconds(), "allocated_bytes": after.TotalAlloc - before.TotalAlloc, "gc_cycles": after.NumGC - before.NumGC})
+          		if err != nil {
+          			t.Fatal(name, err)
+          		}
+          	}
+          	bundle, err := assets.Files.Open("data/dataset.zip")
+          	if err != nil {
+          		t.Fatal(err)
+          	}
+          	defer bundle.Close()
+          	info, err := bundle.Stat()
+          	if err != nil {
+          		t.Fatal(err)
+          	}
+          	reader, ok := bundle.(io.ReaderAt)
+          	if !ok {
+          		t.Fatal("embedded bundle lacks ReaderAt")
+          	}
+          	var d *dataset.Dataset
+          	stage("dataset_open", func() error { d, err = dataset.OpenReader(reader, info.Size()); return err })
+          	body, err := os.ReadFile(os.Getenv("M10_PROFILE_IMAGE"))
+          	if err != nil {
+          		t.Fatal(err)
+          	}
+          	var imageEncoder *imageembedding.Encoder
+          	stage("image_model_load", func() error { imageEncoder, err = loadImageEncoder(ctx, d); return err })
+          	var chw []float32
+          	stage("image_preprocess", func() error { chw, err = imagepreprocess.Preprocess(body, imageEncoder.Recipe()); return err })
+          	hashes := []string{}
+          	for i := range 3 {
+          		stage(fmt.Sprintf("image_encode_%d", i), func() error {
+          			result, err := imageEncoder.Encode(ctx, chw)
+          			if err != nil {
+          				return err
+          			}
+          			raw, err := json.Marshal(result)
+          			if err != nil {
+          				return err
+          			}
+          			hash := sha256.Sum256(raw)
+          			hashes = append(hashes, hex.EncodeToString(hash[:]))
+          			return nil
+          		})
+          	}
+          	_ = imageEncoder.Close()
+          	stage("image_gallery_load", d.LoadImages)
+          	stage("text_index_prepare", func() error { return d.PrepareTextSearch(false) })
+          	stage("observations_prepare", func() error { return d.PrepareTextSearch(true) })
+          	stage("research_filter_prepare", func() error { _, err = d.PrepareFilter(dataset.Filter{Where: []string{"manufacturer=Thales"}}); return err })
+          	var textEncoder *embedding.Encoder
+          	stage("text_model_load", func() error { textEncoder, err = embedding.New(ctx, d.Files); return err })
+          	for i := range 3 {
+          		stage(fmt.Sprintf("text_encode_%d", i), func() error { _, err = textEncoder.Encode(ctx, "russian cheeseboard"); return err })
+          	}
+          	_ = textEncoder.Close()
+          	if hashes[0] != hashes[1] || hashes[0] != hashes[2] {
+          		t.Fatal("image outputs differ between cold/warm encoding")
+          	}
+          	raw, err := json.Marshal(map[string]any{"dataset_id": d.Manifest.DatasetID, "GOMAXPROCS": runtime.GOMAXPROCS(0), "NumCPU": runtime.NumCPU(), "image_output_sha256": hashes, "stages": stages})
+          	if err != nil {
+          		t.Fatal(err)
+          	}
+          	fmt.Printf("M10_STAGES %s\n", raw)
+          }
+          M10_DIAGNOSTIC_EOF
+          cat > build/m10/darwin-intel/native_profile.py <<'M10_DIAGNOSTIC_EOF'
+          """Temporary native profiler; outputs are diagnostic and never release gate evidence."""
+          import argparse
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+          import platform
+          import statistics
+          import subprocess
+          import sys
+          import zipfile
+          
+          ROOT = Path.cwd().resolve()
+          sys.path.insert(0, str(ROOT / "tools"))
+          from benchmark_cli import hardware, measure
+          from measure_release import query_commands
+          
+          
+          def digest(path):
+              with path.open("rb") as stream:
+                  return hashlib.file_digest(stream, "sha256").hexdigest()
+          
+          
+          def command(args, env, log, cwd=None):
+              with log.open("w", encoding="utf-8") as stream:
+                  subprocess.run(args, cwd=cwd or ROOT / "cli", env=env, stdout=stream, stderr=subprocess.STDOUT, check=True)
+          
+          
+          def main():
+              parser = argparse.ArgumentParser(description=__doc__)
+              parser.add_argument("--bundle", required=True, type=Path)
+              parser.add_argument("--output", required=True, type=Path)
+              parser.add_argument("--execute", action="store_true")
+              parser.add_argument("--upstream-modfile", type=Path, help="Optional prepared compute v0.1.7 diagnostic modfile")
+              parser.add_argument("--procs", nargs="+", default=["default", "1", "2", "4"])
+              parser.add_argument("--repeats", type=int, default=3)
+              args = parser.parse_args()
+              output = args.output.resolve(); output.mkdir(parents=True, exist_ok=True)
+              bundle = args.bundle.resolve()
+              with zipfile.ZipFile(bundle) as archive:
+                  manifest = json.loads(archive.read("manifest.json"))
+                  image_record = next(row for row in json.loads(archive.read("image/index.json")) if row["vector_index"] is not None and row["preview"] is not None)
+                  image = output / "query.jpg"; image.write_bytes(archive.read(image_record["preview"]["member"]))
+              if digest(image) != image_record["preview"]["sha256"]:
+                  raise ValueError("preview checksum mismatch")
+              overlay = output / "overlay.json"
+              overlay.write_text(json.dumps({"Replace": {
+                  str(ROOT / "cli/cmd/pipelines/m10_native_profile_test.go"): str(Path(__file__).with_name("profile_test.go").resolve()),
+                  str(ROOT / "cli/internal/assets/data/dataset.zip"): str(bundle),
+              }}, indent=2))
+              report = {"diagnostic_only": True, "native_execution": False, "dataset_id": manifest["dataset_id"], "bundle_sha256": digest(bundle), "query_sha256": digest(image), "script_sha256": digest(Path(__file__)), "test_sha256": digest(Path(__file__).with_name("profile_test.go")), "gomod_sha256":digest(ROOT / "cli/go.mod"), "model_members": {k:v for k,v in manifest["files"].items() if k.endswith(".onnx")}, "samples": [], "parity": {}}
+              report_path = output / "diagnostic.json"
+              report_path.write_text(json.dumps(report, indent=2))
+              if not args.execute:
+                  print(json.dumps({"prepared":str(overlay),"dataset_id":manifest["dataset_id"]})); return
+              if platform.system() != "Darwin" or platform.machine().lower() != "x86_64":
+                  raise ValueError("Native experiment requires Intel macOS; preparation is portable")
+              if args.repeats < 1 or any(p not in {"default", "1", "2", "4"} for p in args.procs):
+                  raise ValueError("Invalid diagnostic sample settings")
+              report["hardware"] = hardware(); report["native_execution"] = True
+              report["sysctl"] = subprocess.check_output(["sysctl", "machdep.cpu.brand_string", "machdep.cpu.features", "machdep.cpu.leaf7_features", "hw.ncpu"], text=True)
+              report_path.write_text(json.dumps(report, indent=2))
+              query = json.loads((ROOT / "tests/fixtures/retrieval.json").read_bytes())[0]
+              commands = query_commands(query, str(image))
+              variants = {}
+              configurations = [("default", "", [])]
+              if args.upstream_modfile:
+                  modfile = args.upstream_modfile.resolve()
+                  report["upstream_modfile_sha256"] = digest(modfile)
+                  configurations += [("compute017", "", ["-modfile", str(modfile)]), ("simd", "simd", ["-modfile", str(modfile)])]
+              for variant, experiment, extra in configurations:
+                  env = dict(os.environ, CGO_ENABLED="0", GOEXPERIMENT=experiment, GOAMD64="v1")
+                  env.pop("GOMAXPROCS", None)
+                  binary = output / ("pipelines-" + variant)
+                  flags = ["-tags", "NODOWNLOAD", "-overlay", str(overlay), *extra]
+                  command(["go", "test", *flags, "./..."], env, output / (variant + "-tests.log"))
+                  command(["go", "build", *flags, "-trimpath", "-ldflags", "-s -w -X main.version=data-" + manifest["dataset_id"][:16], "-o", str(binary), "./cmd/pipelines"], env, output / (variant + "-build.log"))
+                  command(["go", "version", "-m", str(binary)], env, output / (variant + "-build-info.txt"))
+                  command(["go", "list", *extra, "-json", "github.com/gomlx/compute/internal/gobackend/dot/matmul"], env, output / (variant + "-matmul.json"))
+                  verify, _ = measure([str(binary), "verify"])
+                  if verify.get("ok") is not True or verify["dataset_id"] != manifest["dataset_id"]:
+                      raise ValueError("Embedding parity probes failed")
+                  variants[variant] = (binary, env, extra)
+                  report["parity"][variant] = {"verification":verify,"binary_sha256":digest(binary)}
+              # Interleave variants/proc counts by round to reduce time/order confounding.
+              responses = {}
+              settings = [(v, p, m) for v in variants for p in args.procs for m in ("image", "image_text", "observations_text", "filtered_text")]
+              for round_index in range(args.repeats):
+                  ordered = settings if round_index % 2 == 0 else list(reversed(settings))
+                  for variant, procs, mode in ordered:
+                      binary, env, _ = variants[variant]
+                      old_procs = os.environ.pop("GOMAXPROCS", None)
+                      if procs != "default": os.environ["GOMAXPROCS"] = procs
+                      try: response, sample = measure([str(binary), *commands[mode]])
+                      finally:
+                          os.environ.pop("GOMAXPROCS", None)
+                          if old_procs is not None: os.environ["GOMAXPROCS"] = old_procs
+                      if response["dataset_id"] != manifest["dataset_id"]: raise ValueError("Bundle mismatch")
+                      # Floating math may differ; retain complete output for explicit parity review.
+                      name = f"{variant}-{procs}-{mode}-{round_index}"
+                      (output / (name + ".json")).write_text(json.dumps(response))
+                      responses.setdefault(mode, {})[name] = [row["id"] for row in response["results"]]
+                      report["samples"].append({"variant":variant,"GOMAXPROCS":procs,"mode":mode,"round":round_index,**sample})
+                      report_path.write_text(json.dumps(report, indent=2))
+              report["ranking_id_sequences"] = responses
+              report["median_seconds"] = {f"{v}/{p}/{m}":statistics.median(r["seconds"] for r in report["samples"] if (r["variant"],r["GOMAXPROCS"],r["mode"]) == (v,p,m)) for v,p,m in settings}
+              for variant, (_, env, extra) in variants.items():
+                  profile_binary = output / (variant + ".test")
+                  command(["go", "test", "-tags", "NODOWNLOAD", "-overlay", str(overlay), *extra, "-c", "-o", str(profile_binary), "./cmd/pipelines"], env, output / (variant + "-profile-build.log"))
+                  env = dict(env, M10_PROFILE_IMAGE=str(image), M10_PROFILE_ARGS=json.dumps(commands["image_text"]))
+                  for test in ("M10NativeCLIProfile", "M10NativeStages"):
+                      prefix = output / (variant + "-" + test)
+                      command([str(profile_binary), "-test.run", "^Test" + test + "$", "-test.v", "-test.cpuprofile", str(prefix) + ".cpu"], env, Path(str(prefix) + ".log"))
+                      command(["go", "tool", "pprof", "-top", "-nodecount=35", str(profile_binary), str(prefix) + ".cpu"], env, Path(str(prefix) + "-top.txt"))
+              report_path.write_text(json.dumps(report, indent=2))
+              print(json.dumps({"report":str(report_path),"diagnostic_only":True}))
+          
+          
+          if __name__ == "__main__":
+              main()
+          M10_DIAGNOSTIC_EOF
+          python - <<'M10_MODFILE_EOF'
+          from pathlib import Path
+          import shutil
+          root = Path.cwd()
+          mod = root / "build/m10/darwin-intel/compute017.mod"
+          original = (root / "cli/go.mod").read_text()
+          assert original.count("github.com/gomlx/compute v0.1.6") == 1
+          mod.write_text(original.replace("github.com/gomlx/compute v0.1.6", "github.com/gomlx/compute v0.1.7"))
+          shutil.copyfile(root / "cli/go.sum", mod.with_suffix(".sum"))
+          M10_MODFILE_EOF
+          cd cli
+          GOEXPERIMENT=simd go test -mod=mod -tags NODOWNLOAD -modfile "$GITHUB_WORKSPACE/build/m10/darwin-intel/compute017.mod" ./...
+      - name: Profile Intel macOS default and compute v0.1.7 with and without SIMD
+        if: always() && steps.prepare_intel_profile.outcome == 'success'
+        run: |
+          /usr/bin/sandbox-exec -p '(version 1)(allow default)(deny network*)' "$PWD/.venv/bin/python" build/m10/darwin-intel/native_profile.py --bundle build/release/dataset.zip --output build/release/native-profile --upstream-modfile build/m10/darwin-intel/compute017.mod --execute --repeats 2 --procs default 1 2 4
+      - name: Retain Intel macOS diagnostic evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: intel-macos-profile
+          path: |
+            build/release/native-profile/*.json
+            build/release/native-profile/*.log
+            build/release/native-profile/*.txt
+            build/release/native-profile/*.cpu
+            build/m10/darwin-intel/compute017.mod
+            build/m10/darwin-intel/compute017.sum
+          retention-days: 7

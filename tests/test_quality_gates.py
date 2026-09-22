@@ -432,6 +432,7 @@ def test_calibration_separation_rejects_held_out_and_seed_reuse(damage: str) -> 
         case["query"]["image_sha256"] = None
         case["expected_ids"] = ["test:held"]
     elif damage == "text_query":
+        case["query"]["image_sha256"] = None
         case["query"]["text"] = "  HELD-out phrase  "
     else:
         seed = json.loads(
@@ -440,6 +441,43 @@ def test_calibration_separation_rejects_held_out_and_seed_reuse(damage: str) -> 
         case["query"]["image_sha256"] = None
         case["expected_ids"] = [seed[0]["expected"]]
     with pytest.raises(ValueError):
+        calibration_separation(development, fixture)
+
+
+def test_combined_calibration_separates_photos_not_generic_constraint_text() -> None:
+    development: dict = {
+        "cases": [
+            {
+                "group_id": "development-photo",
+                "query": {"text": "rifle", "image_sha256": "a" * 64},
+                "expected_ids": [],
+                "confusable_ids": [],
+            }
+        ]
+    }
+    fixture = {
+        "media": [
+            {
+                "status": "captured",
+                "split": split,
+                "sha256": checksum * 64,
+                "photo_group": split + "-photo",
+            }
+            for split, checksum in [("development", "a"), ("evaluation", "b")]
+        ],
+        "cases": [
+            {
+                "split": "evaluation",
+                "group_id": "evaluation-photo",
+                "query": {"text": "rifle", "image_id": "held-image"},
+                "expected_ids": [],
+                "confusable_ids": [],
+            }
+        ],
+    }
+    assert calibration_separation(development, fixture)["development_photos"] == 1
+    development["cases"][0]["query"]["image_sha256"] = "b" * 64
+    with pytest.raises(ValueError, match="separate registered development photo group"):
         calibration_separation(development, fixture)
 
 
