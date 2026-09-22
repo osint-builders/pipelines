@@ -199,6 +199,7 @@ jobs:
               parser.add_argument("--bundle", required=True, type=Path)
               parser.add_argument("--output", required=True, type=Path)
               parser.add_argument("--execute", action="store_true")
+              parser.add_argument("--compare-pointwise", action="store_true", help="Compare pinned original backend with tracked pointwise lowering")
               parser.add_argument("--upstream-modfile", type=Path, help="Optional prepared compute v0.1.7 diagnostic modfile")
               parser.add_argument("--procs", nargs="+", default=["default", "1", "2", "4"])
               parser.add_argument("--repeats", type=int, default=3)
@@ -217,6 +218,23 @@ jobs:
                   str(ROOT / "cli/internal/assets/data/dataset.zip"): str(bundle),
               }}, indent=2))
               report = {"diagnostic_only": True, "native_execution": False, "dataset_id": manifest["dataset_id"], "bundle_sha256": digest(bundle), "query_sha256": digest(image), "script_sha256": digest(Path(__file__)), "test_sha256": digest(Path(__file__).with_name("profile_test.go")), "gomod_sha256":digest(ROOT / "cli/go.mod"), "model_members": {k:v for k,v in manifest["files"].items() if k.endswith(".onnx")}, "samples": [], "parity": {}}
+              variant_overlays = {}
+              if args.compare_pointwise:
+                  if args.upstream_modfile:
+                      raise ValueError("Pointwise comparison must preserve the pinned dependencies")
+                  encoder_path = ROOT / "cli/internal/imageembedding/encoder.go"
+                  encoder = encoder_path.read_text(encoding="utf-8")
+                  integration = "\te.backend = pointwiseBackend{e.backend}\n"
+                  if encoder.count(integration) != 1:
+                      raise ValueError("Expected exactly one reviewed pointwise integration line")
+                  original_encoder = output / "encoder-original.go"
+                  original_encoder.write_text(encoder.replace(integration, ""), encoding="utf-8")
+                  original_overlay = output / "original-overlay.json"
+                  replacements = json.loads(overlay.read_text())["Replace"]
+                  replacements[str(encoder_path)] = str(original_encoder)
+                  original_overlay.write_text(json.dumps({"Replace": replacements}, indent=2))
+                  variant_overlays = {"original": original_overlay, "pointwise": overlay}
+                  report["pointwise_comparison"] = {"encoder_sha256":digest(encoder_path),"original_encoder_sha256":digest(original_encoder),"pointwise_sha256":digest(ROOT / "cli/internal/imageembedding/pointwise.go"),"gosum_sha256":digest(ROOT / "cli/go.sum"),"only_source_difference":integration.strip(),"dependency_changes":False}
               report_path = output / "diagnostic.json"
               report_path.write_text(json.dumps(report, indent=2))
               if not args.execute:
@@ -231,7 +249,7 @@ jobs:
               query = json.loads((ROOT / "tests/fixtures/retrieval.json").read_bytes())[0]
               commands = query_commands(query, str(image))
               variants = {}
-              configurations = [("default", "", [])]
+              configurations = [("original", "", []), ("pointwise", "", [])] if args.compare_pointwise else [("default", "", [])]
               if args.upstream_modfile:
                   modfile = args.upstream_modfile.resolve()
                   report["upstream_modfile_sha256"] = digest(modfile)
@@ -240,7 +258,8 @@ jobs:
                   env = dict(os.environ, CGO_ENABLED="0", GOEXPERIMENT=experiment, GOAMD64="v1")
                   env.pop("GOMAXPROCS", None)
                   binary = output / ("pipelines-" + variant)
-                  flags = ["-tags", "NODOWNLOAD", "-overlay", str(overlay), *extra]
+                  selected_overlay = variant_overlays.get(variant, overlay)
+                  flags = ["-tags", "NODOWNLOAD", "-overlay", str(selected_overlay), *extra]
                   command(["go", "test", *flags, "-skip", "^TestNetworkCanaryUsesSameBinaryTCPPath$", "./..."], env, output / (variant + "-tests.log"))
                   command(["go", "build", *flags, "-trimpath", "-ldflags", "-s -w -X main.version=data-" + manifest["dataset_id"][:16], "-o", str(binary), "./cmd/pipelines"], env, output / (variant + "-build.log"))
                   command(["go", "version", "-m", str(binary)], env, output / (variant + "-build-info.txt"))
@@ -248,15 +267,15 @@ jobs:
                   verify, _ = measure([str(binary), "verify"])
                   if verify.get("ok") is not True or verify["dataset_id"] != manifest["dataset_id"]:
                       raise ValueError("Embedding parity probes failed")
-                  variants[variant] = (binary, env, extra)
+                  variants[variant] = (binary, env, extra, selected_overlay)
                   report["parity"][variant] = {"verification":verify,"binary_sha256":digest(binary)}
               # Interleave variants/proc counts by round to reduce time/order confounding.
               responses = {}
-              settings = [(v, p, m) for v in variants for p in args.procs for m in ("image", "image_text", "observations_text", "filtered_text")]
+              settings = [(v, p, m) for p in args.procs for m in ("image", "image_text", "observations_text", "filtered_text") for v in variants]
               for round_index in range(args.repeats):
                   ordered = settings if round_index % 2 == 0 else list(reversed(settings))
                   for variant, procs, mode in ordered:
-                      binary, env, _ = variants[variant]
+                      binary, env, _, _ = variants[variant]
                       old_procs = os.environ.pop("GOMAXPROCS", None)
                       if procs != "default": os.environ["GOMAXPROCS"] = procs
                       try: response, sample = measure([str(binary), *commands[mode]])
@@ -272,9 +291,9 @@ jobs:
                       report_path.write_text(json.dumps(report, indent=2))
               report["ranking_id_sequences"] = responses
               report["median_seconds"] = {f"{v}/{p}/{m}":statistics.median(r["seconds"] for r in report["samples"] if (r["variant"],r["GOMAXPROCS"],r["mode"]) == (v,p,m)) for v,p,m in settings}
-              for variant, (_, env, extra) in variants.items():
+              for variant, (_, env, extra, selected_overlay) in variants.items():
                   profile_binary = output / (variant + ".test")
-                  command(["go", "test", "-tags", "NODOWNLOAD", "-overlay", str(overlay), *extra, "-c", "-o", str(profile_binary), "./cmd/pipelines"], env, output / (variant + "-profile-build.log"))
+                  command(["go", "test", "-tags", "NODOWNLOAD", "-overlay", str(selected_overlay), *extra, "-c", "-o", str(profile_binary), "./cmd/pipelines"], env, output / (variant + "-profile-build.log"))
                   env = dict(env, M10_PROFILE_IMAGE=str(image), M10_PROFILE_ARGS=json.dumps(commands["image_text"]))
                   for test in ("M10NativeCLIProfile", "M10NativeStages"):
                       prefix = output / (variant + "-" + test)
@@ -287,34 +306,20 @@ jobs:
           if __name__ == "__main__":
               main()
           M10_DIAGNOSTIC_EOF
-          python - <<'M10_MODFILE_EOF'
-          from pathlib import Path
-          import shutil
-          root = Path.cwd()
-          mod = root / "build/m10/darwin-intel/compute017.mod"
-          original = (root / "cli/go.mod").read_text()
-          assert original.count("github.com/gomlx/compute v0.1.6") == 1
-          mod.write_text(original.replace("github.com/gomlx/compute v0.1.6", "github.com/gomlx/compute v0.1.7"))
-          shutil.copyfile(root / "cli/go.sum", mod.with_suffix(".sum"))
-          M10_MODFILE_EOF
           cd cli
           go test -tags NODOWNLOAD ./...
-          go test -mod=mod -tags NODOWNLOAD -modfile "$GITHUB_WORKSPACE/build/m10/darwin-intel/compute017.mod" ./...
-          GOEXPERIMENT=simd go test -mod=mod -tags NODOWNLOAD -modfile "$GITHUB_WORKSPACE/build/m10/darwin-intel/compute017.mod" ./...
-      - name: Profile Intel macOS default and compute v0.1.7 with and without SIMD
+      - name: Profile Intel macOS original backend and pointwise lowering
         if: always() && steps.prepare_intel_profile.outcome == 'success'
         run: |
-          /usr/bin/sandbox-exec -p '(version 1)(allow default)(deny network*)' "$PWD/.venv/bin/python" build/m10/darwin-intel/native_profile.py --bundle build/release/dataset.zip --output build/release/native-profile --upstream-modfile build/m10/darwin-intel/compute017.mod --execute --repeats 2 --procs default 1 2 4
+          /usr/bin/sandbox-exec -p '(version 1)(allow default)(deny network*)' "$PWD/.venv/bin/python" build/m10/darwin-intel/native_profile.py --bundle build/release/dataset.zip --output build/release/native-profile --compare-pointwise --execute --repeats 3 --procs default 1 2 4
       - name: Retain Intel macOS diagnostic evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: intel-macos-profile
+          name: intel-macos-pointwise-profile
           path: |
             build/release/native-profile/*.json
             build/release/native-profile/*.log
             build/release/native-profile/*.txt
             build/release/native-profile/*.cpu
-            build/m10/darwin-intel/compute017.mod
-            build/m10/darwin-intel/compute017.sum
           retention-days: 7
