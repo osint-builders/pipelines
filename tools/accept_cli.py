@@ -653,13 +653,6 @@ def validate_image_response(
     eligible_ids: list[str] | None = None,
     images: dict | None = None,
 ) -> list[dict]:
-    def finite(value: object) -> bool:
-        return (
-            isinstance(value, (int, float))
-            and not isinstance(value, bool)
-            and math.isfinite(value)
-        )
-
     if (
         response.get("dataset_id") != manifest["dataset_id"]
         or response.get("query_image_sha256") != image_sha256

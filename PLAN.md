@@ -7,6 +7,16 @@ specifications, and images, with every result linked to captured evidence.
 
 **Branch:** `feature/multimodal-entity-search`.
 
+## Code cleanup — active
+
+Apply behavior-preserving changes in small tested commits on main. Existing release
+artifacts and M10 benchmark inputs remain unchanged.
+
+- [x] Reuse content/evidence identity validation and remove the duplicate numeric validator; 163 focused tests and the released dataset verification passed.
+- [ ] Consolidate shared Go bundle validation and evidence ownership.
+- [ ] Unify repeated scraper media-owner lookup while retaining source-specific matching.
+- [ ] Run the complete checks and commit the finished cleanup.
+
 ## ODIN source capture — ready for verification
 
 Requested alongside M10: archive the complete Worldwide Equipment Guide catalog and

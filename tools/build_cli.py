@@ -5,11 +5,13 @@ import base64
 import hashlib
 import json
 import os
-import re
 import shutil
 import subprocess
 import zipfile
 from pathlib import Path
+
+from pipelines.distribution import content_digest, validate_calibration_bundle
+from pipelines.model import evidence_id, response_member, valid_key
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -58,24 +60,7 @@ def verify_bundle(bundle: Path) -> dict:
         if len(entities) != manifest["entities"] or not entities:
             raise ValueError("Invalid entity count")
 
-        def stable_content(value: object) -> object:
-            if isinstance(value, dict):
-                return {
-                    key: stable_content(item)
-                    for key, item in value.items()
-                    if key not in {"retrieved_at", "html_sha256", "source_response"}
-                }
-            if isinstance(value, list):
-                return [stable_content(item) for item in value]
-            return value
-
-        stable = stable_content(entities)
-        digest = hashlib.sha256(
-            json.dumps(
-                stable, sort_keys=True, ensure_ascii=False, separators=(",", ":")
-            ).encode()
-        ).hexdigest()
-        if digest != manifest["content_sha256"]:
+        if content_digest(entities) != manifest["content_sha256"]:
             raise ValueError("Content fingerprint does not match entities")
         evidence_pages = set()
         for entity in entities:
@@ -87,25 +72,15 @@ def verify_bundle(bundle: Path) -> dict:
                 response = page.get("source_response")
                 if page.get("html_origin") == "record-rendered":
                     record_id = page.get("record_id", "")
-                    mime = (
-                        (response or {})
-                        .get("content_type", "")
-                        .split(";", 1)[0]
-                        .strip()
-                        .lower()
+                    member = response_member(
+                        entity["source"],
+                        page["url"],
+                        (response or {}).get("content_type", ""),
                     )
-                    suffix = (
-                        "html"
-                        if mime in {"text/html", "application/xhtml+xml"}
-                        else "json"
-                    )
-                    member = f"responses/{entity['source']}/{hashlib.sha256(page['url'].encode()).hexdigest()[:24]}.{suffix}"
-                    identity = page["url"] + "\n" + record_id
                     if (
-                        not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,127}", record_id)
+                        not valid_key(record_id)
                         or not page.get("records")
-                        or page["id"]
-                        != hashlib.sha256(identity.encode()).hexdigest()[:24]
+                        or page["id"] != evidence_id(page["url"], record_id)
                         or not response
                         or response.get("url") != page["url"]
                         or not response.get("content_type")
@@ -148,8 +123,6 @@ def verify_bundle(bundle: Path) -> dict:
         from pipelines.research_distribution import validate_research_bundle
 
         validate_research_bundle(archive, manifest, entities)
-        from pipelines.distribution import validate_calibration_bundle
-
         validate_calibration_bundle(archive, manifest)
         return manifest
 
