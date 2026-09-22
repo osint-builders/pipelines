@@ -781,9 +781,9 @@ The current held-out seed has seven positive photo groups, below M1's release mi
 of 100; expanded reviewed inputs and valid calibration remain required before release.
 
 The user has no existing reviewed image-query set. A local source-grounded review
-queue now contains 508 candidate entities; candidate duplicate groups and captions
-require visual review before any new split or ground-truth claim. It does not replace
-the frozen seed or establish release quality.
+queue contains 508 candidate entities. Selected queries have now passed source/pixel
+review; unselected candidates remain unreviewed. The expanded benchmark preserves
+the frozen seed, and review coverage does not establish release quality.
 
 Runtime profiling identified a redundant embedded-bundle copy and ZIP inflation of
 models/vectors. ReaderAt loading removes the copy; storing binary members without
@@ -813,8 +813,8 @@ checks, including 9,442 source/text/research members unchanged from M9.
 
 Full candidate dataset: `dabb846669424a7ea4b8b381d9011948f8ee6da185d60a528c9375b7df1164e7`.
 Bundle SHA-256: `48fbe108afcfa2a3294e8f29707695d362f515186b86b20c41c9e1a57f0e7165`.
-This complete gallery is for coverage/resource validation; benchmark query photo
-groups still need exclusion before calibration or held-out quality measurement.
+This complete gallery is for coverage/resource validation. The separate restricted
+bundle below excludes benchmark query groups before calibration or evaluation.
 
 Optional format-5 calibration now binds an acceptance rule to the exact retrieval
 artifacts, mode, observation setting, and eligible entity pool. Python fits deterministic
@@ -825,11 +825,11 @@ preserves source and retrieval members, and publication checks reproduce thresho
 from hashed development evidence. No real thresholds have been fitted. Hashes/refitting
 check evidence consistency; captured responses still require a trusted capture process.
 
-Ignored review packets contain 360 text candidates with 587 checked source citations,
-406 visually inspected archived images, and 344 inspected external negative-image
-candidates. Duplicates, components, illustrations, and ambiguous variants remain
-flagged. These are candidates, with no new accepted or frozen benchmark labels.
-The user confirmed there is no existing reviewed image set to import.
+Initial ignored review packets contained 360 text candidates, 406 visually inspected
+archived images, and 344 inspected external negative-image candidates. Subsequent
+source/variant review and the final allocation are recorded below. Duplicates,
+components, illustrations outside the intended slices, and ambiguous variants remain
+flagged. The user confirmed there is no existing reviewed image set to import.
 
 Frozen-seed reruns remain pilot measurements: image ranks place eight of nine positive
 queries first and combined queries two of two first, but accepted matches remain zero
@@ -883,7 +883,7 @@ interleaved diagnostics improve image latency by 19% and combined latency by 15%
 with unchanged rankings and a maximum score difference of 1.03e-7. The paired native
 Intel macOS diagnostic also improves image median latency from 4.570 to 3.400 s and
 combined latency from 6.843 to 4.664 s. All 96 responses retain their ranked IDs;
-text controls are byte-equivalent JSON, and both builds pass frozen verification.
+text responses match exactly, and both builds pass frozen verification.
 Three samples per setting do not establish p95 compliance; the full native resource
 gate remains pending. The temporary profiling workflow was removed after collecting
 the evidence. General CI and all five encoder-parity targets pass for `04e6d89`.
@@ -922,8 +922,23 @@ hash-pair exceptions while retaining raw matches and every exact/URL/session lin
 The CLI already composites transparency correctly. Two supplemental development
 pairs now cover the ArmyRecognition and Wikipedia image filter pools, with independent
 gallery groups and six additional query/session exclusions.
-No new labels or splits have been frozen, and no real calibration or held-out
-evaluation has run.
+The final 1,114-case selection is now frozen before retrieval. Its gallery allowlist
+contains 8,671 records: 62 reviewed representatives and 8,609 ordinary distractors.
+It excludes 256 query/copy/session records and quarantines 769 other same-entity
+records. All 62 representatives are indexed in the rebuilt gallery, which contains
+3,117 vectors across 3,128 records and 33,554,233 preview bytes. Its 3,749 unique
+observations form 3,768 chunks; all indexed records have completed outcomes, with no
+failed analyses. A strict cached rerun made no fresh inference or network attempts.
+
+Restricted format-4 dataset:
+`bb2f75f815b853dccbbf6508455379c498261811491c8f095b8ebe34fd8d9640`.
+Bundle SHA-256: `2fc41c766985fdc9f047998bb693eb9cd1af243c6c8bf3aa53a01d79a8a026e0`.
+Frozen selection SHA-256: `d64d70d621445202f501adcea42a5984fda9d5d7928bead76dc133b3265bd81c`.
+Development fixture SHA-256: `0f92d1881fdab015ef20907aa18d05f3f7850a774b9ab6c9855ee93d448c2b67`.
+The fixture schedules 1,384 development captures across 27 exact mode/observation/
+source pools, each with 35 independent negative groups. Reusing a negative in several
+contexts does not add independent samples. Development captures are starting; no
+thresholds have been fitted and no expanded held-out evaluation has run.
 
 Calibration validation now uses the actual indexed-image entity pool for image-only
 queries, including source filters; text and combined modes retain their full eligible
