@@ -9,7 +9,7 @@ from bs4 import BeautifulSoup, Comment, Tag
 from markdownify import markdownify
 
 from pipelines.model import Entity, EntityKind, Evidence, Fact, evidence_id
-from pipelines.sources.html import text
+from pipelines.sources.html import resolve_links, text
 
 if TYPE_CHECKING:
     from pipelines.media import MediaCandidate
@@ -218,14 +218,7 @@ class ArmyRecognition:
             parent = img.find_parent("a", href=True)
             if parent:
                 img["src"] = parent["href"]
-        for node in content.select("[href], [src]"):
-            for attr in ("href", "src"):
-                if attr in node.attrs:
-                    link = urljoin(url, str(node[attr])).replace(" ", "%20")
-                    if urlsplit(link).scheme in {"http", "https"}:
-                        node[attr] = link
-                    else:
-                        del node[attr]
+        resolve_links(content, url, encode_spaces=True)
         links = sorted(
             {
                 str(node[attr])

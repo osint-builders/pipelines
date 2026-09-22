@@ -11,7 +11,7 @@ from bs4 import BeautifulSoup, Tag
 from markdownify import markdownify
 
 from pipelines.model import Entity, EntityKind, Evidence, Fact
-from pipelines.sources.html import text
+from pipelines.sources.html import resolve_links, text
 from pipelines.sources.mediawiki import config
 
 if TYPE_CHECKING:
@@ -390,14 +390,7 @@ class Commons:
             for name in categories
         )
         content = clean(content)
-        for node in content.select("[href], [src]"):
-            for attr in ("href", "src"):
-                if attr in node.attrs:
-                    target = urljoin(canonical, str(node[attr]))
-                    if urlsplit(target).scheme in {"http", "https"}:
-                        node[attr] = target
-                    else:
-                        del node[attr]
+        resolve_links(content, canonical)
         markdown = markdownify(str(content), heading_style="ATX").strip()
         if not markdown:
             # Empty named categories still provide stable identity and membership evidence.

@@ -4,7 +4,7 @@ from collections.abc import Iterable
 from dataclasses import replace
 from pathlib import Path
 from typing import TYPE_CHECKING
-from urllib.parse import unquote, urljoin, urlsplit, urlunsplit
+from urllib.parse import unquote, urlsplit, urlunsplit
 from xml.etree import ElementTree
 
 from bs4 import BeautifulSoup, Tag
@@ -12,7 +12,7 @@ from markdownify import markdownify
 
 from pipelines.model import Entity, EntityKind, Evidence, Fact
 from pipelines.sources.feeds import previous_urls
-from pipelines.sources.html import text
+from pipelines.sources.html import resolve_links, text
 
 if TYPE_CHECKING:
     from pipelines.media import MediaCandidate
@@ -114,14 +114,7 @@ class RussianForces:
             metadata[name] = str(node["content"])
         for node in content.select("script, style, form"):
             node.decompose()
-        for node in content.select("[href], [src]"):
-            for attr in ("href", "src"):
-                if attr in node.attrs:
-                    target = urljoin(url, str(node[attr]))
-                    if urlsplit(target).scheme in {"http", "https"}:
-                        node[attr] = target
-                    else:
-                        del node[attr]
+        resolve_links(content, url)
         blocks = [
             heading,
             *[

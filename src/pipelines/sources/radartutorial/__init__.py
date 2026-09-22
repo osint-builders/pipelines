@@ -8,7 +8,7 @@ from bs4 import BeautifulSoup, Tag
 from markdownify import markdownify
 
 from pipelines.model import Entity, EntityKind, Evidence, Fact, evidence_id
-from pipelines.sources.html import text
+from pipelines.sources.html import resolve_links, text
 
 if TYPE_CHECKING:
     from pipelines.media import MediaCandidate
@@ -211,14 +211,7 @@ class Radartutorial:
         for reference in soup.select("p.source, ul.source, ol.source"):
             if content not in reference.parents:
                 content.append(reference.extract())
-        for element in content.select("[href], [src]"):
-            for attr in ("href", "src"):
-                if attr in element.attrs:
-                    resolved = urljoin(url, str(element[attr]))
-                    if urlsplit(resolved).scheme in {"http", "https"}:
-                        element[attr] = resolved
-                    else:
-                        del element[attr]
+        resolve_links(content, url)
         for explanation in content.select(".explan[title]"):
             explanation.append(f" ({explanation['title']})")
         for anchor in content.select("a[title]"):

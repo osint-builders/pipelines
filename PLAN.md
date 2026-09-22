@@ -15,7 +15,7 @@ artifacts and M10 benchmark inputs remain unchanged.
 - [x] Reuse content/evidence identity validation and remove the duplicate numeric validator; 163 focused tests and the released dataset verification passed.
 - [x] Consolidate shared Go bundle validation and evidence ownership; all Go tests and vet passed.
 - [x] Unify repeated scraper media-owner lookup while retaining source-specific matching; affected media and pipeline tests passed.
-- [ ] Consolidate repeated HTML link rewriting without changing source policies.
+- [x] Consolidate repeated HTML link rewriting without changing source policies; 100 source and pipeline tests passed.
 - [ ] Run the complete checks and commit the finished cleanup.
 
 ## ODIN source capture — ready for verification

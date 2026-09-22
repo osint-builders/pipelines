@@ -18,7 +18,7 @@ from markdownify import markdownify
 
 from pipelines.archive import atomic_json
 from pipelines.model import Entity, EntityKind, Evidence, Fact
-from pipelines.sources.html import text
+from pipelines.sources.html import resolve_links, text
 
 if TYPE_CHECKING:
     from pipelines.media import MediaCandidate
@@ -256,14 +256,7 @@ class Deagel:
         family_title = text(family)
         for node in page.select("script, style, nav"):
             node.decompose()
-        for node in page.select("[href], [src]"):
-            for attr in ("href", "src"):
-                if attr in node.attrs:
-                    absolute = urljoin(ORIGIN + "/", str(node[attr]))
-                    if urlsplit(absolute).scheme in {"http", "https"}:
-                        node[attr] = absolute
-                    else:
-                        del node[attr]
+        resolve_links(page, ORIGIN + "/")
         anchors = page.find_all("a", id=VARIANT)
         if not anchors:
             raise ValueError("Deagel equipment page has no variants")

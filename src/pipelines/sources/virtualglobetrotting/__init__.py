@@ -11,7 +11,7 @@ from markdownify import markdownify
 
 from pipelines.model import Entity, EntityKind, Evidence, Fact
 from pipelines.sources.feeds import previous_urls
-from pipelines.sources.html import text
+from pipelines.sources.html import resolve_links, text
 
 if TYPE_CHECKING:
     from pipelines.media import MediaCandidate
@@ -175,14 +175,7 @@ class VirtualGlobetrotting:
         retained = BeautifulSoup("\n".join(fragments), "html.parser")
         for node in retained.select("script, style, form, button, input"):
             node.decompose()
-        for node in retained.select("[href], [src]"):
-            for attr in ("href", "src"):
-                if attr in node.attrs:
-                    target = urljoin(url, str(node[attr]))
-                    if urlsplit(target).scheme in {"http", "https"}:
-                        node[attr] = target
-                    else:
-                        del node[attr]
+        resolve_links(retained, url)
         title = text(heading)
         location_text = ", ".join(location)
         summary = f"# {title}\n\nRadar site record\n\nLocation: {location_text}\n\nCategories: {', '.join(categories)}\n\n"
