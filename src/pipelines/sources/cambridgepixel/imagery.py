@@ -1,4 +1,5 @@
 import json
+import re
 from html import escape
 from pathlib import Path
 from urllib.parse import parse_qs, urljoin, urlsplit
@@ -33,6 +34,14 @@ def validate_page(url: str, body: bytes, matches: list[dict]) -> None:
         images.update(
             urljoin(url, str(node["href"])) for node in soup.select("a[href]:has(img)")
         )
+        for node in soup.select("img[srcset], source[srcset]"):
+            images.update(
+                urljoin(url, match.group(1))
+                for match in re.finditer(
+                    r"(\S+?)(?:\s+\d+(?:\.\d+)?[wx])?(?:\s*,\s*|$)",
+                    str(node["srcset"]),
+                )
+            )
         for image in tuple(images):
             parts = urlsplit(image)
             if parts.path == "/_next/image":
