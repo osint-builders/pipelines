@@ -114,7 +114,9 @@ def test_request_scope_and_body() -> None:
     source = Odin()
     assert source.seeds == (page_url(0), SUBNAV)
     assert source.normalize(page_url(100)) == page_url(100)
-    assert json.loads(source.request_body(page_url(100))) == {
+    body = source.request_body(page_url(100))
+    assert body is not None
+    assert json.loads(body) == {
         "limit": 100,
         "offset": 100,
         "query": QUERY,
@@ -235,10 +237,9 @@ def test_full_record_identity_nested_facts_and_safe_rendering() -> None:
     assert "The complete description." in evidence.markdown
     assert "Example photo" in evidence.markdown
     assert "Example photo" not in evidence.search_text
-    assert (
-        soup.select_one("img")["src"]
-        == ORIGIN + "/dotcms/dA/" + "a" * 32 + "/fileAsset/photo.jpg"
-    )
+    image = soup.select_one("img")
+    assert image is not None
+    assert image["src"] == ORIGIN + "/dotcms/dA/" + "a" * 32 + "/fileAsset/photo.jpg"
     assert entity.metadata("odin")["source_id"] == original["identifier"]
     assert evidence.rendered_html == render(original)
 
