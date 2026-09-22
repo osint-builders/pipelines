@@ -134,3 +134,15 @@ def test_relative_image_paths_preserve_empty_segments() -> None:
     validate_page(url, body, [match])
     with pytest.raises(ValueError, match="image changed"):
         validate_page(url, body.replace(b"images//", b"images/"), [match])
+
+
+@pytest.mark.parametrize("base", ["/", "https://manufacturer.test/"])
+def test_image_paths_follow_document_base(base: str) -> None:
+    match = {**MATCH, "image_url": "https://manufacturer.test/images/radar.jpg"}
+    body = (
+        f'<base href="{base}"><base href="https://ignored.test/">'
+        f'<p>{MATCH["quote"]}</p><img src="images/radar.jpg">'
+    ).encode()
+    validate_page(URL, body, [match])
+    with pytest.raises(ValueError, match="image changed"):
+        validate_page(URL, body.replace(base.encode(), b"/other/", 1), [match])

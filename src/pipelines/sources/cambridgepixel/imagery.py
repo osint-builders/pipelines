@@ -44,6 +44,8 @@ def validate_page(url: str, body: bytes, matches: list[dict]) -> None:
             raise ValueError("Mixed PDF and HTML radar image reviews")
         return
     soup = BeautifulSoup(body, "html.parser")
+    base = soup.select_one("base[href]")
+    image_base = urljoin(url, str(base["href"])) if base else url
     visible = " ".join(text(soup).split())
     for row in matches:
         if row["page_url"] != url:
@@ -51,20 +53,20 @@ def validate_page(url: str, body: bytes, matches: list[dict]) -> None:
         if not row["quote"] or row["quote"] not in visible:
             raise ValueError(f"Reviewed radar evidence changed: {row['model']}")
         images = {
-            _image_url(url, str(node.get(attribute, "")))
+            _image_url(image_base, str(node.get(attribute, "")))
             for node in soup.select("img, video[poster]")
             for attribute in ("src", "data-src", "data-original", "poster")
             if node.get(attribute)
         }
         images.update(
-            _image_url(url, str(node["href"]))
+            _image_url(image_base, str(node["href"]))
             for node in soup.select(
                 'a[href]:has(img), a[href]:has([role="img"]), img + a[href][title], '
                 'a[href][type^="image/"]'
             )
         )
         images.update(
-            _image_url(url, str(node["data-thumbnail"]))
+            _image_url(image_base, str(node["data-thumbnail"]))
             for node in soup.select('[role="img"][data-thumbnail]')
         )
         css_property = row.get("image_css_property")
@@ -82,10 +84,10 @@ def validate_page(url: str, body: bytes, matches: list[dict]) -> None:
                 flags=re.IGNORECASE,
             )
             if match:
-                images.add(_image_url(url, match.group(2)))
+                images.add(_image_url(image_base, match.group(2)))
         for node in soup.select("img[srcset], source[srcset]"):
             images.update(
-                _image_url(url, match.group(1))
+                _image_url(image_base, match.group(1))
                 for match in re.finditer(
                     r"(\S+?)(?:\s+\d+(?:\.\d+)?[wx])?(?:\s*,\s*|$)",
                     str(node["srcset"]),
@@ -95,7 +97,7 @@ def validate_page(url: str, body: bytes, matches: list[dict]) -> None:
             parts = urlsplit(image)
             if parts.path == "/_next/image":
                 images.update(
-                    _image_url(url, value)
+                    _image_url(image_base, value)
                     for value in parse_qs(parts.query).get("url", [])
                 )
         safe = ":/?#[]@!$&'()*+,;=%"

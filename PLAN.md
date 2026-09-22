@@ -27,11 +27,12 @@ cause false table/schema disagreements; functional URL differences still fail.
 Catalog archive: `20260922T142532Z-932ca3c5`. Image reviews are stored beside the
 adapter in `image_reviews.json`; matched originals use the shared media archive,
 with separate captured source evidence. Browser DOM captures are explicitly labelled.
-The latest audited batch covers 259 models: 249 matched records, ten unresolved
-matches, and 13 explicitly ambiguous associations. It saved 244 image URLs with
-none failed, pending, or unassociated. All four PIT-RADWAR originals are recovered.
-Individual review has continued through RL-3DM (275 decisions, twelve unresolved
-and fourteen explicitly ambiguous associations).
+The latest captured batch covers 300 models: 288 matched records, twelve unresolved
+matches, and 16 explicitly ambiguous associations. It saved 273 image URLs; one
+download failed and nine remain pending. Source extraction passes, but media
+acceptance remains open until those captures are resolved.
+Individual review has continued through Halo 20 (311 decisions, twelve unresolved
+and sixteen explicitly ambiguous associations).
 Garmin images retain selected part
 numbers, sizes, and power configurations; GC's X5-21FH was verified in its hardware
 catalog after Google returned unrelated vehicle parts. SuperNet and SuperNet SSR
@@ -73,7 +74,12 @@ uses a larger, explicitly labeled antenna photograph; Pathfinder Mk2 retains a
 physically labeled control-panel photo with its component scope stated. AN/TPN-24K
 and RL-3DL remain unresolved. ReVeal's current P-18 modernization image is explicitly
 related context; RL-3DM retains a labeled historical RETIA design rendering.
-Validation: 116 focused tests passed, including PDF evidence, offline embedded
+Reutech, Rheinmetall, Robin, Saab, Samyung, Sea-Hawk, Sensrad, and Navico evidence
+retain model-specific photographs, configuration limits, and explicit family
+associations. Source pages using HTML base URLs now resolve image references against
+the first base element; altered bases fail validation. Manufacturer specification
+and catalog-link discrepancies remain explicit in the image review ledger.
+Validation: 118 focused tests passed, including PDF evidence, offline embedded
 previews, source content-type opt-in, poster images, linked
 originals, responsive images, gallery thumbnails, CSS backgrounds, and ambiguous associations.
 Explicit image download types are supported; ordinary links and non-image CSS fail.
