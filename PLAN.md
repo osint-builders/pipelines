@@ -27,17 +27,18 @@ cause false table/schema disagreements; functional URL differences still fail.
 Catalog archive: `20260922T142532Z-932ca3c5`. Image reviews are stored beside the
 adapter in `image_reviews.json`; matched originals use the shared media archive,
 with separate captured source evidence. Browser DOM captures are explicitly labelled.
-The latest audited batch covers 250 models: 241 matched records, nine unresolved
-matches, and 13 explicitly ambiguous associations. It saved 233 image URLs; three
-PIT-RADWAR downloads need browser-asset recovery, with none pending or unassociated.
-Individual review has continued through Quantum 2 (259 decisions, ten unresolved).
+The latest audited batch covers 259 models: 249 matched records, ten unresolved
+matches, and 13 explicitly ambiguous associations. It saved 244 image URLs with
+none failed, pending, or unassociated. All four PIT-RADWAR originals are recovered.
+Individual review has continued through RL-3DM (275 decisions, twelve unresolved
+and fourteen explicitly ambiguous associations).
 Garmin images retain selected part
 numbers, sizes, and power configurations; GC's X5-21FH was verified in its hardware
 catalog after Google returned unrelated vehicle parts. SuperNet and SuperNet SSR
 retain separate identities and image evidence despite sharing a manufacturer page.
 Easat's inconsistent EA40575/EA45075 designation remains explicit. Four BAE, three
 BEL, one Foxtrack, four ICS, two IAI, two Indra, MPN-14K, TPY-4, three Meteksan,
-and BYSTRA images were exported from browser assets and
+and four PIT-RADWAR images were exported from browser assets and
 validated by the shared image store. Foxtrack's public article capture excludes
 account controls. Source URL spaces and encoded spaces compare correctly without
 collapsing reserved path characters.
@@ -67,6 +68,11 @@ reviewed CSS image property; unreviewed custom properties still fail validation.
 Pro Patria Dobermann II and Rawenstvo Obzor 100 remain unresolved. Numerica and
 Anduril Spyglass captures remain separate. Raymarine models retain individually
 inspected product images rather than vessel banners or navigation thumbnails.
+Raytheon photographs distinguish SPY-3, SPY-6, Patriot, KuRFS, and LTAMDS. ASR-11
+uses a larger, explicitly labeled antenna photograph; Pathfinder Mk2 retains a
+physically labeled control-panel photo with its component scope stated. AN/TPN-24K
+and RL-3DL remain unresolved. ReVeal's current P-18 modernization image is explicitly
+related context; RL-3DM retains a labeled historical RETIA design rendering.
 Validation: 116 focused tests passed, including PDF evidence, offline embedded
 previews, source content-type opt-in, poster images, linked
 originals, responsive images, gallery thumbnails, CSS backgrounds, and ambiguous associations.

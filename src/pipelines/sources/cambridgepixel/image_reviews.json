@@ -2827,7 +2827,8 @@
     "image_url": "https://en.pitradwar.com/file/7802dd0b-dc17-11e7-83d7-0cc47a3456be",
     "caption": "N22-N(3D) deployed on a stabilized truck with its elevated horizontal radar array.",
     "quote": "3D Mobile Medium Range Surveillance Radar N22-N(3D)",
-    "notes": "Google Images identified the exact manufacturer page. Visually inspected its full-size gallery photograph showing the raised array, lattice lifting structure and rear shelter; preserved the model-specific image rather than related-product thumbnails."
+    "notes": "Google Images identified the exact manufacturer page. Visually inspected its full-size gallery photograph showing the raised array, lattice lifting structure and rear shelter; preserved the model-specific image rather than related-product thumbnails.",
+    "media_capture_method": "browser-asset"
   },
   {
     "manufacturer": "Pit-Radwar",
@@ -2838,7 +2839,8 @@
     "image_url": "https://en.pitradwar.com/file/4f381718-db58-11e7-83d7-0cc47a3456be",
     "caption": "SOŁA redeployable radar with its rectangular antenna raised above a camouflaged armored vehicle.",
     "quote": "SOŁA Redeployable Radar",
-    "notes": "Google Images led to the exact manufacturer SOŁA page. Visually inspected its full gallery photograph of the stabilized vehicle and raised flat antenna; retained the catalog’s unaccented SOLA identity."
+    "notes": "Google Images led to the exact manufacturer SOŁA page. Visually inspected its full gallery photograph of the stabilized vehicle and raised flat antenna; retained the catalog’s unaccented SOLA identity.",
+    "media_capture_method": "browser-asset"
   },
   {
     "manufacturer": "Pit-Radwar",
@@ -2849,7 +2851,8 @@
     "image_url": "https://en.pitradwar.com/file/b3d23d13-6541-11eb-b352-ac1f6b7b40ce",
     "caption": "TRS-15 radar deployed with its raised antenna on an eight-wheel truck and supporting vehicles.",
     "quote": "TRS-15 3D Mobile Medium Range Surveillance Radar",
-    "notes": "Google Images results were cross-checked against the exact manufacturer page. Visually inspected its gallery original showing the rectangular camouflage-painted array and stabilized truck, rather than an isolated command vehicle."
+    "notes": "Google Images results were cross-checked against the exact manufacturer page. Visually inspected its gallery original showing the rectangular camouflage-painted array and stabilized truck, rather than an isolated command vehicle.",
+    "media_capture_method": "browser-asset"
   },
   {
     "manufacturer": "Pit-Radwar",
@@ -3028,5 +3031,177 @@
     "caption": "Raymarine Quantum 2 Q24D radomes shown in white and black finishes; the foreground black unit carries Quantum 2 lettering.",
     "quote": "Quantum 2 Radome",
     "notes": "Individually searched Google Images and verified the exact Q24D manufacturer page. The page reuses an original Quantum thumbnail for one bundle, so chose its separate full-resolution Quantum 2 hero image. Visually verified the black foreground radome’s Quantum 2 marking and preserved that this is a two-unit promotional composition."
+  },
+  {
+    "manufacturer": "Raytheon",
+    "model": "AN/MPQ-64 Sentinel",
+    "status": "matched",
+    "search_url": "https://www.google.com/search?udm=2&q=Raytheon%20AN%20MPQ-64%20Sentinel%20radar",
+    "page_url": "https://www.rtx.com/raytheon/what-we-do/land/sentinel-radar",
+    "image_url": "https://prd-sc102-cdn.rtx.com/raytheon/-/media/ray/what-we-do/land/sensors/sentinel-radar/2020-01/images/sentinel-gal-img3.jpg?rev=a6c93914d91b45d3b65febfd2d0ad0c5&rid=3c10bf193cd441d78c26f722a4c0dd72",
+    "caption": "Raytheon Sentinel radar with tan antenna assembly and two-wheel trailer in deployed configuration.",
+    "quote": "Sentinel Radar",
+    "notes": "Google Images located the original Raytheon Sentinel page. Visually inspected its product gallery photograph showing the complete antenna and trailer; no specific upgrade variant is asserted by the generic manufacturer caption."
+  },
+  {
+    "manufacturer": "Raytheon",
+    "model": "AN/MPQ-65 / MPQ-65A",
+    "status": "matched",
+    "search_url": "https://www.google.com/search?udm=2&q=Raytheon%20AN%20MPQ-65%20MPQ-65A%20Patriot%20radar",
+    "page_url": "https://www.dvidshub.net/image/2548144/patriot-radar-integrates-into-max-thunder-16",
+    "image_url": "https://d1ldvf68ux039x.cloudfront.net/thumbs/photos/1604/2548144/1000w_q95.jpg",
+    "caption": "AN/MPQ-65 Patriot radar at Kunsan Air Base during Max Thunder 16, April 2016.",
+    "quote": "AN/MPQ-65 radar set scans the skies over Kunsan Air Base",
+    "notes": "Google Images results included unrelated LTAMDS and prototype imagery. Selected and visually inspected the U.S. Army DVIDS photograph explicitly identifying AN/MPQ-65; this represents that member of the grouped catalog entry and does not assert MPQ-65A."
+  },
+  {
+    "manufacturer": "Raytheon",
+    "model": "AN/SPS‑49",
+    "status": "matched",
+    "search_url": "https://www.google.com/search?udm=2&q=Raytheon%20AN%20SPS-49%20radar",
+    "page_url": "https://en.wikipedia.org/wiki/File:SPS-49_Air_Search_Radar_antenna.jpg",
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/7/74/SPS-49_Air_Search_Radar_antenna.jpg?utm_source=en.wikipedia.org&utm_campaign=index&utm_content=original",
+    "caption": "SPS-49 air-search radar antenna aboard USS Abraham Lincoln in August 1990.",
+    "quote": "A view of the SPS-49 air search radar antenna",
+    "notes": "Google Images led to the model article and original U.S. Navy image record. Visually inspected the full original photograph of the open parabolic reflector and pedestal; excluded 3D-print model results."
+  },
+  {
+    "manufacturer": "Raytheon",
+    "model": "AN/SPY‑3",
+    "status": "matched",
+    "search_url": "https://www.google.com/search?udm=2&q=Raytheon%20AN%20SPY-3%20radar",
+    "page_url": "https://www.radartutorial.eu/19.kartei/07.naval/po/karte040.po.html",
+    "image_url": "https://www.radartutorial.eu/19.kartei/07.naval/pic/img07-040-01.jpg",
+    "caption": "USS Zumwalt with AN/SPY-3 array integrated into the forward superstructure; full ship installation view.",
+    "quote": "Rysunek 1: USS Zumwalt z AN/SPY-3",
+    "notes": "Google Images search mixed SPY-3 and SPY-6 results. Reviewed the contemporary Raytheon release and AOS reproduction; its 160-pixel illustration was inferior. Selected the full installation photograph from the dedicated Radar Tutorial entry, whose annotated detail explicitly identifies one SPY-3 array above the reserved SPY-4 area. Visually checked both full photo and annotation; image depicts installation context, not a standalone antenna."
+  },
+  {
+    "manufacturer": "Raytheon",
+    "model": "AN/SPY‑6 Series",
+    "status": "matched",
+    "search_url": "https://www.google.com/search?udm=2&q=Raytheon%20AN%20SPY-6%20Series%20radar",
+    "page_url": "https://www.rtx.com/raytheon/what-we-do/sea/spy6-radars",
+    "image_url": "https://prd-sc102-cdn.rtx.com/raytheon/-/media/ray/what-we-do/missile-defense/strategic-sensor-systems/us-navy-spy-6-family-of-radars/2021-01/images/spy-6_gal_img3_0.jpg?rev=4b63c903bf264fb6b0c9d7ce7176e24f&rid=3c10bf193cd441d78c26f722a4c0dd72",
+    "caption": "SPY-6 radar array in a yellow manufacturing fixture at Raytheon’s Andover facility.",
+    "quote": "U.S. Navy’s SPY-6 Family of Radars",
+    "notes": "Google Images located the manufacturer family page. Visually inspected its large array manufacturing photograph with an explicit SPY-6 alt caption; represents the catalog series without claiming a specific variant."
+  },
+  {
+    "manufacturer": "Raytheon",
+    "model": "AN/TPN-24K",
+    "status": "unresolved",
+    "search_url": "https://www.google.com/search?udm=2&q=Raytheon%20AN%20TPN-24K%20radar",
+    "page_url": "https://commons.wikimedia.org/wiki/File:Radar_Bundeswehr.jpg",
+    "notes": "Google Images returned unrelated modern Raytheon radars. Exact web search found only the Cambridge catalog for the K suffix; AN/TPN-24 results identified a different museum ASR-B photograph and a NARA photo behind browser verification. Neither established AN/TPN-24K. Preserved the catalog identity and L-band value without substituting a generic TPN-24 or ASR-910 photograph."
+  },
+  {
+    "manufacturer": "Raytheon",
+    "model": "AN/TPY-2",
+    "status": "matched",
+    "search_url": "https://www.google.com/search?udm=2&q=Raytheon%20AN%20TPY-2%20radar",
+    "page_url": "https://www.rtx.com/raytheon/what-we-do/strategic-missile-defense/antpy-2",
+    "image_url": "https://prd-sc102-cdn.rtx.com/raytheon/-/media/ray/what-we-do/missile-defense/strategic-sensor-systems/antpy2-army-navy-transportable-radar-surveillance/2021-04/images/pelham-tpy-2-unit-1-036z_resize.jpg?rev=744c80f6060841a38e192ffd3a6de01b&rid=3c10bf193cd441d78c26f722a4c0dd72",
+    "caption": "AN/TPY-2 tan radar array on a wheeled trailer with deployed stabilizers at Pelham.",
+    "quote": "AN/TPY-2: Army Navy/Transportable Radar Surveillance",
+    "notes": "Google Images located the manufacturer product page. Visually inspected its gallery image explicitly captioned AN/TPY-2, retaining the full image instead of the cropped banner."
+  },
+  {
+    "manufacturer": "Raytheon",
+    "model": "ASR-11",
+    "status": "matched",
+    "search_url": "https://www.google.com/search?udm=2&q=Raytheon%20ASR-11%20radar",
+    "page_url": "https://www.deagel.com/photo/m02006120800280",
+    "image_url": "https://www.deagel.com/library/md/2006/m02006120800280.jpg",
+    "caption": "Raytheon ASR-11 primary reflector and secondary surveillance antenna mounted above the rotating pedestal.",
+    "quote": "ASR-11",
+    "notes": "Google Images located FAA and Deagel entries. FAA identifies the model but its two originals are approximately 200 pixels wide; Wikipedia repeats the same small FAA photo. Selected the larger Raytheon photograph explicitly labeled ASR-11 in Deagel’s model gallery and visually verified the complete antenna."
+  },
+  {
+    "manufacturer": "Raytheon",
+    "model": "ASR-9",
+    "status": "matched",
+    "search_url": "https://www.google.com/search?udm=2&q=Raytheon%20ASR-9%20radar",
+    "page_url": "https://www.wileywilson.com/project/fort-lauderdale-air-surveillance-radar-tower-asr-9/",
+    "image_url": "https://www.wileywilson.com/wp-content/uploads/2015/01/Fort-Lauderdale-ASR-9-4-800x600.jpg",
+    "caption": "ASR-9 primary reflector and secondary antenna on the Fort Lauderdale/Hollywood International Airport tower.",
+    "quote": "Air Surveillance Radar Tower (ASR-9)",
+    "notes": "Google Images located the installation engineer’s FAA project page. Visually inspected its close equipment photograph, confirming both reflector and feed assembly. The source identifies ASR-9 and location but does not substantiate the catalog manufacturer attribution; retained that attribution as supplied."
+  },
+  {
+    "manufacturer": "Raytheon (RTX)",
+    "model": "KuRFS / KRFS",
+    "status": "matched",
+    "search_url": "https://www.google.com/search?udm=2&q=Raytheon%20(RTX)%20KuRFS%20%2F%20KRFS%20radar",
+    "page_url": "https://www.rtx.com/raytheon/what-we-do/integrated-air-and-missile-defense/kurfs",
+    "image_url": "https://prd-sc102-cdn.rtx.com/raytheon/-/media/ray/what-we-do/counter-uas/sensors/ku-band-radio-frequency-system/450277_mlids_-00066-stmt-a-2022-070_16x9.jpg?rev=be507366c7ac44eb95bbaa614f3ed113&rid=e967f4c04ec241e18cd5f53c9954fc25",
+    "caption": "KuRFS radar raised on a mast on the M-LIDS vehicle, shown in a desert deployment.",
+    "quote": "KuRFS: Ku-band Radio Frequency Sensor",
+    "notes": "Google Images located the original Raytheon KuRFS product page. Visually inspected its labeled photograph of the elevated multiface array; caption preserves vehicle context and does not confuse the adjacent effector with the radar."
+  },
+  {
+    "manufacturer": "Raytheon (RTX)",
+    "model": "LTAMDS (GhostEye family)",
+    "status": "matched",
+    "search_url": "https://www.google.com/search?udm=2&q=Raytheon%20LTAMDS%20GhostEye%20radar",
+    "page_url": "https://www.rtx.com/raytheon/what-we-do/integrated-air-and-missile-defense/ltamds",
+    "image_url": "https://prd-sc102-cdn.rtx.com/raytheon/-/media/ray/what-we-do/integrated-air-and-missile-defense/ghosteye/images/ltamds-001rt1-peo-22-018-e021522-stmta_1600x900.jpg?rev=af0d73a4838f4beca73eec159b143b58&rid=e967f4c04ec241e18cd5f53c9954fc25",
+    "caption": "LTAMDS radar deployed at a Raytheon test facility, showing its large main array and smaller rear arrays.",
+    "quote": "LTAMDS: Lower Tier Air and Missile Defense Sensor",
+    "notes": "Google Images returned both LTAMDS and GhostEye MR. Selected the dedicated LTAMDS manufacturer page and visually confirmed the three-array trailer configuration; excluded the distinct GhostEye MR product."
+  },
+  {
+    "manufacturer": "Raytheon Anschuetz",
+    "model": "Pathfinder Mk2",
+    "status": "matched",
+    "search_url": "https://www.google.com/search?udm=2&q=Raytheon%20Anschuetz%20Pathfinder%20Mk2%20radar",
+    "page_url": "https://www.ebay.com/itm/176168461097",
+    "image_url": "https://i.ebayimg.com/images/g/ulsAAOSw55VljkLS/s-l1600.webp",
+    "caption": "Pathfinder/ST MK2 radar control panel G625425-1, showing the physical model label and operator controls; component image, not the antenna.",
+    "quote": "Raytheon Marine Pathfinder/ST MK2 Radar Control Panel (ARPA) G625425-1 - Working",
+    "capture_method": "browser-dom",
+    "notes": "Google Images found this original seller photograph. Visually read Pathfinder/ST MK2 Radar on the physical panel. Anschuetz history confirms the 1998 Pathfinder/ST MK2 generation; the C-CORE trial report identifies a 7-foot MK2 antenna but contains no corresponding antenna photo. Rejected current Pathfinder Raymarine products and unrelated G-band Pathfinder. The retained image depicts the verified control component only."
+  },
+  {
+    "manufacturer": "Retia",
+    "model": "ReVeal",
+    "status": "matched",
+    "ambiguous": true,
+    "search_url": "https://www.google.com/search?udm=2&q=Retia%20ReVeal%20radar",
+    "page_url": "https://www.retia.eu/solutions/modernization/reveal-p-18/",
+    "image_url": "https://www.retia.eu/wp-content/uploads/2020/11/P-18M-1024x1024.jpg",
+    "caption": "RETIA ReVEAL (P-18) modernization photograph with truck-mounted VHF antenna array; related system context.",
+    "quote": "ReVEAL (P-18)",
+    "notes": "Google Images located the current manufacturer modernization page. The catalog product URL and its linked new ReVeal radar URL redirect here. Visually inspected the P-18M photograph. The page distinguishes the new ReVeal redesigned extendable antenna from the P-18 modernization, so retained as related system context with an ambiguous association rather than asserting an exact new-ReVeal antenna match."
+  },
+  {
+    "manufacturer": "Retia",
+    "model": "ReVisor",
+    "status": "matched",
+    "search_url": "https://www.google.com/search?udm=2&q=Retia%20ReVisor%20radar",
+    "page_url": "https://www.retia.eu/products/radars/revisor/",
+    "image_url": "https://www.retia.eu/wp-content/uploads/elementor/thumbs/JV9_8681-1-plbq7dg9126muijsqriadipq18qxss4kdx32vf7euw.jpg",
+    "caption": "RETIA ReVISOR radar with an elevated rectangular antenna above the deployed equipment shelter.",
+    "quote": "The ReVISOR is a smart short range surveillance radar",
+    "notes": "Google Images located the dedicated manufacturer page. Visually inspected its first gallery photograph, showing the extended antenna mast and equipment enclosure; excluded adjacent ReSAURION and ReGUARD results."
+  },
+  {
+    "manufacturer": "Retia",
+    "model": "RL-3DL",
+    "status": "unresolved",
+    "search_url": "https://www.google.com/search?udm=2&q=Retia%20RL-3DL%20radar",
+    "page_url": "https://defence.csg.com/en/products/air-defence-system",
+    "notes": "Google Images returned ReSAURION long, ReGUARD and an exhibition photo of multiple scale-model vehicles. CSG’s original page explicitly names RL-3DL and RL-3DM but its gallery is labeled RACCOS. The current ReSAURION page uses RSB41 without establishing RL-3DL equivalence. Visually inspected the public exhibition photo; it does not reliably distinguish the two radar models. No image assigned and the catalog’s ReGUARD link was not treated as a model match."
+  },
+  {
+    "manufacturer": "Retia",
+    "model": "RL-3DM",
+    "status": "matched",
+    "search_url": "https://www.google.com/search?udm=2&q=Retia%20RL-3DM%20radar",
+    "page_url": "https://www.armadninoviny.cz/radar-reunion-cesko-a-slovensko-spolecne.html",
+    "image_url": "https://www.armadninoviny.cz/domains/0023-armadninoviny_cz/useruploads/images/reunion_3d_5.jpg",
+    "caption": "RETIA RL-3DM ReUNION design rendering with an elevated radar module on a Tatra chassis.",
+    "quote": "Vizualizace radaru RL-3DM ReUNION",
+    "notes": "Google Images primarily returned other RETIA models. The exact catalog link and the Tatra historical announcement are now 404. A focused model search located this 2014 article reproducing explicitly captioned RETIA imagery. Visually inspected the rendering; retain it as a historical design illustration, not an operational photograph or proof of current ReSAURION equivalence."
   }
 ]
