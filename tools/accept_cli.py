@@ -22,12 +22,32 @@ def finite(value: object) -> bool:
     )
 
 
+def calibration_eligible_ids(
+    query_type: str,
+    eligible_ids: list[str],
+    images: dict | None = None,
+) -> list[str]:
+    """Intersect image-only scopes with entities referenced by indexed images."""
+    eligible = set(eligible_ids)
+    if query_type == "image":
+        if images is None:
+            raise ValueError("Image calibration requires the actual image index")
+        eligible &= {
+            reference["entity_id"]
+            for record in images.values()
+            if record["vector_index"] is not None
+            for reference in record["references"]
+        }
+    return sorted(eligible)
+
+
 def validate_calibration_response(
     response: dict,
     manifest: dict,
     *,
     calibration: dict | None = None,
     eligible_ids: list[str] | None = None,
+    images: dict | None = None,
 ) -> bool:
     """Recompute a supported profile's decision from returned ranking evidence."""
     if not manifest.get("calibration"):
@@ -54,7 +74,8 @@ def validate_calibration_response(
     validate_artifact(calibration, manifest)
     if digest(canonical(calibration)) != manifest["calibration"]["sha256"]:
         raise ValueError("Acceptance calibration artifact checksum mismatch")
-    context = response_context(response, scope_identity(eligible_ids))
+    eligible = calibration_eligible_ids(response["query_type"], eligible_ids, images)
+    context = response_context(response, scope_identity(eligible))
     decision = decide(calibration, context, response)
     if decision is None:
         if (
@@ -630,6 +651,7 @@ def validate_image_response(
     limit: int = 10,
     calibration: dict | None = None,
     eligible_ids: list[str] | None = None,
+    images: dict | None = None,
 ) -> list[dict]:
     def finite(value: object) -> bool:
         return (
@@ -646,7 +668,11 @@ def validate_image_response(
     ):
         raise ValueError("Invalid image query envelope")
     calibrated = validate_calibration_response(
-        response, manifest, calibration=calibration, eligible_ids=eligible_ids
+        response,
+        manifest,
+        calibration=calibration,
+        eligible_ids=eligible_ids,
+        images=images,
     )
     if (
         not calibrated
@@ -729,6 +755,7 @@ def accept_empty_gallery(
             False,
             calibration=calibration,
             eligible_ids=eligible_ids,
+            images={},
         )
         assert not found and not contains_query_path(response, str(picture))
 
@@ -1090,6 +1117,7 @@ def accept(binary: Path, bundle: Path) -> None:
                             bool(extra),
                             source=record["source"],
                             calibration=calibration,
+                            images={item["id"]: item for item in records},
                             eligible_ids=[
                                 item["id"]
                                 for item in index

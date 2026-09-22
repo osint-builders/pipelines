@@ -22,7 +22,10 @@ from quality_gates import (
 
 
 def calibration_inputs(
-    tmp_path: Path, *, review_quote: str = "Archived source identity for test:one"
+    tmp_path: Path,
+    *,
+    review_quote: str = "Archived source identity for test:one",
+    query_type: str = "text",
 ) -> tuple[dict, dict, dict]:
     from pipelines.calibration import (
         canonical,
@@ -34,12 +37,25 @@ def calibration_inputs(
     )
 
     ids = ["test:one", "test:three", "test:two"]
+    eligible = ids.copy()
+    image_only = query_type == "image"
+    if image_only:
+        ids.append("test:unindexed")
     values: dict = {
         "index.json": [{"id": key, "source": "test"} for key in ids],
         "image/index.json": [],
         "observations/index.json": [],
         "observations/recipes.json": {},
     }
+    if image_only:
+        values["image/index.json"] = [
+            {
+                "id": key,
+                "vector_index": position if key in eligible else None,
+                "references": [{"entity_id": key, "evidence_id": "page"}],
+            }
+            for position, key in enumerate(ids)
+        ]
     for key in ids:
         values["entities/" + key.replace(":", "/") + ".json"] = {
             "id": key,
@@ -56,7 +72,7 @@ def calibration_inputs(
         "format_version": 4,
         "dataset_id": "base-dataset",
         "files": {name: digest(raw) for name, raw in members.items()},
-        "image": {"search": {"calibration": None}},
+        "image": {"search": {"calibration": None}, "model_sha256": "a" * 64},
         "observations": {},
     }
     binding = retrieval_identity(base)
@@ -65,20 +81,27 @@ def calibration_inputs(
     contract = quality_gates.ROOT / "tests/fixtures/search_acceptance.json"
     cases = []
     captures = []
+    pictures = []
 
     def result(key: str, score: float) -> dict:
         return {
             "id": key,
             "source": "test",
             "score": score,
-            "cosine": score,
+            "cosine": None if image_only else score,
+            "name_match": False,
             "evidence_id": "page",
             "matches": [
                 {
-                    "channel": "text",
+                    "channel": "image" if image_only else "text",
                     "score": score,
                     "evidence_id": "page",
                     "url": "https://example.test/" + key,
+                    **(
+                        {"media_id": key, "model_sha256": "a" * 64}
+                        if image_only
+                        else {}
+                    ),
                 }
             ],
         }
@@ -86,6 +109,18 @@ def calibration_inputs(
     for number in range(41):
         expected = ["test:one"] if number == 0 else []
         query = "Synthetic development input " + str(number)
+        image_sha256 = digest(query.encode()) if image_only else None
+        if image_only:
+            pictures.append(
+                {
+                    "id": image_sha256,
+                    "sha256": image_sha256,
+                    "status": "captured",
+                    "split": "development",
+                    "photo_group": "development-" + str(number),
+                }
+            )
+            query = ""
         review = {
             "reviewer": "synthetic unit test",
             "rationale": "Synthetic fixture validates proof mechanics only",
@@ -107,10 +142,10 @@ def calibration_inputs(
                 "label_basis": "Synthetic source-grounded test",
                 "group_id": "development-" + str(number),
                 "scope": "global",
-                "query_type": "text",
-                "text_mode": "vector",
+                "query_type": query_type,
+                "text_mode": None if image_only else "vector",
                 "observations": False,
-                "query": {"text": query, "image_sha256": None},
+                "query": {"text": query, "image_sha256": image_sha256},
                 "expected_ids": expected,
                 "confusable_ids": [],
                 "review": review,
@@ -119,10 +154,12 @@ def calibration_inputs(
         )
         response = {
             "dataset_id": base["dataset_id"],
-            "query_type": "text",
-            "mode": "vector",
+            "query_type": query_type,
+            "mode": "image" if image_only else "vector",
             "query": query,
-            "match_status": "candidates",
+            "query_image_sha256": image_sha256,
+            "match_status": "no_supported_match" if image_only else "candidates",
+            "calibration_status": "uncalibrated",
             "results": [
                 result("test:one", 0.8 if expected else 0.1),
                 result("test:two", 0.0),
@@ -131,7 +168,7 @@ def calibration_inputs(
         captures.append(
             {
                 "case_id": str(number),
-                "eligible_entities_sha256": scope_identity(ids),
+                "eligible_entities_sha256": scope_identity(eligible),
                 "response": response,
             }
         )
@@ -139,7 +176,7 @@ def calibration_inputs(
         "schema_version": 1,
         "status": "reviewed_frozen_development",
         "retrieval_sha256": binding,
-        "scopes": {"global": ids},
+        "scopes": {"global": eligible},
         "cases": cases,
     }
     fixture_bytes = canonical(development)
@@ -192,14 +229,14 @@ def calibration_inputs(
     ):
         paths[name] = tmp_path / (name + ".json")
         paths[name].write_bytes(raw)
-    fixture = {
+    fixture: dict = {
         "status": "frozen_before_retrieval",
         "calibration": {
             "artifact_sha256": digest(body),
             "development_fixture_sha256": digest(fixture_bytes),
             "development_responses_sha256": digest(responses_bytes),
         },
-        "media": [],
+        "media": pictures,
         "cases": [
             {
                 "id": "held-out",
@@ -211,20 +248,32 @@ def calibration_inputs(
             }
         ],
     }
+    if image_only:
+        pictures.append(
+            {
+                "id": "held-out-image",
+                "sha256": "b" * 64,
+                "status": "captured",
+                "split": "evaluation",
+                "photo_group": "held-out",
+            }
+        )
+        fixture["cases"][0]["query"] = {"image_id": "held-out-image", "source": "test"}
     paths["fixture"] = tmp_path / "evaluation-fixture.json"
     paths["fixture"].write_bytes(canonical(fixture))
     response = {
         "dataset_id": final["dataset_id"],
-        "query_type": "text",
-        "mode": "vector",
-        "query": "Separate held-out query",
+        "query_type": query_type,
+        "mode": "image" if image_only else "vector",
+        "query": "" if image_only else "Separate held-out query",
+        "query_image_sha256": "b" * 64 if image_only else None,
         "results": [result("test:three", 0.9), result("test:one", 0.0)],
     }
     context = {
-        "query_type": "text",
-        "text_mode": "vector",
+        "query_type": query_type,
+        "text_mode": None if image_only else "vector",
         "observations": False,
-        "eligible_entities_sha256": scope_identity(ids),
+        "eligible_entities_sha256": scope_identity(eligible),
     }
     response.update(decide(fitted, context, response) or {})
     evaluation = {
@@ -234,7 +283,7 @@ def calibration_inputs(
             {
                 "id": "held-out",
                 "scope": "global",
-                "eligible_entities_sha256": scope_identity(ids),
+                "eligible_entities_sha256": scope_identity(eligible),
                 "response": response,
             }
         ],
@@ -250,6 +299,29 @@ def test_calibration_proof_refits_and_replays_captured_decisions(
     assert report["development_cases"] == 41
     assert report["held_out_decisions"] == 1
     assert len(report["frozen_seed_sha256"]) == 4
+
+
+@pytest.mark.parametrize("scope", ["global", "source_filtered"])
+def test_image_calibration_proof_excludes_unindexed_entities(
+    tmp_path: Path,
+    scope: str,
+) -> None:
+    paths, fixture, evaluation = calibration_inputs(tmp_path, query_type="image")
+    evaluation["cases"][0]["scope"] = scope
+    assert response_integrity(evaluation, fixture, paths["bundle"]) == 2
+    assert calibration_proof(paths, fixture, evaluation)["development_photos"] == 41
+    from pipelines.calibration import scope_identity
+
+    evaluation["cases"][0]["eligible_entities_sha256"] = scope_identity(
+        [
+            "test:one",
+            "test:two",
+            "test:three",
+            "test:unindexed",
+        ]
+    )
+    with pytest.raises(ValueError, match="eligible pool binding"):
+        calibration_proof(paths, fixture, evaluation)
 
 
 def test_calibration_proof_rejects_review_claim_without_archived_quote(

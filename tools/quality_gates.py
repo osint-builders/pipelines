@@ -13,6 +13,7 @@ from accept_cli import (
     accept_research,
     bundle_calibration,
     bundle_evidence,
+    calibration_eligible_ids,
     validate_calibration_response,
     validate_image_response,
     validate_observation_response,
@@ -347,6 +348,7 @@ def response_integrity(evaluation: dict, fixture: dict, bundle: Path) -> int:
                 for key, entity in entities.items()
                 if not source or entity["source"] == source
             ]
+            eligible_ids = calibration_eligible_ids(mode(case), eligible_ids, images)
             if response.get("observations"):
                 validate_observation_response(
                     response,
@@ -371,6 +373,7 @@ def response_integrity(evaluation: dict, fixture: dict, bundle: Path) -> int:
                     limit=20,
                     calibration=calibration,
                     eligible_ids=eligible_ids,
+                    images=images,
                 )
             else:
                 validate_calibration_response(
@@ -545,6 +548,10 @@ def calibration_proof(paths: dict[str, Path], fixture: dict, evaluation: dict) -
         if digest(raw_index) != manifest["files"].get("index.json"):
             raise ValueError("Calibration entity index checksum mismatch")
         entities = {row["id"]: row for row in json.loads(raw_index)}
+        raw_images = archive.read("image/index.json")
+        if digest(raw_images) != manifest["files"].get("image/index.json"):
+            raise ValueError("Calibration image index checksum mismatch")
+        images = {row["id"]: row for row in json.loads(raw_images)}
     with zipfile.ZipFile(paths["development_bundle"]) as archive:
         base = json.loads(archive.read("manifest.json"))
         if (
@@ -610,6 +617,10 @@ def calibration_proof(paths: dict[str, Path], fixture: dict, evaluation: dict) -
     for row in raw_responses["cases"]:
         case = development_cases[row["case_id"]]
         eligible = development["scopes"][case["scope"]]
+        if set(eligible) != set(
+            calibration_eligible_ids(case["query_type"], eligible, images)
+        ):
+            raise ValueError("Calibration image scope includes unindexed entities")
         if not {item["id"] for item in row["response"]["results"]} <= set(eligible):
             raise ValueError("Calibration development response leaks its eligible pool")
     raw_fixture = {
@@ -653,14 +664,18 @@ def calibration_proof(paths: dict[str, Path], fixture: dict, evaluation: dict) -
         source = (
             case["query"].get("source") if row["scope"] == "source_filtered" else None
         )
-        eligible = [
-            key
-            for key, entity in entities.items()
-            if not source or entity["source"] == source
-        ]
+        eligible = calibration_eligible_ids(
+            mode(case),
+            [
+                key
+                for key, entity in entities.items()
+                if not source or entity["source"] == source
+            ],
+            images,
+        )
         response = row["response"]
         if not validate_calibration_response(
-            response, manifest, calibration=fitted, eligible_ids=eligible
+            response, manifest, calibration=fitted, eligible_ids=eligible, images=images
         ):
             raise ValueError(
                 "Held-out evaluation has no fitted profile for its exact eligible pool"

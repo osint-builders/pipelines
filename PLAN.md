@@ -826,7 +826,7 @@ from hashed development evidence. No real thresholds have been fitted. Hashes/re
 check evidence consistency; captured responses still require a trusted capture process.
 
 Ignored review packets contain 360 text candidates with 587 checked source citations,
-261 visually inspected archived images, and 284 inspected external negative-image
+406 visually inspected archived images, and 344 inspected external negative-image
 candidates. Duplicates, components, illustrations, and ambiguous variants remain
 flagged. These are candidates, with no new accepted or frozen benchmark labels.
 The user confirmed there is no existing reviewed image set to import.
@@ -865,23 +865,38 @@ The single executable is 264.96 MiB; its ZIP is 242.11 MiB, within the 320/256 M
 limits. Default and observation text also pass M1's relative latency/memory limits.
 The public offline rebuild returns `changed: false`, reproduces the exact ZIP, encodes
 only three text and three image probes, and makes no network attempts. Reports and
-the local CLI are under ignored `build/m10/`; native validation is still running.
-The general CI run for `7715b51` passes. A fresh image export differed from the frozen
+the local CLI are under ignored `build/m10/`. All 116 local baseline queries retain
+their exact prior ranks and first results (73/73 required, 101/116 first, 110/116
+within five). Native resource checks pass on Linux AMD64/ARM64, Windows AMD64, and
+macOS ARM64. macOS Intel fails latency: image p95 7.67 s, combined p95 13.32 s,
+observation text p95 6.57 s, and filtered text p95 4.00 s. Size, memory, and response
+integrity pass there. Investigation and a second native validation run are ongoing;
+the latency limits remain unchanged.
+General CI and all five native encoder-parity jobs for `ffbd1e0` pass. A fresh image export differed from the frozen
 model by 20 half-precision values despite identical graph/checkpoint metadata. Native
 parity now fetches the checksum-pinned model asset and verifies its exact bytes before
 running Python/Go probes; the lock, exporter, and embedded model remain unchanged.
-Actual download and cache reuse are checked. Linux ARM's native resource checks pass;
-its later report write exposed a workflow directory-ownership issue, fixed by creating
+Actual download and cache reuse are checked. Linux's later report write exposed a
+workflow directory-ownership issue, fixed by creating
 the output directory before privileged network-isolated measurements.
 
 Review readiness is recorded in `build/m10/review-readiness.json` and linked from
-`build/m10/review.html`. The positive packets contain 102 provisional usable groups
-across 38 entities after conservative duplicate unions. Reserving independent gallery
-and development images leaves fewer than the required 100 evaluation groups.
-The negative packet contains 165 provisional groups (58 in-domain, 107 unrelated),
-with 66 images held; all source pointers/hashes are checked and no exact/dHash matches
-were found against the archived corpus or frozen seed. Development/evaluation splits,
-confusable examples, diagrams, and final labels remain unfinished.
+`build/m10/review.html`. The original positive packets contain 102 provisional usable
+groups across 38 entities after conservative duplicate unions. Two expansion packets
+add 145 inspected images; their final global grouping and gallery/development/evaluation
+allocation are in progress. The two negative packets contain 193 provisional groups
+(86 in-domain, 107 unrelated), with 84 images held. Source pointers/hashes are checked
+and no exact/dHash matches were found against the archived corpus or frozen seed.
+Text-label review caught aliases extracted from cross-references, unrelated entities
+sharing a name, and a Dnestr/Dnepr family overlap between proposed splits. These need
+correction before freezing. Confusable examples, diagrams, and final labels remain
+unfinished.
+
+Calibration validation now uses the actual indexed-image entity pool for image-only
+queries, including source filters; text and combined modes retain their full eligible
+pool. This matches Go's runtime scope calculation. Regression tests cover unindexed
+entities and incorrect development scopes; 158 focused tests, lint, formatting, and
+type checks pass.
 
 - [ ] Run the frozen evaluation suite for text, image, combined, OCR, filters, and entity relationships; report results by task and source.
 - [ ] Verify top-result accuracy, recall within the first five results, confusable variants, and no-match behavior meet M1's targets.

@@ -11,6 +11,7 @@ from accept_cli import (
     accept_empty_gallery,
     accept_observations,
     accept_search_policy,
+    calibration_eligible_ids,
     contains_query_path,
     source_probe_scores,
     validate_calibration_response,
@@ -19,6 +20,41 @@ from accept_cli import (
     validate_observation_response,
     validate_text_ranking,
 )
+
+
+def calibration_images() -> dict:
+    return {
+        "indexed": {
+            "vector_index": 0,
+            "references": [
+                {"entity_id": "test:one"},
+                {"entity_id": "test:two"},
+                {"entity_id": "other:one"},
+                {"entity_id": "test:one"},
+            ],
+        },
+        "unindexed": {
+            "vector_index": None,
+            "references": [{"entity_id": "test:unindexed"}],
+        },
+    }
+
+
+@pytest.mark.parametrize("query_type", ["image", "image_text", "text"])
+def test_calibration_pool_uses_indexed_entity_references_only_for_image(
+    query_type: str,
+) -> None:
+    filtered = ["test:one", "test:two", "test:unindexed", "test:no-media"]
+    expected = ["test:one", "test:two"] if query_type == "image" else sorted(filtered)
+    assert (
+        calibration_eligible_ids(query_type, filtered, calibration_images()) == expected
+    )
+    assert calibration_eligible_ids(query_type, filtered, {}) == (
+        [] if query_type == "image" else sorted(filtered)
+    )
+    if query_type == "image":
+        with pytest.raises(ValueError, match="actual image index"):
+            calibration_eligible_ids(query_type, filtered)
 
 
 def test_calibrated_acceptance_recomputes_shared_protocol_goldens() -> None:
@@ -38,7 +74,9 @@ def test_calibrated_acceptance_recomputes_shared_protocol_goldens() -> None:
             response,
             manifest,
             calibration=case["artifact"],
-            eligible_ids=["test:one", "test:two"],
+            eligible_ids=["test:one", "test:two"]
+            + (["test:unindexed"] if response["query_type"] == "image" else []),
+            images=calibration_images(),
         )
         changed = deepcopy(response)
         changed["decision"]["reason"] = "unsupported assertion"
@@ -48,6 +86,7 @@ def test_calibrated_acceptance_recomputes_shared_protocol_goldens() -> None:
                 manifest,
                 calibration=case["artifact"],
                 eligible_ids=["test:one", "test:two"],
+                images=calibration_images(),
             )
 
 
@@ -68,19 +107,31 @@ def test_calibration_acceptance_keeps_unsupported_pools_and_base_bundles_strict(
     manifest["calibration"] = {"sha256": digest(canonical(case["artifact"]))}
     with pytest.raises(ValueError, match="Unsupported calibration profile"):
         validate_calibration_response(
-            response, manifest, calibration=case["artifact"], eligible_ids=["test:one"]
+            response,
+            manifest,
+            calibration=case["artifact"],
+            eligible_ids=["test:one"],
+            images=calibration_images(),
         )
     response.pop("decision")
     response.update(
         match_status="no_supported_match", calibration_status="uncalibrated"
     )
     assert not validate_calibration_response(
-        response, manifest, calibration=case["artifact"], eligible_ids=["test:one"]
+        response,
+        manifest,
+        calibration=case["artifact"],
+        eligible_ids=["test:one"],
+        images=calibration_images(),
     )
     manifest["calibration"]["sha256"] = "0" * 64
     with pytest.raises(ValueError, match="checksum mismatch"):
         validate_calibration_response(
-            response, manifest, calibration=case["artifact"], eligible_ids=["test:one"]
+            response,
+            manifest,
+            calibration=case["artifact"],
+            eligible_ids=["test:one"],
+            images=calibration_images(),
         )
 
 
