@@ -27,10 +27,13 @@ cause false table/schema disagreements; functional URL differences still fail.
 Catalog archive: `20260922T142532Z-932ca3c5`. Image reviews are stored beside the
 adapter in `image_reviews.json`; matched originals use the shared media archive,
 with separate captured source evidence. Browser DOM captures are explicitly labelled.
-The first 75 models have been reviewed and audited: 69 image URLs saved for 70
+The first 105 models have been reviewed and audited: 98 image URLs saved for 100
 matched records, five unresolved matches, and no failed or pending downloads.
-Five associations are explicitly marked ambiguous. Individual review has continued
-through DRS2D-NXT (82 decisions), including two more shared NXT family illustrations.
+Seven associations are explicitly marked ambiguous. Individual review has continued
+through SuperNet SSR Series (111 decisions). Garmin images retain selected part
+numbers, sizes, and power configurations; GC's X5-21FH was verified in its hardware
+catalog after Google returned unrelated vehicle parts. SuperNet and SuperNet SSR
+retain separate identities and image evidence despite sharing a manufacturer page.
 Easat's inconsistent EA40575/EA45075 designation remains explicit. Four BAE, three
 BEL, and one Foxtrack image were exported from displayed browser assets and
 validated by the shared image store. Foxtrack's public article capture excludes
