@@ -57,6 +57,7 @@ def test_reviewed_photo_requires_exact_captured_model_and_image_evidence() -> No
         f'<div role="img" data-thumbnail="{IMAGE}"></div>',
         f'<picture><source srcset="{IMAGE}"><img src="/fallback.jpg"></picture>',
         f'<a href="{IMAGE}"><img src="/thumbnail.jpg"></a>',
+        f'<a href="{IMAGE}"><div role="img" data-thumbnail="/thumbnail.jpg"></div></a>',
         f'<picture><source srcset="/small.jpg 800w, {IMAGE} 1600w"><img src="/fallback.jpg"></picture>',
         f'<img src="/_next/image?url={quote(IMAGE, safe="")}&amp;w=1920">',
     ],
@@ -76,6 +77,12 @@ def test_family_illustration_keeps_ambiguous_association() -> None:
     candidate = discover(URL, BODY, [entity.metadata(source.id)], [match])[0]
     assert candidate.references[0].ambiguous
     assert candidate.references[0].association == "reviewed_family_context"
+
+
+def test_plain_link_is_not_image_evidence() -> None:
+    body = f'<p>{MATCH["quote"]}</p><a href="{IMAGE}">Related page</a>'.encode()
+    with pytest.raises(ValueError, match="image changed"):
+        validate_page(URL, body, [MATCH])
 
 
 def test_image_url_escaping_preserves_reserved_path_characters() -> None:

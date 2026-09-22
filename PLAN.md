@@ -27,10 +27,10 @@ cause false table/schema disagreements; functional URL differences still fail.
 Catalog archive: `20260922T142532Z-932ca3c5`. Image reviews are stored beside the
 adapter in `image_reviews.json`; matched originals use the shared media archive,
 with separate captured source evidence. Browser DOM captures are explicitly labelled.
-The first 105 models have been reviewed and audited: 98 image URLs saved for 100
+The first 122 models have been reviewed and audited: 114 image URLs saved for 117
 matched records, five unresolved matches, and no failed or pending downloads.
 Seven associations are explicitly marked ambiguous. Individual review has continued
-through SuperNet SSR Series (111 decisions). Garmin images retain selected part
+through Spexer 2000 Mk III Land (130 decisions). Garmin images retain selected part
 numbers, sizes, and power configurations; GC's X5-21FH was verified in its hardware
 catalog after Google returned unrelated vehicle parts. SuperNet and SuperNet SSR
 retain separate identities and image evidence despite sharing a manufacturer page.
@@ -39,7 +39,10 @@ BEL, and one Foxtrack image were exported from displayed browser assets and
 validated by the shared image store. Foxtrack's public article capture excludes
 account controls. Source URL spaces and encoded spaces compare correctly without
 collapsing reserved path characters.
-Validation: 80 focused tests and Ruff passed, including poster images, linked
+HADES gallery originals are validated through linked image roles; plain links
+still fail image-evidence validation. Hensoldt originals retain the gallery DOM,
+with separate Mk11 and IFF images resolving reversed Cambridge reference links.
+Validation: 82 focused tests and Ruff passed, including poster images, linked
 originals, responsive images, gallery thumbnails, and ambiguous associations.
 All 393 records and 2,700 source facts pass the current capture audit.
 

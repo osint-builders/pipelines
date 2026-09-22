@@ -32,7 +32,8 @@ def validate_page(url: str, body: bytes, matches: list[dict]) -> None:
             if node.get(attribute)
         }
         images.update(
-            urljoin(url, str(node["href"])) for node in soup.select("a[href]:has(img)")
+            urljoin(url, str(node["href"]))
+            for node in soup.select('a[href]:has(img), a[href]:has([role="img"])')
         )
         images.update(
             urljoin(url, str(node["data-thumbnail"]))
