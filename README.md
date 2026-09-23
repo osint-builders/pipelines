@@ -7,11 +7,6 @@ to PATH, and run `pipelines verify`. Each archive contains one executable with t
 dataset, models, evidence, and selected image previews. `SHA256SUMS` contains download
 checksums; `dataset-manifest.json` describes the bundled data.
 
-The dataset includes 598 [SigIDWiki signal references](docs/sigidwiki.md), with
-structured frequency, bandwidth, modulation, and status filters, plus waterfall
-images. Signal references support offline research; they do not decode recordings
-or identify transmitters.
-
 The executable includes offline text, image, and combined search, precomputed OCR and
 visual descriptions, source evidence, and selected image previews. No runtime,
 model download, or separate data file is required. `pipelines info` reports exact
