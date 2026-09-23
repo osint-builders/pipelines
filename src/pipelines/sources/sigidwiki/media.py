@@ -1,7 +1,9 @@
 """Associate only the waterfall cell of each database row with its signal."""
 
 import re
-from urllib.parse import urljoin, urlsplit
+from collections import Counter
+from dataclasses import replace
+from urllib.parse import unquote, urljoin, urlsplit
 
 from bs4 import BeautifulSoup
 
@@ -58,6 +60,11 @@ def discover(url: str, body: bytes, entities: list[dict]) -> list[MediaCandidate
                 .endswith((".png", ".jpg", ".jpeg", ".gif", ".webp"))
                 else "unsupported_image_format"
             )
+            if (
+                unquote(urlsplit(target).path).rsplit("/", 1)[-1].lower()
+                == "nowaterfallfiller.png"
+            ):
+                reason = "source_placeholder"
             result.append(
                 MediaCandidate(
                     url=target,
@@ -70,4 +77,14 @@ def discover(url: str, body: bytes, entities: list[dict]) -> list[MediaCandidate
                     section="Waterfall image",
                 )
             )
-    return result
+    counts = Counter(candidate.url for candidate in result)
+    return [
+        replace(
+            candidate,
+            references=[
+                replace(ref, ambiguous=counts[candidate.url] > 1)
+                for ref in candidate.references
+            ],
+        )
+        for candidate in result
+    ]

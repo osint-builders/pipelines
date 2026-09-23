@@ -152,6 +152,7 @@ def test_waterfalls_are_originals_associated_with_individual_rows(body: bytes) -
         assert ref.entity_id == entity["id"]
         assert ref.evidence_id == evidence_id(DATABASE, entity["source_id"])
         assert ref.section == "Waterfall image"
+        assert ref.ambiguous
         assert entity["title"] in ref.caption
     with pytest.raises(ValueError, match="retained signal"):
         source.discover_media(DATABASE, body, entities[:1])
@@ -169,6 +170,17 @@ def test_waterfalls_are_originals_associated_with_individual_rows(body: bytes) -
 def test_rejects_unsafe_or_malformed_image_paths(value: str) -> None:
     with pytest.raises(ValueError):
         original_url(value)
+
+
+def test_missing_waterfall_placeholder_is_excluded() -> None:
+    body = database(row("NoSample")).replace(
+        b"/images/thumb/a/ab/Example.png/150px-Example.png",
+        b"/images/1/12/NoWaterfallFiller.png",
+    )
+    source = SigIDWiki()
+    entities = [e.metadata(source.id) for e in source.extract(DATABASE, body, [])]
+    images = source.discover_media(DATABASE, body, entities)
+    assert len(images) == 1 and images[0].exclusion_reason == "source_placeholder"
 
 
 def test_database_snapshot_replays_and_audits_row_evidence(
