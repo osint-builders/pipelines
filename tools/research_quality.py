@@ -234,6 +234,14 @@ def evaluate(evidence: dict) -> dict:
         images = json.loads(archive.read("image/index.json"))
         entities = json.loads(archive.read("index.json"))
         image_report = json.loads(archive.read("image/report.json"))
+        observations = json.loads(archive.read("observations/index.json"))
+        observation_report = json.loads(archive.read("observations/report.json"))
+    if {row["kind"] for row in observations} != {"ocr", "description"} or set(
+        observation_report["counts"]
+    ) - {"observed", "empty"}:
+        raise ValueError(
+            "Research release requires completed OCR and description analysis"
+        )
     coverage = {}
     for source in manifest["sources"]:
         source_images = [row for row in images if row["source"] == source]
@@ -289,6 +297,11 @@ def evaluate(evidence: dict) -> dict:
         "contract_sha256": sha256(paths["contract"]),
         "evidence": evidence,
         "coverage": coverage,
+        "observations": {
+            "records": len(observations),
+            "kinds": dict(sorted(Counter(row["kind"] for row in observations).items())),
+            "outcomes": observation_report["counts"],
+        },
         "text_regression": text,
         "research_commands_verified": research,
         "benchmark_scope": "Frozen query-disjoint 4337-entity gallery; production corpus is larger. Raw similarity is not verified identity.",

@@ -6,6 +6,7 @@ import json
 import math
 import subprocess
 import zipfile
+from contextlib import nullcontext
 from pathlib import Path
 from typing import Any
 
@@ -812,20 +813,24 @@ def evaluate(evidence: dict) -> dict:
                 for row in media.values()
                 if row["split"] != "gallery" and row["status"] == "captured"
             }
-            for picture in media.values():
-                if picture["status"] == "captured":
-                    if "query_media" in paths:
-                        with zipfile.ZipFile(paths["query_media"]) as images:
+            with (
+                zipfile.ZipFile(paths["query_media"])
+                if "query_media" in paths
+                else nullcontext()
+            ) as images:
+                for picture in media.values():
+                    if picture["status"] == "captured":
+                        if images is not None:
                             image_hash = hashlib.sha256(
                                 images.read(picture["sha256"])
                             ).hexdigest()
-                    else:
-                        local = Path(picture["local_path"])
-                        if not local.is_absolute():
-                            local = ROOT / local
-                        image_hash = sha256(local)
-                    if image_hash != picture["sha256"]:
-                        raise ValueError("Query or gallery image bytes changed")
+                        else:
+                            local = Path(picture["local_path"])
+                            if not local.is_absolute():
+                                local = ROOT / local
+                            image_hash = sha256(local)
+                        if image_hash != picture["sha256"]:
+                            raise ValueError("Query or gallery image bytes changed")
             labels_ok = reviewed_labels(fixture, media, paths["bundle"])
             check(
                 "photo_group_separation",
