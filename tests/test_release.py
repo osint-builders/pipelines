@@ -108,8 +108,13 @@ def test_unchanged_content_cannot_upload_an_input(
 
 @pytest.mark.parametrize("complete", [True, False])
 @pytest.mark.parametrize("local", [True, False])
+@pytest.mark.parametrize("corrupted", [False, True])
 def test_publication_waits_for_complete_draft_assets(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, complete: bool, local: bool
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    complete: bool,
+    local: bool,
+    corrupted: bool,
 ) -> None:
     manifest: dict = {
         "content_sha256": "a" * 64,
@@ -131,6 +136,8 @@ def test_publication_waits_for_complete_draft_assets(
     def fake_gh(*args: str) -> str:
         calls.append(args)
         if args[:2] == ("release", "view"):
+            return json.dumps({"databaseId": 1})
+        if args[0] == "api":
             uploaded = [
                 *(
                     release.archive_name(system, name)
@@ -143,9 +150,18 @@ def test_publication_waits_for_complete_draft_assets(
                 uploaded.pop()
             return json.dumps(
                 {
-                    "isDraft": True,
+                    "draft": True,
                     "assets": [
-                        {"name": name, "size": (tmp_path / name).stat().st_size}
+                        {
+                            "name": name,
+                            "size": (tmp_path / name).stat().st_size,
+                            "digest": "sha256:"
+                            + (
+                                "0" * 64
+                                if corrupted
+                                else release.asset_sha256(tmp_path / name)
+                            ),
+                        }
                         for name in uploaded
                     ],
                 }
@@ -164,7 +180,7 @@ def test_publication_waits_for_complete_draft_assets(
         "run",
         lambda *a, **k: subprocess.CompletedProcess(a, 1, "", "HTTP 404"),
     )
-    if complete:
+    if complete and not corrupted:
         release.publish(
             "owner/repo",
             tmp_path,
@@ -177,7 +193,9 @@ def test_publication_waits_for_complete_draft_assets(
         assert "--draft=false" in calls[-1]
         assert calls[-1][calls[-1].index("--notes") + 1] == ""
     else:
-        with pytest.raises(ValueError, match="incomplete"):
+        with pytest.raises(
+            ValueError, match="incomplete" if not complete else "checksum mismatch"
+        ):
             release.publish(
                 "owner/repo",
                 tmp_path,

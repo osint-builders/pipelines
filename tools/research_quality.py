@@ -233,16 +233,32 @@ def evaluate(evidence: dict) -> dict:
     with zipfile.ZipFile(paths["bundle"]) as archive:
         images = json.loads(archive.read("image/index.json"))
         entities = json.loads(archive.read("index.json"))
+        image_report = json.loads(archive.read("image/report.json"))
     coverage = {}
     for source in manifest["sources"]:
         source_images = [row for row in images if row["source"] == source]
         indexed = [row for row in source_images if row["vector_index"] is not None]
+        capture_outcomes = [
+            row for row in image_report["capture_outcomes"] if row["source"] == source
+        ]
         coverage[source] = {
             "entities": sum(e["source"] == source for e in entities),
             "saved_image_urls": len(source_images),
             "indexed_image_urls": len(indexed),
             "indexed_entities": len(
                 {ref["entity_id"] for row in indexed for ref in row["references"]}
+            ),
+            "capture_exclusions": dict(
+                sorted(Counter(row["state"] for row in capture_outcomes).items())
+            ),
+            "capture_failures": dict(
+                sorted(
+                    Counter(
+                        row["error"]
+                        for row in capture_outcomes
+                        if row["state"] == "failed"
+                    ).items()
+                )
             ),
             "outcomes": dict(
                 sorted(

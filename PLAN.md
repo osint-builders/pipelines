@@ -1019,6 +1019,13 @@ same aggregate recall and MRR, and all 73 required cases pass. The original
 identification report remains failed. Reports: `build/m10/realign/evaluation/`.
 The four original-image ZIP parts have also been revalidated against every original
 hash: 21,751 distinct files, 21,882 source URLs, and 5,481,572,267 bytes.
+All twelve source-content audits pass. Historical media capture still records
+68 unsuccessful URLs: 20 ClimateViewer, 44 Commons, and four Radartutorial.
+These include 41 unsupported formats, two invalid images, two MIME mismatches,
+eleven network failures, one rate-limit response, and eleven missing URLs.
+They remain explicit in the dataset's capture report and release coverage; they
+are not counted as saved originals. No source has pending downloads. Publication
+now compares every uploaded asset with GitHub's SHA-256 digest before publishing.
 
 ### Existing evidence
 

@@ -549,16 +549,22 @@ def publish(
             "--draft",
         )
     # GitHub's REST lookup by tag omits unpublished drafts. The CLI resolves both.
-    uploaded = json.loads(
-        gh("release", "view", tag, "--repo", repo, "--json", "isDraft,assets")
-    )
+    release_id = json.loads(
+        gh("release", "view", tag, "--repo", repo, "--json", "databaseId")
+    )["databaseId"]
+    uploaded = json.loads(gh("api", f"repos/{repo}/releases/{release_id}"))
     sizes = {asset["name"]: asset["size"] for asset in uploaded["assets"]}
-    if not uploaded["isDraft"] or sizes != {
+    if not uploaded["draft"] or sizes != {
         name: (directory / name).stat().st_size for name in asset_names
     }:
         raise ValueError(
             "Draft release assets are incomplete; previous release is unchanged"
         )
+    if any(
+        asset.get("digest") != "sha256:" + asset_sha256(directory / asset["name"])
+        for asset in uploaded["assets"]
+    ):
+        raise ValueError("Uploaded release checksum mismatch; draft is not published")
     gh(
         "release",
         "edit",
