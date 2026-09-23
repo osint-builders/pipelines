@@ -14,11 +14,39 @@ from quality_gates import (
     evaluate,
     metrics,
     passing,
+    query_failure,
     replay_research,
     response_integrity,
     text_regression,
     validate_report,
 )
+
+
+def test_recorded_image_rejections_require_bound_queries_and_exact_cli_errors() -> None:
+    case = {"query": {"image_id": "query", "text": "radar"}}
+    picture = {"sha256": "a" * 64}
+    row = {
+        "failure": {
+            "exit_code": 1,
+            "stdout": "",
+            "stderr": '{"error":"invalid or truncated image"}\n',
+            "dataset_id": "dataset",
+            "query": "radar",
+            "query_image_sha256": "a" * 64,
+        }
+    }
+    query_failure(row, case, picture, "dataset")
+    row["response"] = {"results": []}
+    with pytest.raises(ValueError, match="Invalid captured"):
+        query_failure(row, case, picture, "dataset")
+    row.pop("response")
+    row["failure"]["query_image_sha256"] = "b" * 64
+    with pytest.raises(ValueError, match="Invalid captured"):
+        query_failure(row, case, picture, "dataset")
+    row["failure"]["query_image_sha256"] = "a" * 64
+    row["failure"]["stderr"] = '{"error":"unrelated inference failure"}'
+    with pytest.raises(ValueError, match="Invalid captured"):
+        query_failure(row, case, picture, "dataset")
 
 
 def calibration_inputs(
@@ -784,9 +812,12 @@ def test_research_proof_replays_payloads_and_rejects_changed_claim(
         replay_research(proof, binary, bundle)
 
 
-@pytest.mark.parametrize("damage", [None, "evidence", "media", "duplicate"])
+@pytest.mark.parametrize(
+    "damage", [None, "evidence", "media", "duplicate", "missing_matches"]
+)
+@pytest.mark.parametrize("metadata_snippet", [False, True])
 def test_response_integrity_checks_actual_source_references(
-    tmp_path: Path, damage: str | None
+    tmp_path: Path, damage: str | None, metadata_snippet: bool
 ) -> None:
     bundle = tmp_path / "bundle.zip"
     values = {
@@ -817,7 +848,7 @@ def test_response_integrity_checks_actual_source_references(
         "source": "source",
         "score": 0.5,
         "cosine": 0.5,
-        "evidence_id": "page",
+        "evidence_id": "" if metadata_snippet else "page",
         "matches": [match],
     }
     response: dict = {
@@ -832,7 +863,9 @@ def test_response_integrity_checks_actual_source_references(
         match["media_id"] = "unrelated-media"
     elif damage == "duplicate":
         response["results"].append(result)
-    fixture = {
+    elif damage == "missing_matches":
+        result["matches"] = []
+    fixture: dict = {
         "cases": [{"id": "case", "query": {"text": "query", "source": "source"}}],
         "media": [],
     }
@@ -844,3 +877,21 @@ def test_response_integrity_checks_actual_source_references(
             response_integrity(evaluation, fixture, bundle)
     else:
         assert response_integrity(evaluation, fixture, bundle) == 1
+        picture = {"id": "photo", "sha256": "a" * 64}
+        fixture["media"] = [picture]
+        fixture["cases"][0]["query"]["image_id"] = "photo"
+        evaluation["cases"][0].pop("response")
+        evaluation["cases"][0]["failure"] = {
+            "exit_code": 1,
+            "stdout": "",
+            "stderr": '{"error":"invalid or truncated image"}',
+            "dataset_id": "dataset",
+            "query": "query",
+            "query_image_sha256": picture["sha256"],
+        }
+        with pytest.raises(ValueError, match="rejected query"):
+            response_integrity(evaluation, fixture, bundle)
+        assert (
+            response_integrity(evaluation, fixture, bundle, allow_image_rejections=True)
+            == 0
+        )

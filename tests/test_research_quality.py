@@ -1,5 +1,6 @@
 import copy
 import json
+from pathlib import Path
 
 import pytest
 import research_quality
@@ -18,7 +19,7 @@ def test_ranking_separates_suggestions_from_accepted_identifications() -> None:
         ],
         "media": [{"id": "photo", "photo_group": "independent-photo"}],
     }
-    captures = {
+    captures: dict = {
         "cases": [
             {
                 "id": "view",
@@ -62,7 +63,7 @@ def test_text_checks_recompute_passes_instead_of_trusting_flags() -> None:
 
 
 def test_research_text_contract_rejects_a_required_regression(
-    tmp_path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = tmp_path
     directory = root / "tests/fixtures"
@@ -74,7 +75,7 @@ def test_research_text_contract_rejects_a_required_regression(
         json.dumps({"baseline": {"dataset_id": "old"}})
     )
     monkeypatch.setattr(research_quality, "ROOT", root)
-    baseline = {
+    baseline: dict = {
         "cases": {"sha256": research_quality.sha256(path)},
         "evaluation": {"dataset_id": "old", "results": [{**cases[0], "rank": 1}]},
     }
@@ -89,3 +90,22 @@ def test_research_text_contract_rejects_a_required_regression(
 def test_research_quality_fails_closed_for_missing_evidence() -> None:
     with pytest.raises(ValueError, match="incomplete"):
         research_quality.evaluate({})
+
+
+def test_rejected_query_stays_in_recall_denominator() -> None:
+    fixture = {
+        "cases": [
+            {
+                "id": "bad",
+                "query": {"image_id": "photo"},
+                "expected_ids": ["source:tank"],
+                "task": "unseen_view",
+            }
+        ],
+        "media": [{"id": "photo", "photo_group": "photo-one"}],
+    }
+    capture = {"cases": [{"id": "bad", "scope": "global", "failure": {"exit_code": 1}}]}
+    summary = ranking_summary(fixture, capture)["global"]["mode:image"]
+    assert summary["raw_ranking"]["positive_cases"] == 1
+    assert summary["raw_ranking"]["query_failures"] == 1
+    assert summary["raw_ranking"]["recall_at_5"]["rate"] == 0

@@ -73,6 +73,7 @@ def metrics(rows: list[dict]) -> dict:
     negative = [row for row in rows if not row["expected_ids"]]
     confusable = [row for row in positive if row.get("confusable_ids")]
     return {
+        "query_failures": sum(bool(row.get("failed")) for row in rows),
         "positive_cases": len(positive),
         "positive_photo_groups": len(
             {row["photo_group"] for row in positive if row.get("photo_group")}
@@ -305,7 +306,28 @@ def replay_research(proof: dict, binary: Path, bundle: Path) -> int:
     return position
 
 
-def response_integrity(evaluation: dict, fixture: dict, bundle: Path) -> int:
+def query_failure(row: dict, case: dict, picture: dict, dataset_id: str) -> None:
+    failure = row["failure"]
+    if (
+        "response" in row
+        or not picture
+        or failure.get("exit_code") != 1
+        or failure.get("stdout") != ""
+        or failure.get("dataset_id") != dataset_id
+        or failure.get("query") != case["query"].get("text", "")
+        or failure.get("query_image_sha256") != picture["sha256"]
+        or json.loads(failure["stderr"]) != {"error": "invalid or truncated image"}
+    ):
+        raise ValueError("Invalid captured image rejection")
+
+
+def response_integrity(
+    evaluation: dict,
+    fixture: dict,
+    bundle: Path,
+    *,
+    allow_image_rejections: bool = False,
+) -> int:
     cases = {case["id"]: case for case in fixture["cases"]}
     pictures = {picture["id"]: picture for picture in fixture["media"]}
     with zipfile.ZipFile(bundle) as archive:
@@ -336,6 +358,16 @@ def response_integrity(evaluation: dict, fixture: dict, bundle: Path) -> int:
         count = 0
         for row in evaluation["cases"]:
             case = cases[row["id"]]
+            if "failure" in row:
+                query_failure(
+                    row,
+                    case,
+                    pictures.get(case["query"].get("image_id"), {}),
+                    manifest["dataset_id"],
+                )
+                if not allow_image_rejections:
+                    raise ValueError("Evaluation includes rejected query images")
+                continue
             response = row["response"]
             source = (
                 case["query"].get("source", "")
@@ -390,7 +422,13 @@ def response_integrity(evaluation: dict, fixture: dict, bundle: Path) -> int:
                 ):
                     raise ValueError("Result entity identity mismatch")
                 pages = evidence[result["id"]]
-                if result.get("evidence_id") not in pages:
+                # Entity-name snippets have no page ID; their contributions resolve it.
+                if (
+                    not isinstance(result.get("evidence_id"), str)
+                    or result["evidence_id"]
+                    and result["evidence_id"] not in pages
+                    or not result["matches"]
+                ):
                     raise ValueError("Result evidence is unrelated to its entity")
                 for match in result["matches"]:
                     if pages.get(match.get("evidence_id")) != match.get("url"):
@@ -840,6 +878,24 @@ def evaluate(evidence: dict) -> dict:
             by_id = {case["id"]: case for case in ready}
             for item in evaluation["cases"]:
                 case = by_id[item["id"]]
+                if "failure" in item:
+                    picture = media.get(case["query"].get("image_id"), {})
+                    query_failure(item, case, picture, manifest["dataset_id"])
+                    if not set(case["expected_ids"]) <= entities.keys():
+                        raise ValueError("Expected entity is absent from the bundle")
+                    rows.append(
+                        {
+                            **case,
+                            "scope": item["scope"],
+                            "mode": mode(case),
+                            "photo_group": picture.get("photo_group"),
+                            "rank": None,
+                            "first": None,
+                            "accepted": False,
+                            "failed": True,
+                        }
+                    )
+                    continue
                 response = item["response"]
                 expected_text = case["query"].get("text", "")
                 expected_image = (

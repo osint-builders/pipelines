@@ -1007,6 +1007,19 @@ every original and accounts for all excluded views. Preview comparison:
 `build/m10/realign/preview-sizes.json`. All 1,221 Python tests, lint, and types pass;
 full native validation awaits the completed observation build.
 
+All 1,794 frozen evaluation query/scope pairs are captured. One malformed JPEG is
+rejected for image and combined queries in both scopes; these four failures remain
+in the recall denominator. Source/media integrity passes for all 35,789 returned
+results. The checker now respects existing entity-name snippets, whose page-level
+provenance is carried by their verified contributions; an absent or unrelated
+contribution still fails. Raw global top-1/top-5 is 298/321 and 314/321 for text,
+12/158 and 24/158 for images, and 29/118 and 58/118 for combined queries.
+Every image/combined suggestion abstains. All 116 text baseline ranks retain the
+same aggregate recall and MRR, and all 73 required cases pass. The original
+identification report remains failed. Reports: `build/m10/realign/evaluation/`.
+The four original-image ZIP parts have also been revalidated against every original
+hash: 21,751 distinct files, 21,882 source URLs, and 5,481,572,267 bytes.
+
 ### Existing evidence
 
 Work is split across runtime profiling, quality/coverage evaluation, release tooling, and

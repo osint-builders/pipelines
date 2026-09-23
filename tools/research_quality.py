@@ -13,6 +13,7 @@ from quality_gates import (
     metrics,
     mode,
     replay_research,
+    response_integrity,
     sha256,
 )
 from quality_gates import (
@@ -74,6 +75,21 @@ def ranking_summary(fixture: dict, evaluation: dict) -> dict:
     rows = []
     for capture in evaluation["cases"]:
         case = cases[capture["id"]]
+        if "failure" in capture:
+            picture = media.get(case["query"].get("image_id"), {})
+            rows.append(
+                {
+                    **case,
+                    "scope": capture["scope"],
+                    "mode": mode(case),
+                    "rank": None,
+                    "first": None,
+                    "photo_group": picture.get("photo_group"),
+                    "accepted": False,
+                    "failed": True,
+                }
+            )
+            continue
         response = capture["response"]
         ids = [row["id"] for row in response["results"]]
         if mode(case) != "text" and (
@@ -113,6 +129,12 @@ def ranking_summary(fixture: dict, evaluation: dict) -> dict:
             {
                 "task:" + key: [r for r in scoped if r["task"] == key]
                 for key in sorted({r["task"] for r in scoped})
+            }
+        )
+        groups.update(
+            {
+                "source:" + key: [r for r in scoped if r["query"].get("source") == key]
+                for key in sorted({r["query"].get("source", "") for r in scoped})
             }
         )
         summary[scope] = {}
@@ -174,12 +196,21 @@ def evaluate(evidence: dict) -> dict:
         "frozen_evaluation_identity",
         "photo_group_separation",
         "release_sample_minimums",
-        "integrity",
     ):
         if not checks[key]["passed"]:
             raise ValueError(
                 f"Independent benchmark integrity failed: {key}: {checks[key]}"
             )
+    fixture = json.loads(paths["benchmark_fixture"].read_bytes())
+    captures = json.loads(paths["benchmark_evaluation"].read_bytes())
+    checked_results = response_integrity(
+        captures, fixture, paths["benchmark_bundle"], allow_image_rejections=True
+    )
+    replay_research(
+        json.loads(paths["benchmark_research"].read_bytes()),
+        paths["benchmark_binary"],
+        paths["benchmark_bundle"],
+    )
     with zipfile.ZipFile(paths["benchmark_bundle"]) as archive:
         benchmark = json.loads(archive.read("manifest.json"))
     if (
@@ -232,8 +263,6 @@ def evaluate(evidence: dict) -> dict:
         json.loads(paths["baseline"].read_bytes()),
         manifest["dataset_id"],
     )
-    fixture = json.loads(paths["benchmark_fixture"].read_bytes())
-    captures = json.loads(paths["benchmark_evaluation"].read_bytes())
     return {
         "schema_version": 1,
         "profile": PROFILE,
@@ -248,6 +277,12 @@ def evaluate(evidence: dict) -> dict:
         "research_commands_verified": research,
         "benchmark_scope": "Frozen query-disjoint 4337-entity gallery; production corpus is larger. Raw similarity is not verified identity.",
         "independent_rankings": ranking_summary(fixture, captures),
+        "independent_results_verified": checked_results,
+        "query_failures": [
+            {"id": row["id"], "scope": row["scope"], **row["failure"]}
+            for row in captures["cases"]
+            if "failure" in row
+        ],
         "original_identification_contract": {
             "passed": original["release_quality_established"],
             "checks": original["checks"],
