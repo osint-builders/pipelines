@@ -331,6 +331,7 @@ def package(
     *,
     image_model: Path | None = None,
     image_selection: Path | None = None,
+    include_unselected_captions: bool = False,
     observations: Path | None = None,
     calibration: Path | None = None,
 ) -> dict:
@@ -350,6 +351,7 @@ def package(
             output,
             image_model=image_model,
             image_selection=image_selection,
+            include_unselected_captions=include_unselected_captions,
             observations=observations,
             calibration=calibration,
         )
@@ -364,6 +366,7 @@ def _package(
     *,
     image_model: Path | None = None,
     image_selection: Path | None = None,
+    include_unselected_captions: bool = False,
     observations: Path | None = None,
     calibration: Path | None = None,
 ) -> dict:
@@ -422,7 +425,7 @@ def _package(
             for row in json.loads(image_members["image/index.json"])
             if row["vector_index"] is not None
         }
-        if image_selection is not None
+        if image_selection is not None and not include_unselected_captions
         else None
     )
     search_members, search_metadata = build_search_members(

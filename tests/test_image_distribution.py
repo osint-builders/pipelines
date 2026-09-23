@@ -947,13 +947,16 @@ def test_image_validation_failure_preserves_previous_output(
     assert not (root / "bundle.pending.zip").exists()
 
 
-def test_package_selection_restricts_search_captions_to_indexed_media(
-    setup: tuple[Path, list[dict], Path], monkeypatch: pytest.MonkeyPatch
+@pytest.mark.parametrize("include_unselected", [False, True])
+def test_package_selection_controls_search_caption_scope(
+    setup: tuple[Path, list[dict], Path],
+    monkeypatch: pytest.MonkeyPatch,
+    include_unselected: bool,
 ) -> None:
     root, entities, image_model = setup
     entity = entities[0]
     wanted = add(setup, "gallery.png")
-    add(
+    unselected = add(
         setup,
         "held-out.png",
         color="blue",
@@ -976,11 +979,21 @@ def test_package_selection_restricts_search_captions_to_indexed_media(
         output,
         image_model=image_model,
         image_selection=selection,
+        include_unselected_captions=include_unselected,
     )
     with zipfile.ZipFile(output) as archive:
         captions = json.loads(archive.read("search/captions.json"))
-        assert {row["media_id"] for row in captions} == {wanted["id"]}
-        assert {row["text"] for row in captions} == {"Publisher caption", "Side view"}
+        expected_ids = {wanted["id"]}
+        expected_text = {"Publisher caption", "Side view"}
+        if include_unselected:
+            expected_ids.add(unselected["id"])
+            expected_text.add("Held-out antenna caption")
+        assert {row["media_id"] for row in captions} == expected_ids
+        assert {row["text"] for row in captions} == expected_text
+        images = json.loads(archive.read("image/index.json"))
+        assert {row["id"] for row in images if row["vector_index"] is not None} == {
+            wanted["id"]
+        }
 
 
 def test_canonical_model_lock_ignores_input_formatting_and_export_telemetry(

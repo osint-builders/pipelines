@@ -49,6 +49,11 @@ def main() -> None:
         "--image-selection", type=Path, help="Explicit gallery media ID selection"
     )
     package.add_argument(
+        "--include-unselected-captions",
+        action="store_true",
+        help="Keep source captions outside an explicitly selected image gallery",
+    )
+    package.add_argument(
         "--observations", type=Path, help="Cached image observation analysis"
     )
     package.add_argument(
@@ -147,6 +152,7 @@ def main() -> None:
             args.output,
             image_model=args.image_model,
             image_selection=args.image_selection,
+            include_unselected_captions=args.include_unselected_captions,
             observations=args.observations,
             calibration=args.calibration,
         )
