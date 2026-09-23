@@ -1,19 +1,20 @@
 # pipelines
 
-Download the [CLI with the image dataset](https://github.com/osint-builders/pipelines/releases/tag/cli-f32652c22c5ed994179356d7800b4537353dbec4fdb91924c6b44fe3b8de3a6b)
+Download the [latest CLI](https://github.com/osint-builders/pipelines/releases/latest)
 for Windows (amd64), Linux (amd64/arm64), or macOS (Intel/Apple silicon).
 Extract the platform `.zip` or `.tar.xz`, add `pipelines` (`pipelines.exe` on Windows)
 to PATH, and run `pipelines verify`. Each archive contains one executable with the
 dataset, models, evidence, and selected image previews. `SHA256SUMS` contains download
 checksums; `dataset-manifest.json` describes the bundled data.
+Platform downloads are 373.8–388.7 MiB.
 
-This is a **prerelease**: offline text search, facts, filters, comparisons, media
-inspection, and image-query suggestions are available. Image identification remains
-experimental and uncalibrated; M10 acceptance remains incomplete. CLI downloads are
-approximately 385–398 MiB, above the planned compact-release budget. Generated OCR and
-descriptions are not included. `pipelines info` reports the exact capabilities and
-counts. The [stable text-only CLI](https://github.com/osint-builders/pipelines/releases/latest)
-remains available.
+The executable includes offline text, image, and combined search, precomputed OCR and
+visual descriptions, source evidence, and selected image previews. No runtime,
+model download, or separate data file is required. `pipelines info` reports exact
+capabilities and counts. Image and generated-text results are **uncalibrated research
+suggestions**; inspect the linked evidence. The release's `quality.json` reports the
+frozen benchmark and original unmet identification targets; `validation-*.json`
+contains native checks.
 
 For original images, download all `images-*.zip` parts, `image-records.json`, and
 `image-dataset.json` from the same release. Extract the parts into one directory.
@@ -30,6 +31,7 @@ Place options before the query or IDs. Use source-qualified IDs returned by a se
 | `pipelines search [options] "query"` | Ranked text search results |
 | `pipelines search --image PATH [options] ["query"]` | Image or combined image-and-text suggestions |
 | `pipelines media [--id MEDIA_ID] [--output PATH] SOURCE:ID` | Image metadata or one embedded JPEG preview |
+| `pipelines observations [--id OBSERVATION_ID] SOURCE:ID` | Generated text, image references, and processing recipes |
 | `pipelines similar [options] SOURCE:ID` | Semantically similar entities |
 | `pipelines list [options]` | Entities matching filters, sorted by ID |
 | `pipelines get [options] SOURCE:ID` | Entity, original source facts, and archived evidence |
@@ -42,8 +44,10 @@ Place options before the query or IDs. Use source-qualified IDs returned by a se
 | Option | Commands | Meaning |
 | --- | --- | --- |
 | `--mode hybrid\|vector` | `search` | Names, source captions, verified numeric clauses, and semantic ranking (default `hybrid`), or semantic ranking only |
+| `--observations` | `search` | Include generated OCR/descriptions; requires a text query and can be combined with an image |
 | `--image PATH` | `search` | Local JPEG/PNG, up to 20 MiB and 40 million pixels; incompatible with `--mode` |
 | `--id MEDIA_ID`, `--output PATH` | `media` | Select a record; `--output` requires `--id` and writes its preview to a new file |
+| `--id OBSERVATION_ID` | `observations` | Inspect one generated record and its recipe |
 | `--limit N` | `search`, `similar`, `list` | 1–100 results, default 10 |
 | `--source SOURCE`, `--kind KIND`, `--category CATEGORY` | `search`, `similar`, `list` | Filter before ranking or limiting |
 | `--where "FIELD OP VALUE"` | `search`, `similar`, `list` | Repeat to require every predicate; operators: `=`, `!=`, `<`, `<=`, `>`, `>=` |
@@ -60,6 +64,7 @@ for field names and `get` for all original specifications. Relationship types ar
 pipelines search --source odin --limit 5 "HIMARS"
 pipelines search --image radar.jpg --source cambridgepixel --limit 5
 pipelines search "range: 550 km; weight: 54 t"
+pipelines search --observations "yellow helicopter with landing skids"
 pipelines list --source odin --where "origin_country=United States" --limit 5
 pipelines get --format markdown odin:0a50e596d1ad19fa32b0521d94bb31a8
 pipelines facts odin:0a50e596d1ad19fa32b0521d94bb31a8
@@ -77,14 +82,21 @@ Results include `id`, `title`, `url`, `source`, `kind`, `categories`, `aliases`,
 `score`, `cosine`, `name_match`, `snippet`, and `evidence_id`. `matches` explains
 lexical, semantic, specification, and image contributions and links them to evidence.
 Scores are ranking signals, not probabilities. `no_supported_match` may still include
-ranked suggestions.
+ranked suggestions. `candidates` means results were ranked; it does not establish
+that the queried entity is present in the archive.
 
-Image queries also return `query_image_sha256` and `calibration_status`. This
-prerelease returns `no_supported_match` and `uncalibrated` for image suggestions.
+Image queries also return `query_image_sha256` and `calibration_status`. Image,
+combined, and generated-text queries return `no_supported_match` and `uncalibrated`.
 `media` returns an array with original URLs, hashes, dimensions, captions, evidence
 references, ambiguity flags, and optional preview metadata. `--output` exports the
 preview and returns its byte count and checksum; the full originals are in the
 separate image archives.
+
+`observations` returns `dataset_id`, `entity_id`, `observations`, and `recipes`.
+Generated records include `kind`, `origin: "generated"`, text, original image hashes,
+source references, and a processing-recipe hash. OCR records also carry text regions.
+Generated text can contain errors; it is excluded from default search and source facts.
+Search `matches` identifies contributions from OCR and descriptions.
 
 `similar` returns `similar_to`, `mode`, and `results`. `list` returns `total` and
 `results`; the limit applies to the latter. `get` returns the entity, source facts,
@@ -95,14 +107,17 @@ values. Missing comparison values are explicit unknowns.
 
 ## Sources and counts
 
-The prerelease above contains **8,463 entities**, **9,595 evidence pages**,
+The latest release contains **8,463 entities**, **9,595 evidence pages**,
 and **269,028 source facts** from 12 sources. Search indexes
 53,930 text chunks and 18,584 source captions. Research includes 49,504 indexed
-claims across 29 fields and 13 relationships. The CLI includes 3,207 image vectors
-with embedded previews covering 3,393 entities.
+claims across 29 fields and 13 relationships. The CLI includes 9,370 image vectors
+with embedded previews covering 7,596 entities. It also includes 11,968
+generated records (9,370 descriptions and 2,598 OCR records) in
+12,000 searchable chunks.
 
 The downloadable image dataset contains **21,882 saved image URLs** and
-**21,751 distinct original files** (5.48 GB).
+**21,751 distinct original files** (5.48 GB). The coverage report also preserves
+68 unsuccessful source image URLs, including unsupported formats and unavailable images.
 All 393 Cambridge Pixel entries were reviewed individually: 379 have matched imagery,
 including 31 explicitly ambiguous family/configuration associations; 14 remain
 unresolved. These matches use 368 saved URLs, with no failed or pending downloads.
