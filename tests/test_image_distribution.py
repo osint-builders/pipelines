@@ -468,7 +468,7 @@ def test_rich_reference_identity_keeps_ambiguity_and_legacy_context() -> None:
 def test_capture_failure_and_unsupported_format_remain_explicit(
     setup: tuple[Path, list[dict], Path],
 ) -> None:
-    add(setup, "unsupported.webp", format="WEBP")
+    add(setup, "unsupported.gif", format="GIF")
     entity = setup[1][0]
     url = "https://images.example/failed.png"
     with MediaStore(setup[0]) as store:
@@ -623,6 +623,76 @@ def test_diverse_views_and_preview_budget_are_explicit(
     assert metadata["vectors"] == metadata["preview_bytes"] == 0
     assert report["outcomes"] == {"preview_budget": 8, "view_budget": 4}
     validate(setup, members, metadata)
+
+
+def test_selection_gives_each_source_a_turn_before_more_entities(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    vectors = {key: np.array([1, 0], dtype=np.float32) for key in ("a", "b", "z")}
+    owners = {"a": {"early:1"}, "b": {"early:2"}, "z": {"late:1"}}
+    monkeypatch.setattr(image_distribution, "MAX_VECTORS", 2)
+    assert image_distribution._diverse(vectors, owners) == ["a", "z"]
+    records = [
+        {
+            "id": key,
+            "_groups": [key],
+            "source": next(iter(owner)).split(":")[0],
+            "references": [{"entity_id": next(iter(owner))}],
+        }
+        for key, owner in owners.items()
+    ]
+    assert [family[0]["id"] for family in image_distribution._families(records)] == [
+        "a",
+        "z",
+        "b",
+    ]
+
+
+def test_static_webp_is_indexed_without_changing_original_or_query_formats(
+    setup: tuple[Path, list[dict], Path],
+) -> None:
+    from pipelines.image_preprocess import preprocess
+
+    stream = BytesIO()
+    Image.new("RGBA", (24, 16), (12, 45, 78, 100)).save(
+        stream, format="WEBP", lossless=True
+    )
+    original = add(setup, "static.webp", format="WEBP", body=stream.getvalue())
+    members, metadata, report = build(setup)
+    row = json.loads(members["image/index.json"])[0]
+    assert (
+        row["sha256"] == sha256(stream.getvalue())
+        and row["content_type"] == "image/webp"
+    )
+    assert row["vector_index"] == 0 and row["preview"] is not None
+    converted = image_distribution._gallery_bytes(stream.getvalue())
+    assert sha256(converted) in ImageEncoder.calls
+    assert np.array_equal(
+        np.asarray(Image.open(BytesIO(converted))),
+        np.asarray(Image.open(BytesIO(stream.getvalue()))),
+    )
+    with MediaStore(setup[0]) as store:
+        assert store.body(original["sha256"]) == stream.getvalue()
+    with pytest.raises(ValueError, match="JPEG or PNG"):
+        preprocess(stream.getvalue(), Recipe())
+    assert (
+        report["webp_vector_recipe"]["settings"]["gallery_decode"]["version"]
+        == "static-webp-to-png-v1"
+    )
+    validate(setup, members, metadata)
+
+
+def test_animated_webp_is_not_silently_reduced_to_one_frame() -> None:
+    stream = BytesIO()
+    Image.new("RGB", (24, 16), "red").save(
+        stream,
+        format="WEBP",
+        save_all=True,
+        append_images=[Image.new("RGB", (24, 16), "blue")],
+        duration=100,
+    )
+    with pytest.raises(ValueError, match="static WebP"):
+        image_distribution._gallery_bytes(stream.getvalue())
 
 
 def test_preview_budget_covers_entities_before_extra_views(

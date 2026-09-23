@@ -301,6 +301,27 @@ def validate_calibration_bundle(archive: zipfile.ZipFile, manifest: dict) -> Non
         raise ValueError("Calibration descriptor mismatch")
 
 
+def _cached_vectors(bundle: Path, chunks: list[dict]) -> bytes | None:
+    if not bundle.is_file():
+        return None
+    with zipfile.ZipFile(bundle) as archive:
+        manifest = json.loads(archive.read("manifest.json"))
+        if manifest.get("model") != LOCK:
+            return None
+        previous = archive.read("chunks.json")
+        if sha256(previous) != manifest["files"].get("chunks.json"):
+            raise ValueError("Existing chunk checksum mismatch")
+        if previous != canonical(chunks):
+            return None
+        vectors = archive.read("vectors.f32")
+        if (
+            sha256(vectors) != manifest["files"].get("vectors.f32")
+            or len(vectors) != len(chunks) * LOCK["dimensions"] * 4
+        ):
+            raise ValueError("Existing vector checksum or size mismatch")
+        return vectors
+
+
 def package(
     root: Path,
     sources: list[str],
@@ -473,27 +494,31 @@ def _package(
             }
         )
         chunks.extend({"entity": len(index) - 1, **chunk} for chunk in texts)
-    model_key = sha256(canonical(LOCK))
-    keys = [sha256(model_key.encode() + chunk["text"].encode()) for chunk in chunks]
-    missing = list(
-        dict.fromkeys(key for key in keys if not (cache / f"{key}.f32").exists())
-    )
-    by_key = dict(zip(keys, chunks, strict=True))
     width = LOCK["dimensions"] * 4
-    for start in range(0, len(missing), 16):
-        batch = missing[start : start + 16]
-        vectors = encoder.encode([by_key[key]["text"] for key in batch])
-        for position, key in enumerate(batch):
-            target = cache / f"{key}.f32"
-            temporary = target.with_suffix(".tmp")
-            temporary.write_bytes(vectors[position * width : (position + 1) * width])
-            temporary.replace(target)
-        print(
-            f"Embedded {min(start + 16, len(missing))}/{len(missing)} new chunks",
-            file=sys.stderr,
-            flush=True,
+    vector_bytes = _cached_vectors(output, chunks)
+    if vector_bytes is None:
+        model_key = sha256(canonical(LOCK))
+        keys = [sha256(model_key.encode() + chunk["text"].encode()) for chunk in chunks]
+        missing = list(
+            dict.fromkeys(key for key in keys if not (cache / f"{key}.f32").exists())
         )
-    vector_bytes = b"".join((cache / f"{key}.f32").read_bytes() for key in keys)
+        by_key = dict(zip(keys, chunks, strict=True))
+        for start in range(0, len(missing), 16):
+            batch = missing[start : start + 16]
+            vectors = encoder.encode([by_key[key]["text"] for key in batch])
+            for position, key in enumerate(batch):
+                target = cache / f"{key}.f32"
+                temporary = target.with_suffix(".tmp")
+                temporary.write_bytes(
+                    vectors[position * width : (position + 1) * width]
+                )
+                temporary.replace(target)
+            print(
+                f"Embedded {min(start + 16, len(missing))}/{len(missing)} new chunks",
+                file=sys.stderr,
+                flush=True,
+            )
+        vector_bytes = b"".join((cache / f"{key}.f32").read_bytes() for key in keys)
     if len(vector_bytes) != len(chunks) * width:
         raise ValueError("Embedding cache contains an invalid vector")
     members = {

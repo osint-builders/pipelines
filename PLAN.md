@@ -1215,6 +1215,15 @@ The existing release workflow can also run native functional checks for a candid
 under its network restrictions. Those reports cannot satisfy the full release
 validator, and the workflow rejects stable publication in functional-only mode.
 
+The first full-archive candidate exposed preview starvation: three sources received
+no indexed images, and 52 Cambridge Pixel WebP originals remained metadata-only.
+Publication was stopped. Selection now alternates sources as well as entities;
+static WebP is converted losslessly for gallery processing with a distinct cached
+recipe, while original bytes and query-format restrictions remain intact. Animated
+WebP is explicitly excluded. Unchanged text vectors can be reused from a prior
+bundle only when the model, ordered chunks, vector size, and checksums agree.
+Focused tests and full type checks pass; the corrected candidate is being rebuilt.
+
 - [x] Improve specification retrieval using source-backed numeric/property evidence; verify unit/value matching on development queries.
 - [ ] Improve image retrieval and qualify gallery subject evidence; current and larger-reference models remain below M1 targets on development photos.
 - [ ] Run the frozen evaluation suite for text, image, combined, OCR, filters, and entity relationships; report results by task and source.

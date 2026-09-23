@@ -5,7 +5,7 @@ import re
 import sys
 import zipfile
 from collections import Counter, defaultdict, deque
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from io import BytesIO
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -162,6 +162,20 @@ def _unit(body: bytes, dimensions: int, dtype: str = "<f2") -> "NDArray[np.float
     return vector / np.float32(squared**0.5)
 
 
+def _source_round_robin(entities: dict) -> list[str]:
+    sources: dict[str, deque[str]] = defaultdict(deque)
+    for entity in sorted(entities):
+        sources[entity.split(":", 1)[0]].append(entity)
+    queues = deque(sources[source] for source in sorted(sources))
+    ordered = []
+    while queues:
+        queue = queues.popleft()
+        ordered.append(queue.popleft())
+        if queue:
+            queues.append(queue)
+    return ordered
+
+
 def _families(records: list[dict]) -> list[list[dict]]:
     parents = {row["id"]: row["id"] for row in records}
 
@@ -189,7 +203,7 @@ def _families(records: list[dict]) -> list[list[dict]]:
             {ref["entity_id"] for row in rows for ref in row["references"]}
         ):
             by_owner[owner].append(group)
-    queues = deque(deque(groups) for _, groups in sorted(by_owner.items()))
+    queues = deque(deque(by_owner[owner]) for owner in _source_round_robin(by_owner))
     ordered: list[str] = []
     seen: set[str] = set()
     while queues:
@@ -232,8 +246,9 @@ def _diverse(vectors: dict, owners: dict[str, set[str]]) -> list[str]:
     selected: set[str] = set()
     ordered: list[str] = []
     counts: Counter = Counter()
+    entity_order = _source_round_robin(proposals)
     for position in range(MAX_VIEWS):
-        for entity in sorted(proposals):
+        for entity in entity_order:
             choices = proposals[entity]
             if position >= len(choices):
                 continue
@@ -250,12 +265,38 @@ def _diverse(vectors: dict, owners: dict[str, set[str]]) -> list[str]:
     return ordered
 
 
+def _gallery_bytes(body: bytes) -> bytes:
+    if not (body.startswith(b"RIFF") and body[8:12] == b"WEBP"):
+        return body
+    from PIL import Image, ImageOps
+
+    from pipelines.image_preprocess import MAX_IMAGE_BYTES, MAX_IMAGE_PIXELS
+
+    if len(body) > MAX_IMAGE_BYTES:
+        raise ValueError("Gallery image exceeds the encoded byte limit")
+    try:
+        with Image.open(BytesIO(body)) as image:
+            if (
+                getattr(image, "n_frames", 1) != 1
+                or image.width * image.height > MAX_IMAGE_PIXELS
+            ):
+                raise ValueError("Only bounded static WebP images can be indexed")
+            image.load()
+            pixels = ImageOps.exif_transpose(image)
+            pixels.info.clear()
+            stream = BytesIO()
+            pixels.save(stream, format="PNG")
+            return stream.getvalue()
+    except (OSError, SyntaxError, Image.DecompressionBombError) as exc:
+        raise ValueError("Invalid gallery WebP image") from exc
+
+
 def _preview(input_path: Path, output_path: Path) -> None:
     from PIL import Image
 
     from pipelines.image_preprocess import _decode
 
-    image = _decode(input_path.read_bytes())
+    image = _decode(_gallery_bytes(input_path.read_bytes()))
     image.thumbnail((PREVIEW_EDGE, PREVIEW_EDGE), Image.Resampling.LANCZOS)
     image.save(
         output_path,
@@ -409,7 +450,7 @@ def build_image_members(
             row["exclusion_reason"] = "selection"
         elif not refs:
             row["exclusion_reason"] = "unassociated"
-        elif row["content_type"] not in {"image/jpeg", "image/png"}:
+        elif row["content_type"] not in {"image/jpeg", "image/png", "image/webp"}:
             row["exclusion_reason"] = "unsupported_image_format"
         rows.append(row)
     encoder = Encoder.from_manifest(model_manifest)
@@ -429,6 +470,16 @@ def build_image_members(
             "pillow": pillow_version,
         },
     )
+    webp_decode = {"version": "static-webp-to-png-v1", "pillow": pillow_version}
+    webp_vectors = replace(
+        vector_recipe,
+        settings={**vector_recipe.settings, "gallery_decode": webp_decode},
+    )
+    webp_previews = replace(
+        preview_recipe,
+        settings={**preview_recipe.settings, "gallery_decode": webp_decode},
+    )
+    webp_hashes = {row["sha256"] for row in rows if row["content_type"] == "image/webp"}
     vectors: dict[str, NDArray[np.float32]] = {}
     owners_by_hash: dict[str, set[str]] = defaultdict(set)
     encoded: dict[str, bytes] = {}
@@ -448,7 +499,7 @@ def build_image_members(
             for row in preferred:
                 body = store.body(row["sha256"])
                 try:
-                    image = _decode(body)
+                    image = _decode(_gallery_bytes(body))
                 except ValueError:
                     row["exclusion_reason"] = "unsupported_image_encoding"
                     continue
@@ -479,11 +530,12 @@ def build_image_members(
                     continue
 
                 def produce(input_path: Path, output_path: Path) -> None:
-                    vector = encoder.encode(input_path.read_bytes())
+                    vector = encoder.encode(_gallery_bytes(input_path.read_bytes()))
                     _unit(vector.astype("<f4").tobytes(), lock["dimensions"], "<f4")
                     output_path.write_bytes(vector.astype("<f2").tobytes())
 
-                cached = store.derive(winner, vector_recipe, produce).read_bytes()
+                recipe = webp_vectors if winner in webp_hashes else vector_recipe
+                cached = store.derive(winner, recipe, produce).read_bytes()
                 vectors[winner] = _unit(cached, lock["dimensions"])
                 encoded[winner] = cached
                 candidate_count += 1
@@ -502,7 +554,8 @@ def build_image_members(
         selected_set = set(selected)
         preview_bytes, previews = 0, {}
         for digest in selected:
-            body = store.derive(digest, preview_recipe, _preview).read_bytes()
+            recipe = webp_previews if digest in webp_hashes else preview_recipe
+            body = store.derive(digest, recipe, _preview).read_bytes()
             preview_hash = sha256(body)
             member = f"image/previews/{preview_hash}.jpg"
             if member not in members and preview_bytes + len(body) > MAX_PREVIEW_BYTES:
@@ -546,12 +599,14 @@ def build_image_members(
         "excluded_occurrences": excluded_occurrences,
         "capture_sha256": sha256(canonical(capture_identity)),
         "selection": sorted(chosen) if chosen is not None else None,
-        "selection_method": "original-groups-farthest-first-preview-round-robin-v3",
+        "selection_method": "original-groups-farthest-first-source-round-robin-v4",
         "max_views_per_entity": MAX_VIEWS,
         "max_vectors": MAX_VECTORS,
         "max_preview_bytes": MAX_PREVIEW_BYTES,
         "vector_recipe": asdict(vector_recipe),
         "preview_recipe": asdict(preview_recipe),
+        "webp_vector_recipe": asdict(webp_vectors),
+        "webp_preview_recipe": asdict(webp_previews),
         "outcomes": dict(
             sorted(
                 Counter(row["exclusion_reason"] or "indexed" for row in rows).items()

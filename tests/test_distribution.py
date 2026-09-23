@@ -9,11 +9,59 @@ from test_pipeline import HTML, archived
 
 from pipelines.build import publish
 from pipelines.distribution import (
+    LOCK,
+    _cached_vectors,
+    canonical,
     collect_artifacts,
     content_digest,
+    sha256,
     validate_calibration_bundle,
     write_bundle,
 )
+
+
+def test_bundled_vector_reuse_requires_exact_chunks_model_and_checksums(
+    tmp_path: Path,
+) -> None:
+    bundle = tmp_path / "dataset.zip"
+    chunks = [{"text": "first"}, {"text": "second"}]
+    vectors = b"\x01" * (len(chunks) * LOCK["dimensions"] * 4)
+    manifest = {
+        "model": LOCK,
+        "files": {
+            "chunks.json": sha256(canonical(chunks)),
+            "vectors.f32": sha256(vectors),
+        },
+    }
+
+    def write(value: dict, body: bytes = vectors) -> None:
+        write_bundle(
+            bundle,
+            {
+                "manifest.json": canonical(value),
+                "chunks.json": canonical(chunks),
+                "vectors.f32": body,
+            },
+        )
+
+    assert _cached_vectors(bundle, chunks) is None
+    write(manifest)
+    assert _cached_vectors(bundle, chunks) == vectors
+    assert _cached_vectors(bundle, list(reversed(chunks))) is None
+    write({**manifest, "model": {}})
+    assert _cached_vectors(bundle, chunks) is None
+    write(manifest, vectors[:-4])
+    with pytest.raises(ValueError, match="vector checksum or size"):
+        _cached_vectors(bundle, chunks)
+    changed = deepcopy(manifest)
+    changed["files"]["vectors.f32"] = sha256(vectors[:-4])
+    write(changed, vectors[:-4])
+    with pytest.raises(ValueError, match="vector checksum or size"):
+        _cached_vectors(bundle, chunks)
+    changed["files"]["chunks.json"] = "0" * 64
+    write(changed)
+    with pytest.raises(ValueError, match="chunk checksum"):
+        _cached_vectors(bundle, chunks)
 
 
 def test_export_preserves_full_content_and_stable_source_id(tmp_path: Path) -> None:
