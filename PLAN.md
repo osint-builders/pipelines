@@ -16,7 +16,7 @@ attach only images supported by model-specific source evidence.
 
 - [x] Parse and reconcile every supplied row, including applications and references.
 - [x] Capture the updated catalog and verify complete offline extraction.
-- [ ] Review imagery for each model; retain search, original-page, and match evidence.
+- [x] Review imagery for each model; retain search, original-page, and match evidence.
 - [ ] Download matched originals through the shared media archive and audit coverage.
 - [ ] Rebuild the local index, test the CLI, update README counts, and publish a new latest release.
 
@@ -31,8 +31,8 @@ The latest captured batch covers 300 models: 288 matched records, twelve unresol
 matches, and 16 explicitly ambiguous associations. It saved 273 image URLs; one
 download failed and nine remain pending. Source extraction passes, but media
 acceptance remains open until those captures are resolved.
-Individual review has continued through Ranger R5D (350 decisions, thirteen unresolved
-and twenty-three explicitly ambiguous associations). KuRFS, LTAMDS, and Sentinel
+Individual review is complete for all 393 records: 379 matched, fourteen unresolved,
+and thirty-one explicitly ambiguous associations within the matched set. KuRFS, LTAMDS, and Sentinel
 source renditions were visually rechecked and exported through observed browser
 assets; the next archive audit will verify those imports.
 Garmin images retain selected part
@@ -52,7 +52,7 @@ TRML and TRS variants have separate images; Hikvision ranges retain model-specif
 evidence and manufacturer/catalog status differences. Radartutorial enlargement
 links beside thumbnails are supported, and rendered Hikvision image URLs are
 preserved in browser captures. Legacy ELM-2129 imagery is explicitly related ARSS
-context, supported by the archived model cross-reference.
+context, supported by the reviewed model cross-reference.
 JRC scanner tabs retain labeled antenna options and dimensional drawings. Koden's
 MDC catalog entry links to MDS; separate manufacturer model pages supply the image
 evidence. ICx STS-12000 remains unresolved. Indra's shared L/S-band illustration
@@ -86,6 +86,9 @@ previews, source content-type opt-in, poster images, linked
 originals, responsive images, gallery thumbnails, CSS backgrounds, and ambiguous associations.
 Explicit image download types are supported; ordinary links and non-image CSS fail.
 All 393 records and 2,700 source facts pass the current capture audit.
+The final image capture is in progress. Large reviewed brochures have a 20 MiB
+source-specific limit; embedded JPEG 2000 images require a hash-verified lossless
+PNG conversion. Thales browser text and asset inventories are labelled as such.
 
 ## Code cleanup — complete
 
@@ -178,7 +181,7 @@ commands and the source table.
 | M7 — Better text and combined ranking | M1, M5, M6 | Verified by user; `0d20f4a`, CI and offline acceptance pass; 116 baseline ranks preserved, new text 18/18 within five; latency and calibration gaps tracked in M10 |
 | M8 — Entity relationships and precise filters | M1, M7 | Verified by user; `beafc67b`, CI and offline acceptance pass; 63 evidence checks, 116 unchanged baseline ranks; resource gaps tracked in M10 |
 | M9 — Media coverage across all sources | M3, M5, M6 | Verified by user; `62d438c`, 822 tests and CI pass; all 11 sources audited, 9,696 saved media records, deterministic offline rebuild and Windows/Linux CLI acceptance |
-| M10 — Quality gates and compact releases | M4–M9 | In progress; reviewed benchmark frozen; JPEG parity and descriptive ranking improved (`09404cf`, `758401c`); image and specification quality still block release |
+| M10 — Quality gates and compact releases | M4–M9 | In progress; reviewed benchmark frozen; JPEG parity, descriptions, and specification retrieval improved; image quality, calibration, and final release validation remain open |
 
 Advance in milestone order and stop for user verification between milestones.
 Agents may work concurrently within the active milestone; dependencies do not authorize
@@ -1182,7 +1185,22 @@ type checks pass. Independent combined-query photographs may reuse a generic tex
 constraint; image/group overlap remains prohibited and text-only duplicate protection
 is unchanged. The expanded focused suite passes 159 tests.
 
-- [ ] Improve specification retrieval using source-backed numeric/property evidence; verify unit/value matching on development queries.
+Search policy v3 adds exact, source-backed specification coverage to hybrid ranking.
+Labelled clauses match the original fact name or canonical field, with unit conversion
+and exact scalar/interval bounds; approximate and unknown claims earn no credit.
+Duplicate clauses do not increase coverage. Each contribution carries its claim ID,
+source evidence, and requested clause. Versions 1 and 2 retain their prior behavior.
+The controlled candidate preserves all 12,575 non-manifest bundle members and leaves
+frozen fixtures untouched. Development specification top-1/top-5 improves from 1/5
+to 20/20 out of 20; all 116 baseline ranks remain unchanged. Exact names stay 20/20,
+descriptions 18/20 first and 20/20 within five, and combined queries 5/25 and 13/25.
+These are raw development rankings, not calibrated held-out acceptance. Full Go tests
+and vet plus 166 focused Python checks pass. Binary SHA-256:
+`3f6b3aa5da47d943646099455f8d43f4c76863f0acd5c95b90b6def13d06706d`.
+Comparison SHA-256: `17762ead9b8924f228f46008356162a9d95c2dbdea98a93c7de0196624c592c0`.
+Reports: `build/m10/runtime/search-policy-v3/`.
+
+- [x] Improve specification retrieval using source-backed numeric/property evidence; verify unit/value matching on development queries.
 - [ ] Improve image retrieval and qualify gallery subject evidence; current and larger-reference models remain below M1 targets on development photos.
 - [ ] Run the frozen evaluation suite for text, image, combined, OCR, filters, and entity relationships; report results by task and source.
 - [ ] Verify top-result accuracy, recall within the first five results, confusable variants, and no-match behavior meet M1's targets.

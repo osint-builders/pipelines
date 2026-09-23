@@ -16,6 +16,7 @@ type Match struct {
 	EvidenceID           string   `json:"evidence_id"`
 	URL                  string   `json:"url"`
 	MediaID              string   `json:"media_id,omitempty"`
+	ClaimID              string   `json:"claim_id,omitempty"`
 	ModelSHA256          string   `json:"model_sha256,omitempty"`
 	Origin               string   `json:"origin,omitempty"`
 	ObservationID        string   `json:"observation_id,omitempty"`

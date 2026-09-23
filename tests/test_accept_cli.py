@@ -412,6 +412,44 @@ def test_ranked_source_name_priority_keeps_raw_cosine_signal(cosine: float) -> N
     assert validate_text_ranking(item, manifest) == pytest.approx(item["score"])
 
 
+def test_specification_coverage_is_versioned_and_recomputed() -> None:
+    manifest, response = ranked_response()
+    item = response["results"][0]
+    manifest["search"]["version"] = item["ranking"]["method"] = "bm25-minilm-v3"
+    item["ranking"]["specification_terms"] = 2
+    contribution = {
+        "channel": "text",
+        "method": "specification",
+        "reason": "source_fact",
+        "score": 0.5,
+        "claim_id": "claim:" + "a" * 24,
+        "terms": ["range: 300 m"],
+        "evidence_id": "evidence",
+        "url": "https://example.test",
+    }
+    item["matches"].append(contribution)
+    item["score"] += 0.5
+    item["ranking"]["text_score"] = item["score"]
+    assert validate_text_ranking(item, manifest) == pytest.approx(item["score"])
+    for field, value in [
+        ("score", 1),
+        ("claim_id", "missing"),
+        ("channel", "ocr"),
+        ("terms", []),
+    ]:
+        wrong = deepcopy(item)
+        wrong["matches"][-1][field] = value
+        with pytest.raises(ValueError):
+            validate_text_ranking(wrong, manifest)
+    item["ranking"]["specification_terms"] = 0
+    with pytest.raises(ValueError):
+        validate_text_ranking(item, manifest)
+    item["ranking"]["specification_terms"] = 2
+    manifest["search"]["version"] = item["ranking"]["method"] = "bm25-minilm-v2"
+    with pytest.raises(ValueError):
+        validate_text_ranking(item, manifest)
+
+
 @pytest.mark.parametrize(
     ("path", "value"),
     [

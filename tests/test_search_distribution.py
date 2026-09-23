@@ -120,13 +120,15 @@ def test_missing_media_is_a_valid_empty_caption_index(
     assert check(root, manifest, packed) == metadata
 
 
+@pytest.mark.parametrize("version", ["bm25-minilm-v1", "bm25-minilm-v2"])
 def test_new_ranking_policy_retains_legacy_bundle_validation(
     source_archive: tuple[Path, list[dict]],
+    version: str,
 ) -> None:
     root, entities = source_archive
     members, metadata = build_search_members(root, [entities[0]["source"]], entities)
-    assert metadata["version"] == "bm25-minilm-v2"
-    legacy = {**metadata, "version": "bm25-minilm-v1"}
+    assert metadata["version"] == "bm25-minilm-v3"
+    legacy = {**metadata, "version": version}
     manifest, packed = bundle(root, entities, members, legacy)
     assert check(root, manifest, packed) == legacy
 

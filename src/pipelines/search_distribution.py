@@ -35,7 +35,7 @@ MAX_MEMBER_BYTES = 32 * 1024 * 1024
 def _policy(value: object) -> dict:
     if not isinstance(value, dict) or set(value) != {*SEARCH_POLICY, "captions"}:
         raise ValueError("Invalid search policy fields")
-    if value["version"] not in (LEGACY_SEARCH_VERSION, SEARCH_VERSION):
+    if value["version"] not in (LEGACY_SEARCH_VERSION, "bm25-minilm-v2", SEARCH_VERSION):
         raise ValueError("Unsupported search policy version")
     for field in ("k1", "b", "lexical_weight", "semantic_weight"):
         number = value[field]

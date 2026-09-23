@@ -26,10 +26,11 @@ type SearchPolicy struct {
 
 // TextRanking reports retrieval signals, never identity probabilities.
 type TextRanking struct {
-	Method       string  `json:"method"`
-	SemanticRank int     `json:"semantic_rank"`
-	LexicalRank  int     `json:"lexical_rank,omitempty"`
-	TextScore    float64 `json:"text_score"`
+	Method             string  `json:"method"`
+	SemanticRank       int     `json:"semantic_rank"`
+	LexicalRank        int     `json:"lexical_rank,omitempty"`
+	TextScore          float64 `json:"text_score"`
+	SpecificationTerms int     `json:"specification_terms,omitempty"`
 }
 
 type sourceCaption struct {
@@ -64,7 +65,7 @@ func (d *Dataset) validateSearchPolicy() error {
 		}
 		return nil
 	}
-	if (p.Version != "bm25-minilm-v1" && p.Version != "bm25-minilm-v2") || p.K1 != 1.2 || p.B != .75 || p.RankConstant < 1 || p.RankConstant > 1000 ||
+	if (p.Version != "bm25-minilm-v1" && p.Version != "bm25-minilm-v2" && p.Version != "bm25-minilm-v3") || p.K1 != 1.2 || p.B != .75 || p.RankConstant < 1 || p.RankConstant > 1000 ||
 		!(p.LexicalWeight > 0 && p.LexicalWeight <= 10) || !(p.SemanticWeight > 0 && p.SemanticWeight <= 10) || p.Captions < 0 || p.Captions > 100000 {
 		return errors.New("unsupported text search policy")
 	}
@@ -316,9 +317,14 @@ func (d *Dataset) rankText(results []Result, generated map[string]Match, query s
 			result.Snippet, result.EvidenceID = index.documents[hit.Doc].Text, match.EvidenceID
 		}
 	}
+	if p.Version == "bm25-minilm-v3" {
+		if err := d.rankSpecifications(results, positions, query); err != nil {
+			return nil, err
+		}
+	}
 	for i := range results {
 		result := &results[i]
-		if p.Version == "bm25-minilm-v2" {
+		if p.Version != "bm25-minilm-v1" {
 			result.NameMatch = sourceNameMatchV2(query, result.Entity)
 		} else {
 			result.NameMatch = sourceNameMatch(query, result.Entity)

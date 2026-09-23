@@ -4,6 +4,7 @@ import base64
 import hashlib
 import json
 import math
+import re
 import subprocess
 import sys
 import tempfile
@@ -162,10 +163,31 @@ def validate_text_ranking(item: dict, manifest: dict) -> float:
     text = [match for match in item["matches"] if match["channel"] != "image"]
     semantic = [match for match in text if match.get("method") == "semantic"]
     lexical = [match for match in text if match.get("method") == "lexical"]
+    specifications = [match for match in text if match.get("method") == "specification"]
+    specification_terms = ranking.get("specification_terms", 0)
+    if (
+        type(specification_terms) is not int
+        or not 0 <= specification_terms <= 1000
+        or len(specifications) > specification_terms
+        or (specification_terms and policy["version"] != "bm25-minilm-v3")
+        or any(
+            match.get("channel") != "text"
+            or match.get("reason") != "source_fact"
+            or not re.fullmatch(r"claim:[a-f0-9]{24}", str(match.get("claim_id", "")))
+            or not finite(match.get("score"))
+            or abs(match["score"] - 1 / specification_terms) > 1e-6
+            or not isinstance(match.get("terms"), list)
+            or len(match["terms"]) != 1
+            or not isinstance(match["terms"][0], str)
+            or not match["terms"][0].strip()
+            for match in specifications
+        )
+    ):
+        raise ValueError("Invalid source specification contributions")
     if (
         len(semantic) != 1
         or len(lexical) != bool(lexical_rank)
-        or len(text) != len(semantic) + len(lexical)
+        or len(text) != len(semantic) + len(lexical) + len(specifications)
     ):
         raise ValueError("Invalid lexical and semantic contributions")
     if (
@@ -193,6 +215,7 @@ def validate_text_ranking(item: dict, manifest: dict) -> float:
     score = policy["semantic_weight"] / (policy["rank_constant"] + semantic_rank)
     if lexical_rank:
         score += policy["lexical_weight"] / (policy["rank_constant"] + lexical_rank)
+    score += len(specifications) / specification_terms if specification_terms else 0
     if item["name_match"]:
         score = 2 + max(-1, min(1, item["cosine"]))
     if (
