@@ -24,7 +24,7 @@ func loadImageEncoder(ctx context.Context, d *dataset.Dataset) (*imageembedding.
 	return imageembedding.NewFromFS(ctx, d.Files, "image/model.json")
 }
 
-func searchImage(ctx context.Context, d *dataset.Dataset, filename, query string, filter dataset.Filter, limit int, observations bool, output *json.Encoder) error {
+func searchImage(ctx context.Context, d *dataset.Dataset, filename, query string, filter dataset.Filter, options searchOptions, observations bool, output *json.Encoder) error {
 	if !d.HasImages() {
 		return errors.New("this dataset has no image search model or gallery")
 	}
@@ -60,29 +60,21 @@ func searchImage(ctx context.Context, d *dataset.Dataset, filename, query string
 		}
 		queryType = "image_text"
 	}
-	var results []dataset.VisualResult
-	if observations {
-		results, err = d.SearchImagesWithObservations(encoded.Normalized, textVector, query, filter, calibrationLimit(d, limit))
-	} else {
-		results, err = d.SearchImages(encoded.Normalized, textVector, query, filter, calibrationLimit(d, limit))
-	}
+	page, err := d.SearchImagesPage(encoded.Normalized, textVector, query, filter, options.Page, observations)
 	if err != nil {
 		return err
 	}
 	digest := sha256.Sum256(body)
 	response := map[string]any{"dataset_id": d.Manifest.DatasetID, "query": query,
 		"query_type": queryType, "mode": queryType, "query_image_sha256": hex.EncodeToString(digest[:]),
-		"match_status": "no_supported_match", "calibration_status": "uncalibrated", "results": results}
+		"match_status": "no_supported_match", "calibration_status": "uncalibrated", "results": page.Results}
 	if observations {
 		response["observations"] = true
 	}
 	if query != "" && d.Manifest.Search != nil {
 		response["ranking_policy"], response["score_kind"] = d.Manifest.Search, "ranking_signal"
 	}
-	if err := completeSearch(d, response, queryType, "hybrid", observations, filter, results, visualCalibrationCandidates(results), limit); err != nil {
-		return err
-	}
-	return output.Encode(response)
+	return writeSearchPage(d, response, queryType, options, page, visualCalibrationCandidates(page.Leaders), output)
 }
 
 func readQueryImage(filename string) ([]byte, error) {

@@ -20,11 +20,11 @@ func validateResearchArguments(command string, args []string, relationType strin
 	switch command {
 	case "list":
 		if len(args) != 0 {
-			return errors.New("list accepts filters and no query or ID; place flags before arguments")
+			return errors.New("list accepts filters and no query or ID")
 		}
 	case "facts", "relationships":
 		if len(args) != 1 || strings.TrimSpace(args[0]) == "" {
-			return fmt.Errorf("%s requires one nonempty entity ID; place flags before the ID", command)
+			return fmt.Errorf("%s requires one nonempty entity ID", command)
 		}
 	case "compare":
 		if len(args) < 2 || len(args) > 20 {

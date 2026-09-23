@@ -23,7 +23,6 @@ func TestImageAndMediaArgumentsFailBeforeDatasetLoad(t *testing.T) {
 		{"search", "--image", "image.png", "--mode", "hybrid"},
 		{"search", "--mode", "vector", "--image", "image.png"},
 		{"search", "--image", "image.png", ""},
-		{"search", "--image", "image.png", "two", "words"},
 		{"search", "--image", "image.png", strings.Repeat("雪", 1001)},
 		{"media"},
 		{"media", "--id", "", "sample:one"},

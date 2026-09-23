@@ -88,7 +88,7 @@ func TestHelpWorksWithoutDatasetOrModel(t *testing.T) {
 }
 
 func TestBadArgumentsFailBeforeLoadingModel(t *testing.T) {
-	for _, args := range [][]string{{"unknown"}, {"search", ""}, {"search", "--limit", "0", "radar"}, {"get", "--format", "pdf", "id"}, {"search", "--mode", "keyword", "radar"}, {"search", "unquoted", "query"}} {
+	for _, args := range [][]string{{"unknown"}, {"search", ""}, {"search", "--limit", "0", "radar"}, {"get", "--format", "pdf", "id"}, {"search", "--mode", "keyword", "radar"}} {
 		if err := run(context.Background(), args, &bytes.Buffer{}); err == nil {
 			t.Fatalf("accepted %v", args)
 		}

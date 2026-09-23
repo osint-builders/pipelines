@@ -13,6 +13,7 @@ import (
 	"io/fs"
 	"math"
 	"os"
+	"sort"
 	"strings"
 
 	"github.com/osint-builders/pipelines/cli/internal/assets"
@@ -21,37 +22,6 @@ import (
 )
 
 var version = "development"
-
-const help = `pipelines - offline equipment and entity search
-
-Usage:
-  pipelines search [--mode hybrid|vector] [--limit 10] [filters] "query"
-  pipelines search --image PATH [--limit 10] [filters] ["query"]
-  pipelines search --observations [--image PATH] [--limit 10] [filters] "query"
-  pipelines similar [--limit 10] [filters] SOURCE:ID
-  pipelines get [--format json|markdown|html|source] [--evidence PAGE_ID] SOURCE:ID
-  pipelines media [--id MEDIA_ID] [--output PATH] SOURCE:ID
-  pipelines observations [--id OBSERVATION_ID] SOURCE:ID
-  pipelines facts SOURCE:ID
-  pipelines relationships [--type TYPE] SOURCE:ID
-  pipelines compare SOURCE:ID SOURCE:ID [...]
-  pipelines list [--limit 10] [filters]
-  pipelines info
-  pipelines verify
-  pipelines version
-  pipelines notices
-
-Filters: --source SOURCE --kind KIND --category CATEGORY --where "FIELD OP VALUE"
-Repeat --where to require every condition; OP is = != < <= > >=.
-Number filters require units except counts. See info for the research field catalog.
-Compare accepts 2 to 20 unique IDs and preserves each source claim.
-Place flags before the query or ID. Every search returns stable, source-qualified IDs.
-JSON is the default output. Source export preserves the archived response bytes.
-Image queries accept local JPEG/PNG files up to 20 MiB and 40 million pixels.
-Image suggestions abstain unless this bundle has calibration for the query's search scope.
-Generated OCR/descriptions are searched only with --observations. Media export writes the embedded preview.
-All commands work offline. This executable never scrapes or downloads models.
-`
 
 func main() {
 	if err := run(context.Background(), os.Args[1:], os.Stdout); err != nil {
@@ -66,10 +36,13 @@ func run(ctx context.Context, args []string, out io.Writer) error {
 
 func runWithFiles(ctx context.Context, args []string, out io.Writer, files fs.FS) error {
 	if len(args) == 0 || args[0] == "--help" || args[0] == "help" || args[0] == "-h" {
-		_, err := io.WriteString(out, help)
-		return err
+		command := ""
+		if len(args) == 2 && args[0] == "help" {
+			command = args[1]
+		}
+		return commandHelp(command, out)
 	}
-	if args[0] == "version" {
+	if args[0] == "version" || args[0] == "--version" {
 		return json.NewEncoder(out).Encode(map[string]string{"version": version})
 	}
 	if args[0] == "notices" {
@@ -96,6 +69,7 @@ func runWithFiles(ctx context.Context, args []string, out io.Writer, files fs.FS
 	observationID := ""
 	relationType := ""
 	useObservations := false
+	options := searchOptions{Page: dataset.Page{Number: 1, Size: 10}}
 	filter := dataset.Filter{}
 	if command == "search" || command == "similar" || command == "list" {
 		flags.IntVar(&limit, "limit", 10, "maximum results")
@@ -112,6 +86,8 @@ func runWithFiles(ctx context.Context, args []string, out io.Writer, files fs.FS
 	}
 	if command == "search" {
 		flags.StringVar(&mode, "mode", "hybrid", "search mode")
+		flags.IntVar(&options.Page.Number, "page", 1, "result page")
+		flags.BoolVar(&options.Raw, "raw", false, "include complete saved records")
 		flags.StringVar(&imagePath, "image", "", "local JPEG or PNG query")
 		flags.BoolVar(&useObservations, "observations", false, "include generated OCR and descriptions")
 	}
@@ -129,10 +105,9 @@ func runWithFiles(ctx context.Context, args []string, out io.Writer, files fs.FS
 	if command == "relationships" {
 		flags.StringVar(&relationType, "type", "", "relationship type")
 	}
-	if err := flags.Parse(args[1:]); err != nil {
+	if err := parseFlags(flags, args[1:]); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
-			_, err = io.WriteString(out, help)
-			return err
+			return commandHelp(command, out)
 		}
 		return err
 	}
@@ -142,8 +117,11 @@ func runWithFiles(ctx context.Context, args []string, out io.Writer, files fs.FS
 		return err
 	}
 	imageQuery := explicit["image"]
-	if imageQuery && (strings.TrimSpace(imagePath) == "" || explicit["mode"]) {
-		return errors.New("--image requires a local file and cannot be combined with --mode")
+	if imageQuery && strings.TrimSpace(imagePath) == "" {
+		return errors.New("--image requires a local JPEG or PNG path")
+	}
+	if imageQuery && explicit["mode"] {
+		return errors.New("--mode applies to text-only searches; omit it with --image")
 	}
 	if explicit["id"] && ((command == "media" && strings.TrimSpace(mediaID) == "") || (command == "observations" && strings.TrimSpace(observationID) == "")) || explicit["output"] && (strings.TrimSpace(outputPath) == "" || mediaID == "") {
 		return errors.New("--id must not be empty; --output requires --id and a new file path")
@@ -152,20 +130,29 @@ func runWithFiles(ctx context.Context, args []string, out io.Writer, files fs.FS
 	if useObservations && imageQuery && flags.NArg() == 0 {
 		return errors.New("--observations requires a text query")
 	}
-	if !isResearchCommand(command) && (imageQuery && flags.NArg() > 1 || !imageQuery && (needsArgument && flags.NArg() != 1 || !needsArgument && flags.NArg() != 0)) {
-		return errors.New("incorrect arguments; quote the query and place flags before it (see --help)")
+	if command == "search" {
+		if !imageQuery && flags.NArg() == 0 {
+			return errors.New("search requires query words or --image PATH")
+		}
+	} else if !isResearchCommand(command) && (needsArgument && flags.NArg() != 1 || !needsArgument && flags.NArg() != 0) {
+		return errors.New("incorrect arguments (see pipeline --help)")
 	}
+
 	if mode != "hybrid" && mode != "vector" {
 		return errors.New("mode must be hybrid or vector")
 	}
 	if format != "json" && format != "markdown" && format != "html" && format != "source" {
 		return errors.New("format must be json, markdown, html, or source")
 	}
-	if limit < 1 || limit > 100 {
-		return errors.New("limit must be between 1 and 100")
+	options.Page.Size = limit
+	if err := options.Page.Validate(); err != nil {
+		return err
 	}
 	value := flags.Arg(0)
-	if needsArgument && (!imageQuery || flags.NArg() == 1) && strings.TrimSpace(value) == "" {
+	if command == "search" {
+		value = strings.Join(flags.Args(), " ")
+	}
+	if needsArgument && (!imageQuery || flags.NArg() > 0) && strings.TrimSpace(value) == "" {
 		return errors.New("query or ID must not be empty")
 	}
 	if command == "search" && len([]rune(value)) > 1000 {
@@ -201,6 +188,7 @@ func runWithFiles(ctx context.Context, args []string, out io.Writer, files fs.FS
 	if useObservations && !d.HasObservations() {
 		return errors.New("this dataset has no generated observations")
 	}
+	options.Mode, options.Observations, options.Filter = mode, useObservations, filter
 	output := json.NewEncoder(out)
 	output.SetIndent("", "  ")
 	if isResearchCommand(command) {
@@ -208,6 +196,15 @@ func runWithFiles(ctx context.Context, args []string, out io.Writer, files fs.FS
 	}
 	switch command {
 	case "info":
+		kindSet := map[string]bool{}
+		for _, entity := range d.Entities {
+			kindSet[entity.Kind] = true
+		}
+		kinds := make([]string, 0, len(kindSet))
+		for kind := range kindSet {
+			kinds = append(kinds, kind)
+		}
+		sort.Strings(kinds)
 		var imageModel json.RawMessage
 		calibration := "unavailable"
 		if d.HasImages() {
@@ -218,6 +215,7 @@ func runWithFiles(ctx context.Context, args []string, out io.Writer, files fs.FS
 			calibration = "uncalibrated"
 		}
 		response := map[string]any{"version": version, "dataset_id": d.Manifest.DatasetID, "content_sha256": d.Manifest.ContentSHA256, "entities": d.Manifest.Entities, "evidence_pages": d.Manifest.EvidencePages, "chunks": d.Manifest.Chunks, "model": d.Manifest.Model, "sources": d.Manifest.Sources, "image_available": d.HasImages(), "image": d.Manifest.Image, "image_model": imageModel, "image_calibration_status": calibration, "observations_available": d.HasObservations(), "observations": d.Manifest.Observations, "search": d.Manifest.Search}
+		response["kinds"] = kinds
 		if d.Manifest.Research != nil {
 			response["research_available"], response["research"] = true, d.Manifest.Research
 		}
@@ -272,7 +270,7 @@ func runWithFiles(ctx context.Context, args []string, out io.Writer, files fs.FS
 		}
 	}
 	if imageQuery {
-		return searchImage(ctx, d, imagePath, value, filter, limit, useObservations, output)
+		return searchImage(ctx, d, imagePath, value, filter, options, useObservations, output)
 	}
 	if command == "verify" {
 		probes, err := verifyText(ctx, d)
@@ -311,35 +309,33 @@ func runWithFiles(ctx context.Context, args []string, out io.Writer, files fs.FS
 		return closeErr
 	}
 	if useObservations {
-		results, err := d.SearchObservations(vector, value, mode == "hybrid", filter, calibrationLimit(d, limit))
+		page, err := d.SearchObservationsPage(vector, value, mode == "hybrid", filter, options.Page)
 		if err != nil {
 			return err
 		}
-		response := map[string]any{"dataset_id": d.Manifest.DatasetID, "query": value, "query_type": "text", "mode": mode, "observations": true, "match_status": "no_supported_match", "calibration_status": "uncalibrated", "results": results}
+		response := map[string]any{"dataset_id": d.Manifest.DatasetID, "query": value, "query_type": "text", "mode": mode, "observations": true, "match_status": "no_supported_match", "calibration_status": "uncalibrated", "results": page.Results}
 		if mode == "hybrid" && d.Manifest.Search != nil {
 			response["ranking_policy"], response["score_kind"] = d.Manifest.Search, "ranking_signal"
 		}
-		if err := completeSearch(d, response, "text", mode, true, filter, results, visualCalibrationCandidates(results), limit); err != nil {
-			return err
-		}
-		return output.Encode(response)
+		return writeSearchPage(d, response, "text", options, page, visualCalibrationCandidates(page.Leaders), output)
 	}
-	results, err := d.Search(vector, value, mode == "hybrid", filter, calibrationLimit(d, limit), "")
+	page, err := d.SearchPage(vector, value, mode == "hybrid", filter, options.Page)
 	if err != nil {
 		return err
 	}
-	type textResult struct {
-		dataset.Result
-		Matches []dataset.Match `json:"matches"`
+	contributions, err := textResults(d, page.Results)
+	if err != nil {
+		return err
 	}
-	contributions := make([]textResult, len(results))
-	for i, result := range results {
-		matches, err := d.TextMatches(result)
+	var leaders []textResult
+	if d.HasCalibration() {
+		leaders, err = textResults(d, page.Leaders)
 		if err != nil {
 			return err
 		}
-		contributions[i] = textResult{result, matches}
 	}
+	results := page.Leaders
+
 	status := "candidates"
 	if len(results) == 0 {
 		status = "no_supported_match"
@@ -353,14 +349,8 @@ func runWithFiles(ctx context.Context, args []string, out io.Writer, files fs.FS
 			response["match_status"] = "no_supported_match"
 		}
 	}
-	candidates := make([]dataset.CalibrationCandidate, len(results))
-	for i := range results {
-		candidates[i] = dataset.CalibrationCandidate{Score: results[i].Score, Cosine: &results[i].Cosine, Matches: contributions[i].Matches}
-	}
-	if err := completeSearch(d, response, "text", mode, false, filter, contributions, candidates, limit); err != nil {
-		return err
-	}
-	return output.Encode(response)
+	selected := dataset.RankedPage[textResult]{Results: contributions, Total: page.Total, HasMore: page.HasMore}
+	return writeSearchPage(d, response, "text", options, selected, textCandidates(leaders), output)
 }
 
 func verifyText(ctx context.Context, d *dataset.Dataset) (int, error) {

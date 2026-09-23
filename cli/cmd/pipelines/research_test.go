@@ -29,7 +29,6 @@ func TestResearchArgumentsFailBeforeDatasetLoad(t *testing.T) {
 		{"relationships"}, {"relationships", " "},
 		{"relationships", "--type", "", "sample:one"},
 		{"relationships", "--type", "identical", "sample:one"},
-		{"relationships", "sample:one", "--type", "equivalent"},
 		{"compare"}, {"compare", "sample:one"},
 		{"compare", "sample:one", "sample:one"},
 		{"compare", "sample:one", " "}, tooMany,

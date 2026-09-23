@@ -513,30 +513,32 @@ func (d *Dataset) MediaPreview(entityID, mediaID string) ([]byte, error) {
 }
 
 func (d *Dataset) SearchImages(imageVector, textVector []float32, query string, filter Filter, limit int) ([]VisualResult, error) {
-	return d.searchImages(imageVector, textVector, query, filter, limit, false)
+	page, err := d.SearchImagesPage(imageVector, textVector, query, filter, Page{Number: 1, Size: limit}, false)
+	return page.Results, err
 }
 
 func (d *Dataset) SearchImagesWithObservations(imageVector, textVector []float32, query string, filter Filter, limit int) ([]VisualResult, error) {
-	if len(textVector) == 0 {
-		return nil, errors.New("observations require a text query")
-	}
-	return d.searchImages(imageVector, textVector, query, filter, limit, true)
+	page, err := d.SearchImagesPage(imageVector, textVector, query, filter, Page{Number: 1, Size: limit}, true)
+	return page.Results, err
 }
 
-func (d *Dataset) searchImages(imageVector, textVector []float32, query string, filter Filter, limit int, observations bool) ([]VisualResult, error) {
-	if limit < 1 || limit > 100 {
-		return nil, errors.New("limit must be between 1 and 100")
+func (d *Dataset) SearchImagesPage(imageVector, textVector []float32, query string, filter Filter, page Page, observations bool) (RankedPage[VisualResult], error) {
+	if err := page.Validate(); err != nil {
+		return RankedPage[VisualResult]{}, err
+	}
+	if observations && len(textVector) == 0 {
+		return RankedPage[VisualResult]{}, errors.New("observations require a text query")
 	}
 	var err error
 	filter, err = d.PrepareFilter(filter)
 	if err != nil {
-		return nil, err
+		return RankedPage[VisualResult]{}, err
 	}
 	if err := d.LoadImages(); err != nil {
-		return nil, err
+		return RankedPage[VisualResult]{}, err
 	}
 	if err := unitVector(imageVector, d.Manifest.Image.Dimensions); err != nil {
-		return nil, err
+		return RankedPage[VisualResult]{}, err
 	}
 	best := map[int]VisualResult{}
 	for _, record := range d.images.records {
@@ -584,7 +586,7 @@ func (d *Dataset) searchImages(imageVector, textVector []float32, query string, 
 			text, err = d.search(textVector, query, true, filter, len(d.Entities), "")
 		}
 		if err != nil {
-			return nil, err
+			return RankedPage[VisualResult]{}, err
 		}
 		combined := map[string]VisualResult{}
 		textByID = map[string]Result{}
@@ -608,10 +610,22 @@ func (d *Dataset) searchImages(imageVector, textVector []float32, query string, 
 		}
 		sortVisual(results)
 	}
-	if len(results) > limit {
-		results = results[:limit]
+	selected := paginate(results, page)
+	rows, err := d.resolveVisualResults(selected.Results, textByID, generated)
+	if err != nil {
+		return RankedPage[VisualResult]{}, err
 	}
+	var leaders []VisualResult
+	if d.HasCalibration() {
+		leaders, err = d.resolveVisualResults(selected.Leaders, textByID, generated)
+	}
+	return RankedPage[VisualResult]{Results: rows, Leaders: leaders, Total: selected.Total, HasMore: selected.HasMore}, err
+}
+
+func (d *Dataset) resolveVisualResults(rows []VisualResult, textByID map[string]Result, generated map[string]Match) ([]VisualResult, error) {
+	results := append([]VisualResult{}, rows...)
 	for i := range results {
+		results[i].Matches = append([]Match{}, results[i].Matches...)
 		if text, ok := textByID[results[i].ID]; ok {
 			if text.Ranking != nil {
 				matches, err := d.TextMatches(text)

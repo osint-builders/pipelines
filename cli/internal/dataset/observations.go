@@ -572,16 +572,31 @@ func (d *Dataset) observedText(vector []float32, query string, hybrid bool, filt
 }
 
 func (d *Dataset) SearchObservations(vector []float32, query string, hybrid bool, filter Filter, limit int) ([]VisualResult, error) {
-	if limit < 1 || limit > 100 {
-		return nil, errors.New("limit must be between 1 and 100")
+	page, err := d.SearchObservationsPage(vector, query, hybrid, filter, Page{Number: 1, Size: limit})
+	return page.Results, err
+}
+
+func (d *Dataset) SearchObservationsPage(vector []float32, query string, hybrid bool, filter Filter, page Page) (RankedPage[VisualResult], error) {
+	if err := page.Validate(); err != nil {
+		return RankedPage[VisualResult]{}, err
 	}
 	results, generated, err := d.observedText(vector, query, hybrid, filter)
 	if err != nil {
-		return nil, err
+		return RankedPage[VisualResult]{}, err
 	}
-	if len(results) > limit {
-		results = results[:limit]
+	selected := paginate(results, page)
+	rows, err := d.observationResults(selected.Results, generated)
+	if err != nil {
+		return RankedPage[VisualResult]{}, err
 	}
+	var leaders []VisualResult
+	if d.HasCalibration() {
+		leaders, err = d.observationResults(selected.Leaders, generated)
+	}
+	return RankedPage[VisualResult]{Results: rows, Leaders: leaders, Total: selected.Total, HasMore: selected.HasMore}, err
+}
+
+func (d *Dataset) observationResults(results []Result, generated map[string]Match) ([]VisualResult, error) {
 	output := make([]VisualResult, len(results))
 	for i, result := range results {
 		if result.Ranking != nil {
@@ -594,6 +609,7 @@ func (d *Dataset) SearchObservations(vector []float32, query string, hybrid bool
 		}
 		match, derived := generated[result.ID]
 		if !derived {
+			var err error
 			match, err = d.TextMatch(result)
 			if err != nil {
 				return nil, err
