@@ -12,6 +12,64 @@ import (
 func researchFloat(v float64) *float64 { return &v }
 func researchText(v string) *string    { return &v }
 
+func TestSignalFieldsFilterWithoutTreatingFrequencySpansAsChannels(t *testing.T) {
+	f := researchTestFixture(t, false)
+	f.manifest.Research.Version = "entity-research-v2"
+	f.manifest.Research.Fields = researchCatalogForVersion("entity-research-v2")
+	member := "entities/" + strings.Replace(firstID, ":", "/", 1) + ".json"
+	var record map[string]json.RawMessage
+	var facts []ResearchRawFact
+	var claims []ResearchClaim
+	if err := json.Unmarshal(f.members[member], &record); err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(record["facts"], &facts); err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(f.members["research/claims.json"], &claims); err != nil {
+		t.Fatal(err)
+	}
+	add := func(field, name, raw string, value *ResearchValue) {
+		fact := ResearchRawFact{Name: name, Raw: raw, Evidence: "https://sample.test/0/0", Values: []float64{}}
+		claims = append(claims, ResearchClaim{ID: fmt.Sprintf("claim:%024x", len(claims)+1), Entity: 0, Field: field,
+			EvidenceID: digestString([]byte(fact.Evidence))[:24], Locator: ResearchLocator{"fact", len(facts)}, Raw: fact, Status: "known", Value: value})
+		facts = append(facts, fact)
+	}
+	add("modulation", "Modulation", "GMSK", &ResearchValue{Text: researchText("GMSK")})
+	add("bandwidth", "Bandwidth", "25 kHz", &ResearchValue{Number: &ResearchNumber{researchFloat(25000), researchFloat(25000), true, true, "Hz"}})
+	add("frequency_range", "Reported frequency range", "161.975 MHz — 162.025 MHz", &ResearchValue{Number: &ResearchNumber{researchFloat(161975000), researchFloat(162025000), true, true, "Hz"}})
+	record["facts"] = rawJSON(t, facts)
+	f.members[member] = rawJSON(t, record)
+	f.members["research/claims.json"] = rawJSON(t, claims)
+	f.manifest.Research.Claims = len(claims)
+	d := f.open(t)
+	if err := d.Verify(); err != nil {
+		t.Fatal(err)
+	}
+	for _, tc := range []struct {
+		where []string
+		total int
+	}{
+		{[]string{"modulation = GMSK", "bandwidth = 25 kHz"}, 1},
+		{[]string{"frequency_range >= 161 MHz", "frequency_range <= 163 MHz"}, 1},
+		{[]string{"frequency_range = 162 MHz"}, 0},
+		{[]string{"frequency = 162 MHz"}, 0},
+		{[]string{"modulation = FMCW"}, 0},
+	} {
+		rows, total, err := d.List(Filter{Where: tc.where}, 10)
+		if err != nil || total != tc.total || total == 1 && rows[0].ID != firstID {
+			t.Fatalf("%v: %v %d %v", tc.where, rows, total, err)
+		}
+	}
+	legacy := researchTestFixture(t, false).open(t)
+	if err := legacy.Verify(); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := legacy.List(Filter{Where: []string{"modulation = GMSK"}}, 10); err == nil {
+		t.Fatal("legacy catalog accepted an undeclared field")
+	}
+}
+
 func researchTestFixture(t *testing.T, observations bool) *imageBundleFixture {
 	t.Helper()
 	f := newImageFixture(t)

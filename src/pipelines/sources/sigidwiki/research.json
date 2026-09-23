@@ -1,4 +1,11 @@
 {
-  "fields": {},
+  "fields": {
+    "Reported frequency range": "frequency_range",
+    "Bandwidth": "bandwidth",
+    "Modulation": "modulation",
+    "Reception mode": "reception_mode",
+    "Signal location": "signal_location",
+    "Signal status": "signal_status"
+  },
   "relations": []
 }

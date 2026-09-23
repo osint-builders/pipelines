@@ -132,7 +132,7 @@ def records(body: bytes) -> list[dict]:
 class SigIDWiki:
     id = "sigidwiki"
     version = "1"
-    seeds = (DATABASE,)
+    seeds: tuple[str, ...] = (DATABASE,)
     minimum_entities = 550
     request_interval = 10.0
     download_delay_jitter = 0

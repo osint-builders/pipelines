@@ -159,6 +159,25 @@ func researchCatalog() []ResearchField {
 	return fields
 }
 
+func researchCatalogForVersion(version string) []ResearchField {
+	fields := researchCatalog()
+	switch version {
+	case "entity-research-v1":
+		return fields
+	case "entity-research-v2":
+		for _, name := range []string{"modulation", "reception_mode", "signal_location", "signal_status"} {
+			fields = append(fields, ResearchField{name, "text", ""})
+		}
+		for _, name := range []string{"frequency_range", "bandwidth"} {
+			fields = append(fields, ResearchField{name, "number", "Hz"})
+		}
+		sort.Slice(fields, func(i, j int) bool { return fields[i].Name < fields[j].Name })
+		return fields
+	default:
+		return nil
+	}
+}
+
 func (d *Dataset) HasResearch() bool { return d.Manifest.Research != nil }
 
 func researchObject(raw []byte, names []string, nullable ...string) (map[string]json.RawMessage, error) {
@@ -198,7 +217,8 @@ func (d *Dataset) validateResearchManifest(raw map[string]json.RawMessage) error
 		return errors.New("invalid research manifest")
 	}
 	m := d.Manifest.Research
-	if m.Version != "entity-research-v1" || m.Claims < 0 || m.Claims > 100000 || m.Relations < 0 || m.Relations > 20000 || !reflect.DeepEqual(m.Fields, researchCatalog()) {
+	catalogFields := researchCatalogForVersion(m.Version)
+	if catalogFields == nil || m.Claims < 0 || m.Claims > 100000 || m.Relations < 0 || m.Relations > 20000 || !reflect.DeepEqual(m.Fields, catalogFields) {
 		return errors.New("unsupported research manifest or field catalog")
 	}
 	var catalog []json.RawMessage

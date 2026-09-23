@@ -10,11 +10,11 @@ from pathlib import Path
 
 from pipelines.distribution import canonical, sha256
 
-VERSION = "entity-research-v1"
+VERSION = "entity-research-v2"
 RULES_ROOT = Path(__file__).with_name("sources")
 TEXT_FIELDS = (
     "manufacturer contractor origin_country designer_country operator_country "
-    "site_country development_status"
+    "site_country development_status modulation reception_mode signal_location signal_status"
 ).split()
 DATE_FIELDS = (
     "service_entry first_flight launch_date retired publication_date updated_date captured_date"
@@ -28,6 +28,8 @@ NUMBER_FIELDS = {
     "speed": "m/s",
     "frequency": "Hz",
     "pulse_repetition_frequency": "Hz",
+    "frequency_range": "Hz",
+    "bandwidth": "Hz",
     "power": "W",
     "crew": "count",
     "quantity": "count",
@@ -44,6 +46,16 @@ FIELDS = sorted(
     key=lambda field: field["name"],
 )
 FIELD_NAMES = {field["name"] for field in FIELDS}
+SIGNAL_FIELDS = {
+    "frequency_range",
+    "bandwidth",
+    "modulation",
+    "reception_mode",
+    "signal_location",
+    "signal_status",
+}
+LEGACY_FIELDS = [field for field in FIELDS if field["name"] not in SIGNAL_FIELDS]
+FIELD_CATALOGS = {"entity-research-v1": LEGACY_FIELDS, VERSION: FIELDS}
 RELATION_TYPES = {
     "equivalent",
     "related_system",
@@ -182,6 +194,19 @@ def date_value(raw: str) -> dict | None:
 
 def number_value(field: str, raw: str, unit_hint: str | None) -> dict | None:
     value = raw.replace("−", "-").replace("≤", "<=").replace("≥", ">=").strip()
+    if field in {"frequency_range", "bandwidth"}:
+        # SigIDWiki repeats units at both endpoints, sometimes with different
+        # scales. Preserve the source string and convert each endpoint separately.
+        value = value.replace("—", "–")
+        interval = re.fullmatch(
+            rf"({NUMBER})\s*([A-Za-z]+)\s*[-–…]\s*({NUMBER})\s*([A-Za-z]+)", value
+        )
+        if interval:
+            lower = number_value(field, interval[1] + " " + interval[2], unit_hint)
+            upper = number_value(field, interval[3] + " " + interval[4], unit_hint)
+            if lower is None or upper is None or lower["min"] > upper["max"]:
+                return None
+            return {**lower, "max": upper["max"]}
     for phrase, operator in (
         ("up to ", "<="),
         ("at least ", ">="),

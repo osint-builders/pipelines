@@ -10,6 +10,7 @@ from pipelines.build import publish
 from pipelines.distribution import collect_artifacts
 from pipelines.media_pipeline import media
 from pipelines.model import evidence_id
+from pipelines.research import build_research
 from pipelines.sources.sigidwiki import (
     DATABASE,
     HEADERS,
@@ -114,6 +115,28 @@ def test_title_can_contain_a_colon_without_being_a_namespace() -> None:
     assert article_url("/wiki/SOLRAD_7B_(COSPAR_ID:_1965-016D)").endswith(
         "COSPAR_ID%3A_1965-016D)"
     )
+
+
+def test_signal_claims_are_filterable_without_asserting_channels_or_origin(
+    body: bytes,
+) -> None:
+    source = SigIDWiki()
+    entities = [e.metadata(source.id) for e in source.extract(DATABASE, body, [])]
+    claims, relations = build_research(entities)
+    assert not relations
+    assert {c["field"] for c in claims} == {
+        "modulation",
+        "frequency_range",
+        "bandwidth",
+        "signal_location",
+        "signal_status",
+        "reception_mode",
+    }
+    assert all(c["status"] == "known" for c in claims)
+    for claim in claims:
+        if claim["field"] == "frequency_range":
+            assert claim["value"]["number"]["min"] == 161975000
+            assert claim["value"]["number"]["max"] == 162025000
 
 
 def test_waterfalls_are_originals_associated_with_individual_rows(body: bytes) -> None:

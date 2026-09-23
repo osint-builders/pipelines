@@ -306,3 +306,40 @@ def test_all_source_configs_use_the_shared_catalog() -> None:
     for source in source_names():
         rules = research.source_rules(source)
         assert isinstance(rules["relations"], list)
+
+
+@pytest.mark.parametrize(
+    ("field", "raw", "bounds"),
+    [
+        ("frequency_range", "161.975 MHz — 162.025 MHz", (161975000, 162025000)),
+        ("bandwidth", "60 kHz — 1 MHz", (60000, 1000000)),
+        ("bandwidth", "25 kHz", (25000, 25000)),
+    ],
+)
+def test_signal_intervals_keep_both_endpoint_units(
+    field: str, raw: str, bounds: tuple
+) -> None:
+    status, value = normalize(field, fact(raw))
+    assert status == "known" and value
+    assert (value["number"]["min"], value["number"]["max"]) == bounds
+    assert value["number"]["unit"] == "Hz"
+
+
+@pytest.mark.parametrize(
+    "raw",
+    ["162 MHz, 163 MHz", "10 MHz — 5 MHz", "2 MHz — 3 km", "1e999 Hz — 1e999 MHz"],
+)
+def test_invalid_or_discrete_signal_values_do_not_become_ranges(raw: str) -> None:
+    assert normalize("frequency_range", fact(raw)) == ("unparsed", None)
+
+
+def test_legacy_research_bundles_still_validate(
+    records: list[dict], tmp_path: Path
+) -> None:
+    manifest, members = packed(records, tmp_path)
+    _, legacy = build_research_members(records, version="entity-research-v1")
+    manifest["research"] = legacy
+    assert validate(tmp_path, manifest, members) == legacy
+    manifest["research"]["fields"] = research.FIELDS
+    with pytest.raises(ValueError, match="manifest"):
+        validate(tmp_path, manifest, members)
