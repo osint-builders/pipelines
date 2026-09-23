@@ -23,6 +23,7 @@ def response_member(source: str, url: str, content_type: str) -> str:
 
 
 class EntityKind(StrEnum):
+    SIGNAL = "signal"
     RADAR = "radar"
     EMITTER = "emitter"
     SENSOR = "sensor"

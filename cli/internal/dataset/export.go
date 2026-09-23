@@ -25,7 +25,7 @@ func safeKey(value string) bool {
 
 func validKind(kind string) bool {
 	switch kind {
-	case "radar", "emitter", "sensor", "vehicle", "aircraft", "vessel", "weapon", "equipment", "item", "site", "spacecraft":
+	case "signal", "radar", "emitter", "sensor", "vehicle", "aircraft", "vessel", "weapon", "equipment", "item", "site", "spacecraft":
 		return true
 	}
 	return false

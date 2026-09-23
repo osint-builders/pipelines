@@ -33,3 +33,6 @@ adapter = "pipelines.sources.militaryperiscope:MilitaryPeriscope"
 
 [odin]
 adapter = "pipelines.sources.odin:Odin"
+
+[sigidwiki]
+adapter = "pipelines.sources.sigidwiki:SigIDWiki"
