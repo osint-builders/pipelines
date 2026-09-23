@@ -3,7 +3,7 @@
   "profile": "research-search-v1",
   "scope": "A self-contained offline research tool with text retrieval, image similarity suggestions, combined queries, generated image text, and captured evidence. Visual similarity is not verified equipment identification.",
   "supersedes_for_release_readiness": "The original M1 identification contract remains unchanged in search_acceptance.json and must be reported separately. Failing its identification targets must never be described as passing them.",
-  "reason": "The archive grew from 4337 to 8463 entities and now embeds substantially more source evidence. Reviewed independent-photo experiments with MobileCLIP2-S0, MobileCLIP2-B, DINOv2-small, and SigLIP2-B do not support the original automatic-identification promise. Release readiness instead requires reproducible retrieval, complete evidence, measured limitations, and bounded offline operation.",
+  "reason": "The archive grew from 4337 to 9061 entities, including 598 SigIDWiki signal references. The preview budget is 40 MiB to retain every previously indexed image and add the waterfall samples; the 10000-vector cap and all other resource budgets are unchanged. Reviewed independent-photo experiments with MobileCLIP2-S0, MobileCLIP2-B, DINOv2-small, and SigLIP2-B do not support the original automatic-identification promise. Release readiness instead requires reproducible retrieval, complete evidence, measured limitations, and bounded offline operation.",
   "required_capabilities": ["text", "image_similarity", "image_text", "observations", "facts", "filters", "relationships", "source_exports", "embedded_previews"],
   "distribution": {
     "executables_per_platform": 1,
@@ -21,7 +21,7 @@
     "native": "All five platforms pass native functional, encoder parity, text regression and resource checks with network access blocked."
   },
   "resource_targets": {
-    "comparison_scope": "Complete 8463-entity archive with at most 10000 indexed image views; absolute budgets apply to all five native targets. The original fixed-corpus relative regression remains a separate report.",
+    "comparison_scope": "Complete 9061-entity archive with at most 10000 indexed image views; absolute budgets apply to all five native targets. The original fixed-corpus relative regression remains a separate report.",
     "latency_seconds": {
       "text": {"first_process_max": 15, "repeated_process_p95_max": 10},
       "image": {"first_process_max": 15, "repeated_process_p95_max": 10},
@@ -32,6 +32,6 @@
     "peak_resident_memory_mib_max": 2048,
     "standalone_executable_mib_max": 512,
     "compressed_release_mib_max": 448,
-    "embedded_previews_mib_max": 32
+    "embedded_previews_mib_max": 40
   }
 }

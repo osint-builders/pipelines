@@ -6,11 +6,11 @@ Extract the platform `.zip` or `.tar.xz`, add `pipelines` (`pipelines.exe` on Wi
 to PATH, and run `pipelines verify`. Each archive contains one executable with the
 dataset, models, evidence, and selected image previews. `SHA256SUMS` contains download
 checksums; `dataset-manifest.json` describes the bundled data.
-Platform downloads are 373.8–388.7 MiB.
 
-Source builds also support [SigIDWiki signal references](docs/sigidwiki.md),
-including structured signal filters and waterfall images. The linked published
-release predates this addition.
+The dataset includes 598 [SigIDWiki signal references](docs/sigidwiki.md), with
+structured frequency, bandwidth, modulation, and status filters, plus waterfall
+images. Signal references support offline research; they do not decode recordings
+or identify transmitters.
 
 The executable includes offline text, image, and combined search, precomputed OCR and
 visual descriptions, source evidence, and selected image previews. No runtime,
@@ -72,6 +72,9 @@ pipelines search --observations "yellow helicopter with landing skids"
 pipelines list --source odin --where "origin_country=United States" --limit 5
 pipelines get --format markdown odin:0a50e596d1ad19fa32b0521d94bb31a8
 pipelines facts odin:0a50e596d1ad19fa32b0521d94bb31a8
+pipelines search --source sigidwiki "Automatic Identification System"
+pipelines list --kind signal --where "modulation=FMCW" --where "bandwidth<=50 kHz"
+pipelines search --source sigidwiki --image waterfall.png
 ```
 
 ## API
@@ -111,22 +114,28 @@ values. Missing comparison values are explicit unknowns.
 
 ## Sources and counts
 
-The latest release contains **8,463 entities**, **9,595 evidence pages**,
-and **269,028 source facts** from 12 sources. Search indexes
-53,930 text chunks and 18,584 source captions. Research includes 49,504 indexed
-claims across 29 fields and 13 relationships. The CLI includes 9,370 image vectors
-with embedded previews covering 7,596 entities. It also includes 11,968
-generated records (9,370 descriptions and 2,598 OCR records) in
-12,000 searchable chunks.
+The latest release contains **9,061 entities**, **10,193 evidence pages**,
+and **273,985 source facts** from 13 sources. Search indexes
+55,128 text chunks and 19,165 source captions. Research includes 53,906 indexed
+claims across 35 fields and 13 relationships. The CLI includes 9,942 image vectors
+with embedded previews covering 8,171 entities. It also includes 12,570
+generated records (9,942 descriptions and 2,628 OCR records) in
+12,602 searchable chunks.
 
-The downloadable image dataset contains **21,882 saved image URLs** and
-**21,751 distinct original files** (5.48 GB). The coverage report also preserves
+The downloadable image dataset contains **22,462 saved image URLs** and
+**22,330 distinct original files** (5.60 GB). The coverage report also preserves
 68 unsuccessful source image URLs, including unsupported formats and unavailable images.
 All 393 Cambridge Pixel entries were reviewed individually: 379 have matched imagery,
 including 31 explicitly ambiguous family/configuration associations; 14 remain
 unresolved. These matches use 368 saved URLs, with no failed or pending downloads.
 The search gallery covers 376 Cambridge Pixel records; three GIF originals are
 included in the image download and remain outside image search.
+
+SigIDWiki contributes 579 sample-image URLs associated with 581 signals, including
+572 distinct searchable JPEG/PNG samples. Six GIF originals are included in the
+image download. Seventeen signals have no waterfall sample; the shared placeholder
+is excluded from search. All previously indexed images and source captions are
+retained. Frequency spans describe reported ranges, not individual occupied channels.
 
 | Source (`--source`) | Entities | Evidence pages | Saved image URLs | Description |
 | --- | ---: | ---: | ---: | --- |
@@ -142,4 +151,5 @@ included in the image download and remain outside image search.
 | [cambridgepixel](https://cambridgepixel.com/resources/radar-database/) | 393 | 772 | 368 | Radar records, specifications, and individually reviewed imagery |
 | [militaryperiscope](https://militaryperiscope.com/) | 143 | 164 | 427 | Weapons, armed forces, defense companies, and militant organizations |
 | [odin](https://odin.t2com.army.mil/WEG/List) | 4,118 | 4,118 | 11,818 | Worldwide Equipment Guide records and specifications |
-| **Total** | **8,463** | **9,595** | **21,882** | |
+| [sigidwiki](https://www.sigidwiki.com/wiki/Database) | 598 | 598 | 580 | Signal table records and waterfall images; includes one archived placeholder excluded from search |
+| **Total** | **9,061** | **10,193** | **22,462** | |

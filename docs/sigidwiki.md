@@ -16,8 +16,8 @@ numeric fields. Identical duplicate rows collapse; conflicting duplicates fail.
 
 ## Use
 
-These commands require a CLI built with the new source; the previously published
-12-source release predates this addition.
+Download the [latest CLI](https://github.com/osint-builders/pipelines/releases/latest)
+to use the signal references and embedded waterfall previews offline.
 
 ```sh
 pipelines search --source sigidwiki "over the horizon radar"
@@ -97,13 +97,12 @@ sources. The source provides 579 sample-image URLs for 581 signals; 17 profiles
 use its missing-waterfall placeholder. Six samples are GIFs. The JPEG/PNG samples
 produce 572 distinct searchable image vectors, with duplicate bytes stored once.
 
-The local distribution is in `dist/sigidwiki/`: the Windows executable,
-`dataset.zip`, manifests, original-image archives, retained gallery selection,
-verification reports, and `SHA256SUMS`. These generated files stay outside Git.
+The release includes executables for Windows, Linux, and macOS, manifests,
+original-image archives, validation reports, and `SHA256SUMS`. Local build inputs
+and verification reports are retained in `dist/sigidwiki/` outside Git.
 The capture and preservation checks are recorded in
 [`sources/sigidwiki-capture.json`](sources/sigidwiki-capture.json).
 
 The gallery retains all 9,370 previously indexed image vectors and adds the
 572 signal samples. Existing entities, image associations, previews, and source
-captions are checked against the prior complete release. The previous public
-download remains unchanged until a new release is published.
+captions are checked against the prior complete release.
