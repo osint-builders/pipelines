@@ -717,9 +717,9 @@ def validate_image_response(
         if len(matches) != len(visual) + len(text) or len(visual) > 1:
             raise ValueError("Invalid contribution channels")
         if combined:
-            if (
-                len(text) not in {1, 2} if "search" in manifest else len(text) != 1
-            ) or not finite(item.get("cosine")):
+            if (not text if "search" in manifest else len(text) != 1) or not finite(
+                item.get("cosine")
+            ):
                 raise ValueError(
                     "Combined result requires a text contribution and cosine"
                 )

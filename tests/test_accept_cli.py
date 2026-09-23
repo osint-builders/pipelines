@@ -431,6 +431,18 @@ def test_specification_coverage_is_versioned_and_recomputed() -> None:
     item["score"] += 0.5
     item["ranking"]["text_score"] = item["score"]
     assert validate_text_ranking(item, manifest) == pytest.approx(item["score"])
+    combined = deepcopy(response)
+    combined.update(
+        query_type="image_text",
+        query_image_sha256="hash",
+        match_status="no_supported_match",
+        calibration_status="uncalibrated",
+    )
+    combined["results"][0]["score"] = 1 / 61
+    assert validate_image_response(combined, manifest, "hash", True)
+    combined["results"][0]["matches"][-1]["score"] = 1
+    with pytest.raises(ValueError):
+        validate_image_response(combined, manifest, "hash", True)
     for field, value in [
         ("score", 1),
         ("claim_id", "missing"),
