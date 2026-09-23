@@ -7,6 +7,19 @@ specifications, and images, with every result linked to captured evidence.
 
 **Branch:** `main`.
 
+## M10 completion in progress — research release
+
+The active release scope is `research-search-v1` in
+`tests/fixtures/research_release.json`. The original identification contract remains
+unchanged and unmet; image and generated-text results remain uncalibrated suggestions.
+The frozen evaluation has completed all 1,794 query/scope runs, including four
+explicitly rejected runs for one malformed JPEG. Text baseline checks pass.
+Compact vector storage and 160-pixel previews expand the full-archive gallery to
+9,370 images covering 7,596 entities. OCR and description analysis is finishing for
+that complete gallery. Remaining work: finish the independent offline rebuild,
+run all five native resource gates, verify publication assets, publish the latest
+single-binary CLI and original-image archives, then finalize this plan and README.
+
 ## Cambridge Pixel refresh — data and prerelease published
 
 Reconcile the supplied 388-row HTML table with the previous 385-record archive
