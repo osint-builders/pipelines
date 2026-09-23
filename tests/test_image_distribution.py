@@ -674,6 +674,46 @@ def test_preview_budget_covers_entities_before_extra_views(
     validate(setup, members, metadata)
 
 
+def test_vector_budget_covers_entities_before_extra_views(
+    setup: tuple[Path, list[dict], Path], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from pipelines import snapshot
+
+    root, entities, _ = setup
+    manifest, _ = snapshot.load_snapshot(root / entities[0]["source"])
+    second = deepcopy(entities[0])
+    second["id"] = second["source"] + ":second"
+    entities.append(second)
+    monkeypatch.setattr(
+        snapshot, "load_snapshot", lambda directory: (manifest, entities)
+    )
+    names = [f"budget-{i}.png" for i in range(4)]
+    names.sort(
+        key=lambda name: media_id(second["source"], "https://images.example/" + name)
+    )
+    for position, name in enumerate(names):
+        owner = entities[0] if position < 3 else second
+        add(
+            setup,
+            name,
+            color=("red", "green", "blue", "yellow")[position],
+            references=[MediaReference(owner["id"], owner["evidence"][0]["id"])],
+        )
+    monkeypatch.setattr(image_distribution, "MAX_VECTORS", 2)
+    members, metadata, report = build(setup)
+    indexed = [
+        row
+        for row in json.loads(members["image/index.json"])
+        if row["vector_index"] is not None
+    ]
+    assert {ref["entity_id"] for row in indexed for ref in row["references"]} == {
+        e["id"] for e in entities
+    }
+    assert metadata["vectors"] == 2
+    assert report["outcomes"] == {"indexed": 2, "vector_budget": 2}
+    validate(setup, members, metadata)
+
+
 @pytest.mark.parametrize(
     "failure",
     ["nan", "norm", "size", "reference", "ownership", "preview", "model", "orphan"],

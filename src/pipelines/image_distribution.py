@@ -4,7 +4,7 @@ import json
 import re
 import sys
 import zipfile
-from collections import Counter, defaultdict
+from collections import Counter, defaultdict, deque
 from dataclasses import asdict
 from io import BytesIO
 from pathlib import Path
@@ -183,7 +183,26 @@ def _families(records: list[dict]) -> list[list[dict]]:
     result: dict[str, list[dict]] = defaultdict(list)
     for row in records:
         result[find(row["id"])].append(row)
-    return [result[key] for key in sorted(result)]
+    by_owner: dict[str, list[str]] = defaultdict(list)
+    for group, rows in sorted(result.items()):
+        for owner in sorted(
+            {ref["entity_id"] for row in rows for ref in row["references"]}
+        ):
+            by_owner[owner].append(group)
+    queues = deque(deque(groups) for _, groups in sorted(by_owner.items()))
+    ordered: list[str] = []
+    seen: set[str] = set()
+    while queues:
+        queue = queues.popleft()
+        group = queue.popleft()
+        if group not in seen:
+            seen.add(group)
+            ordered.append(group)
+        if queue:
+            queues.append(queue)
+    # Give each entity an encoding opportunity before spending the vector budget
+    # on extra views from an earlier source.
+    return [result[key] for key in [*ordered, *sorted(result.keys() - seen)]]
 
 
 def _diverse(vectors: dict, owners: dict[str, set[str]]) -> list[str]:
@@ -527,7 +546,7 @@ def build_image_members(
         "excluded_occurrences": excluded_occurrences,
         "capture_sha256": sha256(canonical(capture_identity)),
         "selection": sorted(chosen) if chosen is not None else None,
-        "selection_method": "original-groups-farthest-first-preview-round-robin-v2",
+        "selection_method": "original-groups-farthest-first-preview-round-robin-v3",
         "max_views_per_entity": MAX_VIEWS,
         "max_vectors": MAX_VECTORS,
         "max_preview_bytes": MAX_PREVIEW_BYTES,

@@ -117,15 +117,26 @@ def prepare_assets(directory: Path) -> list[str]:
             pool.map(lambda target: compress_binary(directory, target), BINARY_TARGETS)
         )
     names.append("dataset-manifest.json")
+    if (directory / "image-dataset.json").exists():
+        from pipelines.media_export import media_assets
+
+        names.extend(
+            media_assets(
+                directory,
+                json.loads((directory / "dataset-manifest.json").read_bytes()),
+            )
+        )
     (directory / "SHA256SUMS").write_text(
-        "".join(
-            f"{hashlib.sha256((directory / name).read_bytes()).hexdigest()}  {name}\n"
-            for name in names
-        ),
+        "".join(f"{asset_sha256(directory / name)}  {name}\n" for name in names),
         encoding="utf-8",
         newline="\n",
     )
     return [*names, "SHA256SUMS"]
+
+
+def asset_sha256(path: Path) -> str:
+    with path.open("rb") as stream:
+        return hashlib.file_digest(stream, "sha256").hexdigest()
 
 
 def pack_quality_evidence(report: dict, output: Path) -> None:

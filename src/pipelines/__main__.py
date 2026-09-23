@@ -28,6 +28,12 @@ def main() -> None:
             command.add_argument("--output", type=Path, help="Save the JSON report")
     model = commands.add_parser("model", help="Download the pinned embedding model")
     model.add_argument("--output", type=Path, required=True)
+    export = commands.add_parser(
+        "export-media", help="Export original images for a CLI bundle"
+    )
+    export.add_argument("--root", type=Path, required=True)
+    export.add_argument("--bundle", type=Path, required=True)
+    export.add_argument("--output", type=Path, required=True)
     package = commands.add_parser(
         "package", help="Create a vector bundle from existing entity snapshots"
     )
@@ -114,6 +120,10 @@ def main() -> None:
 
         download_model(args.output)
         output = {"model": str(args.output)}
+    elif args.command == "export-media":
+        from pipelines.media_export import export_media
+
+        output = export_media(args.root, args.bundle, args.output)
     elif args.command == "observe":
         from pipelines.observations import observe as observe_images
 

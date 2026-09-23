@@ -17,7 +17,7 @@ attach only images supported by model-specific source evidence.
 - [x] Parse and reconcile every supplied row, including applications and references.
 - [x] Capture the updated catalog and verify complete offline extraction.
 - [x] Review imagery for each model; retain search, original-page, and match evidence.
-- [ ] Download matched originals through the shared media archive and audit coverage.
+- [x] Download matched originals through the shared media archive and audit coverage.
 - [ ] Rebuild the local index, test the CLI, update README counts, and publish a new latest release.
 
 Working reports: `build/cambridgepixel/`. All 388 supplied models match the refreshed
@@ -27,14 +27,14 @@ cause false table/schema disagreements; functional URL differences still fail.
 Catalog archive: `20260922T142532Z-932ca3c5`. Image reviews are stored beside the
 adapter in `image_reviews.json`; matched originals use the shared media archive,
 with separate captured source evidence. Browser DOM captures are explicitly labelled.
-The latest captured batch covers 300 models: 288 matched records, twelve unresolved
-matches, and 16 explicitly ambiguous associations. It saved 273 image URLs; one
-download failed and nine remain pending. Source extraction passes, but media
-acceptance remains open until those captures are resolved.
+The final archive `20260923T011507Z-d25e4161` and snapshot
+`20260923T011805Z-b75ee174` contain 393 entities and 772 evidence pages.
+All 368 selected image URLs are saved; no downloads failed or remain pending.
+Twenty-five source-declared generic images are excluded. The capture audit passes.
 Individual review is complete for all 393 records: 379 matched, fourteen unresolved,
 and thirty-one explicitly ambiguous associations within the matched set. KuRFS, LTAMDS, and Sentinel
 source renditions were visually rechecked and exported through observed browser
-assets; the next archive audit will verify those imports.
+assets; the final archive audit verifies those imports.
 Garmin images retain selected part
 numbers, sizes, and power configurations; GC's X5-21FH was verified in its hardware
 catalog after Google returned unrelated vehicle parts. SuperNet and SuperNet SSR
@@ -86,7 +86,7 @@ previews, source content-type opt-in, poster images, linked
 originals, responsive images, gallery thumbnails, CSS backgrounds, and ambiguous associations.
 Explicit image download types are supported; ordinary links and non-image CSS fail.
 All 393 records and 2,700 source facts pass the current capture audit.
-The final image capture is in progress. Large reviewed brochures have a 20 MiB
+The final image capture is complete. Large reviewed brochures have a 20 MiB
 source-specific limit; embedded JPEG 2000 images require a hash-verified lossless
 PNG conversion. Thales browser text and asset inventories are labelled as such.
 
@@ -1199,6 +1199,18 @@ and vet plus 166 focused Python checks pass. Binary SHA-256:
 `3f6b3aa5da47d943646099455f8d43f4c76863f0acd5c95b90b6def13d06706d`.
 Comparison SHA-256: `17762ead9b8924f228f46008356162a9d95c2dbdea98a93c7de0196624c592c0`.
 Reports: `build/m10/runtime/search-policy-v3/`.
+
+A separate DINOv2-small development comparison uses the same 3,117 gallery images
+and 62 queries. Its best pooling variant retrieves 4/27 positives first and 7/27
+within five; it is not adopted. No held-out queries or acceptance targets changed.
+Reports: `build/m10/runtime/dinov2-small/`.
+
+Full-archive packaging now gives each entity an image-encoding turn before extra
+views consume the vector budget. Original-image exports preserve every saved image
+record in the bundle, deduplicate content-addressed originals, and use bounded ZIP
+parts. Their metadata binds records and archives to the CLI dataset; validation
+checks both archive hashes and each original's hash. These changes support a
+downloadable data candidate without claiming the unfinished M10 quality gates pass.
 
 - [x] Improve specification retrieval using source-backed numeric/property evidence; verify unit/value matching on development queries.
 - [ ] Improve image retrieval and qualify gallery subject evidence; current and larger-reference models remain below M1 targets on development photos.

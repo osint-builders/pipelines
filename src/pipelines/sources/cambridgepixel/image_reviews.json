@@ -3698,10 +3698,10 @@
     "status": "matched",
     "search_url": "https://www.google.com/search?udm=2&q=Simrad%20HALO%206%20radar",
     "page_url": "https://citimarinestore.com/en/simrad-radars/13445-simrad-halo-6-pulse-compression-radar-w6-antenna-ri-12-interface-module-20m-cable.html",
-    "image_url": "https://citimarinestore.com/resize/490x490/50280/simrad-halo-6-pulse-compression-radar-w6-antenna-ri-12-interface-module-20m-cable.jpg.avif",
+    "image_url": "https://citimarinestore.com/resize/980x980/50280/simrad-halo-6-pulse-compression-radar-w6-antenna-ri-12-interface-module-20m-cable.jpg",
     "caption": "Legacy Simrad HALO6 six-foot radar with RI-12 interface module.",
     "quote": "Simrad HALO-6 Pulse Compression Radar w/ 6' Antenna",
-    "notes": "Google Images located the exact legacy SKU 000-11471-001 listing. Manufacturer R3016/HALO6 documentation independently confirms the system. Visually inspected the scanner and black RI-12 module; newer HALO3006 products were excluded. Reseller range/power specification inconsistencies are not adopted as new catalog facts."
+    "notes": "Google Images located the exact legacy SKU 000-11471-001 listing. Manufacturer R3016/HALO6 documentation independently confirms the system. Visually inspected the scanner and black RI-12 module; newer HALO3006 products were excluded. Reseller range/power specification inconsistencies are not adopted as new catalog facts. Rechecked the source picture element and visually verified its larger 980px JPEG rendition after the AVIF thumbnail could not enter the image archive."
   },
   {
     "manufacturer": "Simrad / B&G / Lowrance - Navico",

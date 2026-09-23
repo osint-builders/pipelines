@@ -48,7 +48,9 @@ def test_producer_only_exposes_entity_build_commands() -> None:
         check=True,
     )
     assert "pipeline-build" in result.stdout
-    assert "crawl,extract,status,audit,media,model,package" in result.stdout
+    assert (
+        "crawl,extract,status,audit,media,model,export-media,package" in result.stdout
+    )
     for obsolete in ("search", "read", "reindex"):
         failed = subprocess.run(
             [sys.executable, "-m", "pipelines", obsolete], capture_output=True
