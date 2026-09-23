@@ -76,3 +76,20 @@ def test_storage_binding_is_validated(tmp_path: Path, field: str) -> None:
         manifest["files"]["vectors.f32"] = "0" * 64
     with zipfile.ZipFile(path) as archive, pytest.raises(ValueError):
         read_vectors(archive, manifest)
+
+
+def test_undeclared_conflicting_storage_and_boolean_count_are_rejected(
+    tmp_path: Path,
+) -> None:
+    path, manifest = bundle(tmp_path, struct.pack("<ee", 1, 0))
+    with zipfile.ZipFile(path, "a") as archive:
+        archive.writestr("vectors.f32", struct.pack("<ff", 1, 0))
+    with (
+        zipfile.ZipFile(path) as archive,
+        pytest.raises(ValueError, match="Conflicting"),
+    ):
+        read_vectors(archive, manifest)
+    path, manifest = bundle(tmp_path, struct.pack("<ee", 1, 0))
+    manifest["chunks"] = True
+    with zipfile.ZipFile(path) as archive, pytest.raises(ValueError, match="count"):
+        read_vectors(archive, manifest)

@@ -7,6 +7,7 @@ import pytest
 from measure_release import (
     CONTRACT,
     MODES,
+    RESEARCH_CONTRACT,
     functional_acceptance,
     native_target,
     query_commands,
@@ -71,6 +72,24 @@ def test_resource_gates_reject_short_runs_cross_targets_and_oversized_archives()
     assert not checks["native_target"]
     assert not checks["sample_count"]
     assert not checks["archive_size"]
+
+
+def test_research_budgets_do_not_change_the_original_contract() -> None:
+    original = json.loads(CONTRACT.read_bytes())
+    research = json.loads(RESEARCH_CONTRACT.read_bytes())
+    report = candidate()
+    report["binary"]["bytes"] = 420 * 1024**2
+    report["archive"]["bytes"] = 400 * 1024**2
+    for mode in report["modes"].values():
+        for sample in mode["samples"]:
+            sample["seconds"] = 6
+    assert all(resource_checks(report, research).values())
+    old = resource_checks(report, original)
+    assert not old["latency"] and not old["executable_size"] and not old["archive_size"]
+    report["archive"]["bytes"] = 449 * 1024**2
+    assert not resource_checks(report, research)["archive_size"]
+    report["verification"].pop("observation_probes")
+    assert not resource_checks(report, research)["acceptance"]
 
 
 def test_reference_comparison_rejects_different_hardware_and_observation_regression() -> (

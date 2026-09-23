@@ -117,6 +117,12 @@ def prepare_assets(directory: Path) -> list[str]:
             pool.map(lambda target: compress_binary(directory, target), BINARY_TARGETS)
         )
     names.append("dataset-manifest.json")
+    names.extend(
+        name
+        for name in ("quality.json", "quality-evidence.zip", "research-contract.json")
+        if (directory / name).is_file()
+    )
+    names.extend(path.name for path in sorted(directory.glob("validation-*.json")))
     if (directory / "image-dataset.json").exists():
         from pipelines.media_export import media_assets
 
@@ -156,16 +162,26 @@ def pack_quality_evidence(report: dict, output: Path) -> None:
                 )
 
 
-def validate_release(directory: Path, bundle: Path, validation: Path) -> None:
-    from measure_release import CONTRACT, reference_checks, resource_checks
+def validate_release(
+    directory: Path, bundle: Path, validation: Path, *, profile: str = "identification"
+) -> None:
+    from measure_release import (
+        CONTRACT,
+        RESEARCH_CONTRACT,
+        reference_checks,
+        resource_checks,
+    )
     from quality_gates import REQUIRED_RELEASE_CHECKS, validate_report
 
+    if profile not in {"identification", "research"}:
+        raise ValueError("Unknown release validation profile")
+    contract_path = RESEARCH_CONTRACT if profile == "research" else CONTRACT
     manifest = verify_bundle(bundle)
     if json.loads((directory / "dataset-manifest.json").read_bytes()) != manifest:
         raise ValueError("Release manifest does not match the verified bundle")
     bundle_hash = hashlib.sha256(bundle.read_bytes()).hexdigest()
-    contract = json.loads(CONTRACT.read_bytes())
-    contract_hash = hashlib.sha256(CONTRACT.read_bytes()).hexdigest()
+    contract = json.loads(contract_path.read_bytes())
+    contract_hash = hashlib.sha256(contract_path.read_bytes()).hexdigest()
 
     def read_report(path: Path) -> dict:
         report = json.loads(path.read_bytes())
@@ -188,9 +204,23 @@ def validate_release(directory: Path, bundle: Path, validation: Path) -> None:
             raise ValueError("Release validation has missing or failed checks")
 
     quality = read_report(validation / "quality.json")
-    require_checks(quality, REQUIRED_RELEASE_CHECKS)
-    if quality.get("release_quality_established") is not True:
-        raise ValueError("Release quality is not established")
+    if profile == "research":
+        from research_quality import (
+            PROFILE,
+        )
+        from research_quality import (
+            validate_report as validate_research_report,
+        )
+
+        if (
+            quality.get("profile") != PROFILE
+            or quality.get("research_release_ready") is not True
+        ):
+            raise ValueError("Research release quality is not established")
+    else:
+        require_checks(quality, REQUIRED_RELEASE_CHECKS)
+        if quality.get("release_quality_established") is not True:
+            raise ValueError("Release quality is not established")
     if quality.get("contract_sha256") != contract_hash:
         raise ValueError("Release quality uses a different acceptance contract")
     binary_hashes = {}
@@ -217,7 +247,10 @@ def validate_release(directory: Path, bundle: Path, validation: Path) -> None:
                     path = Path(temporary) / name
                     path.write_bytes(evidence_archive.read(name))
                     replacements[name] = path
-        validate_report(quality, replacements)
+        if profile == "research":
+            validate_research_report(quality, replacements)
+        else:
+            validate_report(quality, replacements)
     for system, architecture, name in BINARY_TARGETS:
         target = f"{system}-{architecture}"
         report = read_report(validation / f"{target}.json")
@@ -242,6 +275,32 @@ def validate_release(directory: Path, bundle: Path, validation: Path) -> None:
         require_checks(report, tuple(computed))
         if not all(computed.values()):
             raise ValueError(f"Native resource gates failed: {target}")
+        if profile == "research":
+            from quality_gates import checked_artifact
+            from research_quality import PROFILE, validate_text
+
+            if report.get("profile") != PROFILE:
+                raise ValueError("Native report uses a different research profile")
+            # Packed evidence lives only inside the validation scope above.
+            if (validation / "quality-evidence.zip").is_file():
+                with zipfile.ZipFile(
+                    validation / "quality-evidence.zip"
+                ) as packed_evidence:
+                    baseline = json.loads(packed_evidence.read("baseline"))
+            else:
+                baseline = json.loads(
+                    checked_artifact(quality["evidence"]["baseline"]).read_bytes()
+                )
+            validate_text(
+                json.loads((validation / f"{target}-text.json").read_bytes()),
+                baseline,
+                manifest["dataset_id"],
+            )
+    if profile == "research":
+        from pipelines.media_export import media_assets
+
+        media_assets(directory, manifest)
+        return
     reference = read_report(validation / "reference.json")
     if (
         reference.get("binary_sha256")
@@ -347,7 +406,13 @@ def gate(repo: str, tag: str, output: Path) -> dict:
     return result
 
 
-def stage(repo: str, bundle: Path, validation: Path | None = None) -> None:
+def stage(
+    repo: str,
+    bundle: Path,
+    validation: Path | None = None,
+    *,
+    profile: str = "identification",
+) -> None:
     manifest = verify_bundle(bundle)
     tag = input_tag(manifest)
     with tempfile.TemporaryDirectory() as temporary:
@@ -368,7 +433,11 @@ def stage(repo: str, bundle: Path, validation: Path | None = None) -> None:
         shutil.copyfile(bundle, upload)
         assets = [str(upload)]
         if validation is not None:
-            for name in ("quality.json", "reference.json"):
+            for name in (
+                ("quality.json",)
+                if profile == "research"
+                else ("quality.json", "reference.json")
+            ):
                 report = validation / name
                 identity = json.loads(report.read_bytes())
                 if identity.get("dataset_id") != manifest["dataset_id"]:
@@ -414,13 +483,34 @@ def publish(
     target: str | None = None,
     bundle: Path | None = None,
     validation: Path | None = None,
+    profile: str = "identification",
 ) -> None:
     manifest = json.loads((directory / "dataset-manifest.json").read_text())
     if tag != "cli-" + manifest["dataset_id"]:
         raise ValueError("Release tag does not match dataset")
     if bundle is None or validation is None:
         raise ValueError("Publication requires --bundle and --validation reports")
-    validate_release(directory, bundle, validation)
+    validate_release(directory, bundle, validation, profile=profile)
+    if profile == "research":
+        from measure_release import RESEARCH_CONTRACT
+
+        shutil.copyfile(validation / "quality.json", directory / "quality.json")
+        shutil.copyfile(RESEARCH_CONTRACT, directory / "research-contract.json")
+        packed = validation / "quality-evidence.zip"
+        if packed.is_file():
+            shutil.copyfile(packed, directory / packed.name)
+        else:
+            pack_quality_evidence(
+                json.loads((validation / "quality.json").read_bytes()),
+                directory / "quality-evidence.zip",
+            )
+        for report in validation.glob("*.json"):
+            if report.stem in {
+                f"{system}-{architecture}{suffix}"
+                for system, architecture, _ in BINARY_TARGETS
+                for suffix in ("", "-text")
+            }:
+                shutil.copyfile(report, directory / ("validation-" + report.name))
     with tempfile.TemporaryDirectory() as temporary:
         if not changed(manifest, latest_manifest(repo, Path(temporary))):
             print("Dataset already published; skipping.")
@@ -491,6 +581,9 @@ def main() -> None:
     parser.add_argument("--directory", type=Path, default=Path("build/release"))
     parser.add_argument("--target", help="Commit SHA for a manually built release")
     parser.add_argument(
+        "--profile", choices=["identification", "research"], default="identification"
+    )
+    parser.add_argument(
         "--validation",
         type=Path,
         help="Directory of dataset-bound quality and native resource reports",
@@ -503,13 +596,15 @@ def main() -> None:
     if args.command == "stage":
         if args.bundle is None:
             parser.error("stage requires --bundle")
-        stage(args.repo, args.bundle, args.validation)
+        stage(args.repo, args.bundle, args.validation, profile=args.profile)
     elif args.command == "gate":
         print(json.dumps(gate(args.repo, args.tag or "", args.directory)))
     elif args.command == "validate":
         if args.bundle is None or args.validation is None:
             parser.error("validate requires --bundle and --validation")
-        validate_release(args.directory, args.bundle, args.validation)
+        validate_release(
+            args.directory, args.bundle, args.validation, profile=args.profile
+        )
         print(json.dumps({"publication_ready": True}))
     else:
         publish(
@@ -519,6 +614,7 @@ def main() -> None:
             target=args.target,
             bundle=args.bundle,
             validation=args.validation,
+            profile=args.profile,
         )
 
 

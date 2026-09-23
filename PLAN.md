@@ -990,13 +990,22 @@ include image/text queries, generated observations, evidence, and selected previ
 and pass native functionality, integrity, text-regression, reproducibility, and
 resource checks. Full-corpus budgets are 512 MiB executable / 448 MiB compressed,
 with the existing 32 MiB preview and 2 GiB memory budgets retained. Full native
-measurements have not yet been run against this revised contract.
+measurements have not yet been run against this revised contract. The explicit
+research publication profile recomputes independent evaluation integrity, separates
+raw rankings from accepted decisions with Wilson intervals, requires every baseline
+text case, checks a byte-identical rebuild, and retains the original failed gates.
+Default identification publication remains unchanged and strict.
 
 A query-independent 400-original preview sample estimates 98.45 MiB for 10,000
 320-pixel previews versus 34.18 MiB at 160 pixels and the same JPEG quality. The
 smaller display previews preserve original images and vectors, enabling much
-broader gallery coverage within 32 MiB. Full-gallery counts and visual inspection
-remain required before adopting the build (`build/m10/realign/preview-sizes.json`).
+broader gallery coverage within 32 MiB. The completed gallery has 9,370 vectors,
+9,454 indexed URL records, and previews covering 7,596 entities, including 4,117
+ODIN and 376 Cambridge Pixel entries. Source images and vectors remain unchanged;
+sampled 160-pixel previews remain readable in visual inspection. The build retains
+every original and accounts for all excluded views. Preview comparison:
+`build/m10/realign/preview-sizes.json`. All 1,221 Python tests, lint, and types pass;
+full native validation awaits the completed observation build.
 
 ### Existing evidence
 

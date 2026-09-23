@@ -17,6 +17,14 @@ on:
         required: true
         default: false
         type: boolean
+      validation_profile:
+        description: Acceptance contract; research requires explicit visual-suggestion limits
+        required: true
+        default: identification
+        type: choice
+        options:
+          - identification
+          - research
 
 permissions:
   contents: read
@@ -52,7 +60,12 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           INPUT_TAG: ${{ inputs.input_tag }}
-        run: gh release download "$INPUT_TAG" --repo "$GITHUB_REPOSITORY" --pattern quality.json --pattern reference.json --pattern quality-evidence.zip --dir build/release/validation
+          VALIDATION_PROFILE: ${{ inputs.validation_profile }}
+        run: |
+          gh release download "$INPUT_TAG" --repo "$GITHUB_REPOSITORY" --pattern quality.json --pattern quality-evidence.zip --dir build/release/validation
+          if [ "$VALIDATION_PROFILE" = identification ]; then
+            gh release download "$INPUT_TAG" --repo "$GITHUB_REPOSITORY" --pattern reference.json --dir build/release/validation
+          fi
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: verified-dataset
@@ -90,6 +103,7 @@ jobs:
       TARGET: ${{ matrix.target }}
       BINARY: ${{ matrix.binary }}
       VALIDATION_OPTION: ${{ inputs.functional_only && '--functional-only' || '' }}
+      VALIDATION_PROFILE: ${{ inputs.validation_profile }}
     defaults:
       run:
         shell: bash
@@ -116,10 +130,10 @@ jobs:
       - run: uv run --no-sync python tools/build_cli.py --bundle build/release/dataset.zip --output "dist/$BINARY"
       - name: Native Linux CLI checks without networking
         if: runner.os == 'Linux'
-        run: sudo unshare --net -- "$PWD/.venv/bin/python" tools/measure_release.py "dist/$BINARY" --bundle build/release/dataset.zip --target "$TARGET" --output "build/release/validation/$TARGET.json" $VALIDATION_OPTION
+        run: sudo unshare --net -- "$PWD/.venv/bin/python" tools/measure_release.py "dist/$BINARY" --bundle build/release/dataset.zip --target "$TARGET" --output "build/release/validation/$TARGET.json" --profile "$VALIDATION_PROFILE" $VALIDATION_OPTION
       - name: Native macOS CLI checks without networking
         if: runner.os == 'macOS'
-        run: /usr/bin/sandbox-exec -p '(version 1)(allow default)(deny network*)' "$PWD/.venv/bin/python" tools/measure_release.py "dist/$BINARY" --bundle build/release/dataset.zip --target "$TARGET" --output "build/release/validation/$TARGET.json" $VALIDATION_OPTION
+        run: /usr/bin/sandbox-exec -p '(version 1)(allow default)(deny network*)' "$PWD/.venv/bin/python" tools/measure_release.py "dist/$BINARY" --bundle build/release/dataset.zip --target "$TARGET" --output "build/release/validation/$TARGET.json" --profile "$VALIDATION_PROFILE" $VALIDATION_OPTION
       - name: Native Windows CLI checks with outbound traffic blocked
         if: runner.os == 'Windows'
         shell: pwsh
@@ -133,7 +147,7 @@ jobs:
             New-NetFirewallRule -Name $ruleName -DisplayName $ruleName -Direction Outbound -Action Block -Program $binaryPath -Profile Any -Protocol Any -Enabled True | Out-Null
             $validationArgs = @()
             if ($env:VALIDATION_OPTION) { $validationArgs += $env:VALIDATION_OPTION }
-            & ./.venv/Scripts/python.exe tools/measure_release.py $binaryPath --bundle build/release/dataset.zip --target $env:TARGET --output "build/release/validation/$env:TARGET.json" @validationArgs
+            & ./.venv/Scripts/python.exe tools/measure_release.py $binaryPath --bundle build/release/dataset.zip --target $env:TARGET --output "build/release/validation/$env:TARGET.json" --profile $env:VALIDATION_PROFILE @validationArgs
             if ($LASTEXITCODE -ne 0) { throw 'Native release resource gates failed' }
           } finally {
             Remove-NetFirewallRule -Name $ruleName -ErrorAction SilentlyContinue
@@ -189,4 +203,5 @@ jobs:
       - env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ needs.gate.outputs.tag }}
-        run: uv run --no-sync python tools/release.py publish --repo "$GITHUB_REPOSITORY" --tag "$RELEASE_TAG" --directory dist --bundle build/release/dataset.zip --validation build/release/validation
+          VALIDATION_PROFILE: ${{ inputs.validation_profile }}
+        run: uv run --no-sync python tools/release.py publish --repo "$GITHUB_REPOSITORY" --tag "$RELEASE_TAG" --directory dist --bundle build/release/dataset.zip --validation build/release/validation --profile "$VALIDATION_PROFILE"

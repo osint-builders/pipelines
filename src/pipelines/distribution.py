@@ -11,7 +11,12 @@ from pathlib import Path
 
 from pipelines.model import response_member
 from pipelines.snapshot import load_snapshot
-from pipelines.vector_storage import COMPACT, compact_vectors, read_vectors
+from pipelines.vector_storage import (
+    COMPACT,
+    compact_vectors,
+    read_vectors,
+    search_vectors,
+)
 
 FORMAT_VERSION = 2
 LEGACY_SEARCH_VERSION = "bm25-minilm-v1"
@@ -459,6 +464,7 @@ def _package(
                 validate_search_bundle(previous, manifest, entities)
                 validate_research_bundle(previous, manifest, entities)
                 validate_calibration_bundle(previous, manifest)
+                search_vectors(previous, manifest)
                 if image_model is not None:
                     from pipelines.image_distribution import validate_image_bundle
 
@@ -583,6 +589,7 @@ def _package(
             validate_search_bundle(archive, manifest, entities)
             validate_research_bundle(archive, manifest, entities)
             validate_calibration_bundle(archive, manifest)
+            search_vectors(archive, manifest)
             if image_model is not None:
                 from pipelines.image_distribution import validate_image_bundle
 

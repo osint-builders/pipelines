@@ -157,7 +157,7 @@ def test_publication_waits_for_complete_draft_assets(
     else:
         monkeypatch.setenv("GITHUB_SHA", "c" * 40)
     monkeypatch.setattr(release, "latest_manifest", lambda repo, path: None)
-    monkeypatch.setattr(release, "validate_release", lambda *args: None)
+    monkeypatch.setattr(release, "validate_release", lambda *args, **kwargs: None)
     monkeypatch.setattr(release, "gh", fake_gh)
     monkeypatch.setattr(
         release.subprocess,

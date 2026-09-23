@@ -18,6 +18,7 @@ from release import BINARY_TARGETS, compress_binary
 
 ROOT = Path(__file__).resolve().parents[1]
 CONTRACT = ROOT / "tests/fixtures/search_acceptance.json"
+RESEARCH_CONTRACT = ROOT / "tests/fixtures/research_release.json"
 MODES = ("text", "image", "image_text", "observations_text", "filtered_text")
 RESOURCE_CHECKS = (
     "native_target",
@@ -214,11 +215,19 @@ def benchmark(
     *,
     repeats: int = 20,
     baseline: Path | None = None,
+    profile: str = "identification",
 ) -> dict:
     if repeats < 20:
         raise ValueError("Release measurements require at least 20 repeat processes")
     selected = native_binary(binary, target)
-    contract = json.loads(CONTRACT.read_bytes())
+    if profile not in {"identification", "research"}:
+        raise ValueError("Unknown release validation profile")
+    if profile == "research" and baseline is not None:
+        raise ValueError(
+            "Fixed-corpus reference comparison uses the identification profile"
+        )
+    contract_path = RESEARCH_CONTRACT if profile == "research" else CONTRACT
+    contract = json.loads(contract_path.read_bytes())
     machine = hardware()
     query = json.loads((ROOT / "tests/fixtures/retrieval.json").read_bytes())[0]
     with zipfile.ZipFile(bundle) as archive, tempfile.TemporaryDirectory() as temporary:
@@ -267,7 +276,7 @@ def benchmark(
         "dataset_id": manifest["dataset_id"],
         "content_sha256": manifest["content_sha256"],
         "bundle_sha256": artifact(bundle)["sha256"],
-        "contract_sha256": artifact(CONTRACT)["sha256"],
+        "contract_sha256": artifact(contract_path)["sha256"],
         "binary_sha256": binary_artifact["sha256"],
         "binary": binary_artifact,
         "archive": artifact(compressed),
@@ -284,6 +293,8 @@ def benchmark(
         "modes": modes,
     }
     checks = resource_checks(report, contract)
+    if profile == "research":
+        report["profile"] = contract["profile"]
     if baseline is not None:
         report["baseline"] = json.loads(baseline.read_bytes())
         checks.update(reference_checks(report, report["baseline"], contract))
@@ -303,6 +314,9 @@ def main() -> None:
     parser.add_argument("--baseline", type=Path)
     parser.add_argument("--repeats", type=int, default=20)
     parser.add_argument(
+        "--profile", choices=["identification", "research"], default="identification"
+    )
+    parser.add_argument(
         "--functional-only",
         action="store_true",
         help="Check candidate functionality without claiming quality or resource gates",
@@ -317,6 +331,7 @@ def main() -> None:
             args.target,
             repeats=args.repeats,
             baseline=args.baseline,
+            profile=args.profile,
         )
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")

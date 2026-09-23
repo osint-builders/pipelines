@@ -32,6 +32,16 @@ def compact_vectors(raw: bytes) -> bytes:
 def read_vectors(archive: zipfile.ZipFile, manifest: dict) -> bytes:
     """Restore stored values without another rounding step when rebuilding."""
     member = vector_member(manifest)
+    other = "vectors.f32" if member == "vectors.f16" else "vectors.f16"
+    if other in archive.namelist() or other in manifest["files"]:
+        raise ValueError("Conflicting text vector members")
+    if (
+        type(manifest.get("chunks")) is not int
+        or manifest["chunks"] < 1
+        or type(manifest["model"].get("dimensions")) is not int
+        or manifest["model"]["dimensions"] < 1
+    ):
+        raise ValueError("Invalid text vector dimensions or count")
     raw = archive.read(member)
     width = 2 if member.endswith(".f16") else 4
     if (
