@@ -1,17 +1,25 @@
 # pipelines
 
-Download the [latest CLI](https://github.com/osint-builders/pipelines/releases/latest)
+Download the [CLI with the image dataset](https://github.com/osint-builders/pipelines/releases/tag/cli-f32652c22c5ed994179356d7800b4537353dbec4fdb91924c6b44fe3b8de3a6b)
 for Windows (amd64), Linux (amd64/arm64), or macOS (Intel/Apple silicon).
-Extract the `.zip` or `.tar.xz`, add `pipelines` (`pipelines.exe` on Windows) to your
-PATH, and run `pipelines verify`. Each archive contains one executable with the
-dataset and text model. `SHA256SUMS` contains download checksums;
-`dataset-manifest.json` describes the bundled data.
+Extract the platform `.zip` or `.tar.xz`, add `pipelines` (`pipelines.exe` on Windows)
+to PATH, and run `pipelines verify`. Each archive contains one executable with the
+dataset, models, evidence, and selected image previews. `SHA256SUMS` contains download
+checksums; `dataset-manifest.json` describes the bundled data.
 
-This release supports offline text search, structured filters, evidence exports,
-facts, relationships, and comparisons. `pipelines info` reports the capabilities,
-sources, field catalog, counts, and model version in your download. Original images
-are stored in the local archive; this release has no embedded images, image search,
-or generated OCR/descriptions.
+This is a **prerelease**: offline text search, facts, filters, comparisons, media
+inspection, and image-query suggestions are available. Image identification remains
+experimental and uncalibrated; M10 acceptance remains incomplete. CLI downloads are
+approximately 385–398 MiB, above the planned compact-release budget. Generated OCR and
+descriptions are not included. `pipelines info` reports the exact capabilities and
+counts. The [stable text-only CLI](https://github.com/osint-builders/pipelines/releases/latest)
+remains available.
+
+For original images, download all `images-*.zip` parts, `image-records.json`, and
+`image-dataset.json` from the same release. Extract the parts into one directory.
+`image-records.json` maps each source URL and entity/evidence reference to a SHA-256;
+the original file is `objects/<first two hash characters>/<full hash>`.
+`image-dataset.json` binds these records and archive checksums to the CLI dataset.
 
 ## CLI
 
@@ -20,6 +28,8 @@ Place options before the query or IDs. Use source-qualified IDs returned by a se
 | Command | Output |
 | --- | --- |
 | `pipelines search [options] "query"` | Ranked text search results |
+| `pipelines search --image PATH [options] ["query"]` | Image or combined image-and-text suggestions |
+| `pipelines media [--id MEDIA_ID] [--output PATH] SOURCE:ID` | Image metadata or one embedded JPEG preview |
 | `pipelines similar [options] SOURCE:ID` | Semantically similar entities |
 | `pipelines list [options]` | Entities matching filters, sorted by ID |
 | `pipelines get [options] SOURCE:ID` | Entity, original source facts, and archived evidence |
@@ -31,7 +41,9 @@ Place options before the query or IDs. Use source-qualified IDs returned by a se
 
 | Option | Commands | Meaning |
 | --- | --- | --- |
-| `--mode hybrid\|vector` | `search` | Names, source captions, and semantic ranking (default `hybrid`), or semantic ranking only |
+| `--mode hybrid\|vector` | `search` | Names, source captions, verified numeric clauses, and semantic ranking (default `hybrid`), or semantic ranking only |
+| `--image PATH` | `search` | Local JPEG/PNG, up to 20 MiB and 40 million pixels; incompatible with `--mode` |
+| `--id MEDIA_ID`, `--output PATH` | `media` | Select a record; `--output` requires `--id` and writes its preview to a new file |
 | `--limit N` | `search`, `similar`, `list` | 1–100 results, default 10 |
 | `--source SOURCE`, `--kind KIND`, `--category CATEGORY` | `search`, `similar`, `list` | Filter before ranking or limiting |
 | `--where "FIELD OP VALUE"` | `search`, `similar`, `list` | Repeat to require every predicate; operators: `=`, `!=`, `<`, `<=`, `>`, `>=` |
@@ -46,6 +58,8 @@ for field names and `get` for all original specifications. Relationship types ar
 
 ```sh
 pipelines search --source odin --limit 5 "HIMARS"
+pipelines search --image radar.jpg --source cambridgepixel --limit 5
+pipelines search "range: 550 km; weight: 54 t"
 pipelines list --source odin --where "origin_country=United States" --limit 5
 pipelines get --format markdown odin:0a50e596d1ad19fa32b0521d94bb31a8
 pipelines facts odin:0a50e596d1ad19fa32b0521d94bb31a8
@@ -55,14 +69,22 @@ pipelines facts odin:0a50e596d1ad19fa32b0521d94bb31a8
 
 Run the executable as a subprocess and parse JSON on stdout. Errors return a nonzero
 exit code and `{"error":"message"}` on stderr. Help and non-JSON `get` formats return
-text or captured bytes. Data responses include `dataset_id` so callers can identify the
-data used.
+text or captured bytes. Search responses include `dataset_id` so callers can identify
+the data used.
 
 `search` returns `query`, `query_type`, `mode`, `match_status`, and `results`.
 Results include `id`, `title`, `url`, `source`, `kind`, `categories`, `aliases`,
 `score`, `cosine`, `name_match`, `snippet`, and `evidence_id`. `matches` explains
-lexical and semantic contributions and links them to evidence. Scores are ranking
-signals, not probabilities. `no_supported_match` may still include ranked suggestions.
+lexical, semantic, specification, and image contributions and links them to evidence.
+Scores are ranking signals, not probabilities. `no_supported_match` may still include
+ranked suggestions.
+
+Image queries also return `query_image_sha256` and `calibration_status`. This
+prerelease returns `no_supported_match` and `uncalibrated` for image suggestions.
+`media` returns an array with original URLs, hashes, dimensions, captions, evidence
+references, ambiguity flags, and optional preview metadata. `--output` exports the
+preview and returns its byte count and checksum; the full originals are in the
+separate image archives.
 
 `similar` returns `similar_to`, `mode`, and `results`. `list` returns `total` and
 `results`; the limit applies to the latter. `get` returns the entity, source facts,
@@ -73,17 +95,21 @@ values. Missing comparison values are explicit unknowns.
 
 ## Sources and counts
 
-The bundled dataset contains **8,455 entities**, **9,208 evidence pages**, and
-**268,972 source facts** from 12 sources. Search indexes 53,535 text chunks and
-18,205 source captions. Research includes 49,093 indexed claims across 29 fields
-and 13 relationships.
+The prerelease above contains **8,463 entities**, **9,595 evidence pages**,
+and **269,028 source facts** from 12 sources. Search indexes
+53,930 text chunks and 18,584 source captions. Research includes 49,504 indexed
+claims across 29 fields and 13 relationships. The CLI includes 3,207 image vectors
+with embedded previews covering 3,393 entities.
 
-The current local archives contain 21,514 saved image URLs representing 21,391
-distinct original files (5.32 GB). Other image outcomes: 68 failed, 9,283 excluded,
-348 unassociated, and 0 pending. The image counts below describe those local
-archives; image files are separate from the CLI download.
+The downloadable image dataset contains **21,882 saved image URLs** and
+**21,751 distinct original files** (5.48 GB).
+All 393 Cambridge Pixel entries were reviewed individually: 379 have matched imagery,
+including 31 explicitly ambiguous family/configuration associations; 14 remain
+unresolved. These matches use 368 saved URLs, with no failed or pending downloads.
+The search gallery covers 376 Cambridge Pixel records; three GIF originals are
+included in the image download and remain outside image search.
 
-| Source (`--source`) | Entities | Evidence pages | Saved image URLs (local) | Description |
+| Source (`--source`) | Entities | Evidence pages | Saved image URLs | Description |
 | --- | ---: | ---: | ---: | --- |
 | [radartutorial](https://www.radartutorial.eu/index.en.html) | 1,735 | 1,735 | 3,745 | English radar and equipment pages |
 | [deagel](https://www.deagel.com/Armies/) | 1,285 | 797 | 2,615 | Military equipment families and variants |
@@ -94,7 +120,7 @@ archives; image files are separate from the CLI download.
 | [armyrecognition](https://www.armyrecognition.com/military-products/army/radars/air-defense-radars) | 11 | 11 | 241 | Air-defense radar product pages |
 | [fandom](https://military-history.fandom.com/wiki/Category:Russian_and_Soviet_military_radars) | 46 | 53 | 45 | Military Wiki category membership and articles |
 | [climateviewer](https://climateviewer.org/layers/geojson/2018/Fortress-Russia-SAM-Sites-ClimateViewer-3D.geojson) | 383 | 383 | 0 | Site records from the Fortress Russia GeoJSON |
-| [cambridgepixel](https://cambridgepixel.com/resources/radar-database/) | 385 | 385 | 0 | Radar database records |
+| [cambridgepixel](https://cambridgepixel.com/resources/radar-database/) | 393 | 772 | 368 | Radar records, specifications, and individually reviewed imagery |
 | [militaryperiscope](https://militaryperiscope.com/) | 143 | 164 | 427 | Weapons, armed forces, defense companies, and militant organizations |
 | [odin](https://odin.t2com.army.mil/WEG/List) | 4,118 | 4,118 | 11,818 | Worldwide Equipment Guide records and specifications |
-| **Total** | **8,455** | **9,208** | **21,514** | |
+| **Total** | **8,463** | **9,595** | **21,882** | |

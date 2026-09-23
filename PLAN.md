@@ -7,7 +7,7 @@ specifications, and images, with every result linked to captured evidence.
 
 **Branch:** `main`.
 
-## Cambridge Pixel refresh — in progress
+## Cambridge Pixel refresh — data and prerelease published
 
 Reconcile the supplied 388-row HTML table with the previous 385-record archive
 and the live 393-row catalog. Preserve every field and stable identities when
@@ -18,7 +18,9 @@ attach only images supported by model-specific source evidence.
 - [x] Capture the updated catalog and verify complete offline extraction.
 - [x] Review imagery for each model; retain search, original-page, and match evidence.
 - [x] Download matched originals through the shared media archive and audit coverage.
-- [ ] Rebuild the local index, test the CLI, update README counts, and publish a new latest release.
+- [x] Rebuild the local index, test the CLI, and update README counts.
+- [x] Publish the CLI and complete original-image dataset as a prerelease.
+- [ ] Promote a stable latest release after M10 quality and distribution gates pass.
 
 Working reports: `build/cambridgepixel/`. All 388 supplied models match the refreshed
 393-record catalog; five additions and one application-list change are accounted
@@ -89,6 +91,22 @@ All 393 records and 2,700 source facts pass the current capture audit.
 The final image capture is complete. Large reviewed brochures have a 20 MiB
 source-specific limit; embedded JPEG 2000 images require a hash-verified lossless
 PNG conversion. Thales browser text and asset inventories are labelled as such.
+
+Published [CLI and image dataset](https://github.com/osint-builders/pipelines/releases/tag/cli-f32652c22c5ed994179356d7800b4537353dbec4fdb91924c6b44fe3b8de3a6b)
+from `f81e415`. The complete dataset has 8,463 entities, 9,595 evidence pages,
+269,028 source facts, and 21,882 saved image URLs. Four original-image ZIP parts
+contain 21,751 distinct files (5,481,572,267 bytes); dataset-bound metadata retains
+their source, entity, and evidence associations. All 18 uploaded assets match their
+local SHA-256 hashes and sizes. The release remains explicitly experimental;
+the existing stable text-only release is unchanged.
+
+All five native CLI builds pass offline functional checks and the text regression
+suite in [release validation](https://github.com/osint-builders/pipelines/actions/runs/35810222580).
+The Cambridge Pixel CLI audit compares all 772 evidence pages in source, HTML,
+and Markdown formats against the archive. A cached offline rebuild returns
+`changed:false` with the identical dataset and ZIP checksum. The full Python suite
+passes 1,203 tests; Ruff, mypy, Go tests/vet, CI, and native encoder parity pass.
+Reports and publication receipt: `build/cambridgepixel/candidate-v2/`.
 
 ## Code cleanup — complete
 
@@ -1216,13 +1234,31 @@ under its network restrictions. Those reports cannot satisfy the full release
 validator, and the workflow rejects stable publication in functional-only mode.
 
 The first full-archive candidate exposed preview starvation: three sources received
-no indexed images, and 52 Cambridge Pixel WebP originals remained metadata-only.
+no indexed images, and 52 Cambridge Pixel WebP/GIF originals remained metadata-only.
 Publication was stopped. Selection now alternates sources as well as entities;
 static WebP is converted losslessly for gallery processing with a distinct cached
 recipe, while original bytes and query-format restrictions remain intact. Animated
 WebP is explicitly excluded. Unchanged text vectors can be reused from a prior
 bundle only when the model, ordered chunks, vector size, and checksums agree.
-Focused tests and full type checks pass; the corrected candidate is being rebuilt.
+The corrected gallery includes 3,207 vectors and previews covering 3,393 entities,
+with representation from all eleven sources that have saved imagery. All 49 static
+Cambridge Pixel WebP originals are indexed; 365 indexed image URLs support 376
+Cambridge Pixel records. Three GIF originals remain downloadable and metadata-only.
+The 32 MiB preview budget is preserved. The complete original-image download is
+independent of the selected preview/vector gallery.
+
+Dataset `f32652c22c5ed994179356d7800b4537353dbec4fdb91924c6b44fe3b8de3a6b`
+is published as a prerelease with five native-tested binaries, original-image parts,
+metadata, functional reports, and checksums. Its cached rebuild takes 339.8 seconds
+and preserves bundle SHA-256
+`2cac527e2793179be3fdc7f2d0558ee87f66d6bee350151ec599d923e013db56`.
+Functional validation does not establish M10 quality or resource acceptance.
+Compressed CLI downloads are 384.62–398.35 MiB, exceeding the frozen 256 MiB
+budget; executables also exceed the 320 MiB limit. This full-data format-3 candidate
+has no generated OCR/descriptions or calibration artifact. The separate frozen
+format-4 benchmark and acceptance targets remain unchanged. Image retrieval,
+no-match calibration, held-out quality evaluation, and full native resource gates
+remain open; M10 is not complete.
 
 - [x] Improve specification retrieval using source-backed numeric/property evidence; verify unit/value matching on development queries.
 - [ ] Improve image retrieval and qualify gallery subject evidence; current and larger-reference models remain below M1 targets on development photos.
@@ -1232,8 +1268,9 @@ Focused tests and full type checks pass; the corrected candidate is being rebuil
 - [ ] Measure cold/warm latency, peak memory, and compressed executable size on all supported targets.
 - [x] Bring text within the frozen reference-machine budgets: M10 default p95 1.145 s / 557.22 MiB, filtered p95 1.794 s, and observation p95 2.233 s / 711.74 MiB.
 - [ ] Build and test one standalone executable per platform with required models, indices, evidence, and selected previews embedded.
+- [x] Publish a separately labelled full-data/image prerelease after all five native functional checks and checksum validation pass.
 - [x] Improve gallery coverage within the preview budget: development-only preview comparison and round-robin allocation increase entity coverage from 1,101 to 3,102.
-- [ ] Validate deterministic dataset identities, cached rebuilds, checksums, source exports, and operation without network access.
+- [x] Validate deterministic dataset identities, cached rebuilds, checksums, source exports, and operation without network access; both the frozen benchmark and full-data prerelease retain reproducible identities.
 - [x] Extend release change detection and tag identity to include image artifacts using the full deterministic dataset identity.
 - [ ] Run lint, types, unit/integration tests, Python/Go parity, and native release acceptance checks.
 - [x] Update the root README with CLI options/API behavior, capability availability, and the source table.
