@@ -170,9 +170,10 @@ def test_reviewed_jpeg2000_requires_verified_png_conversion() -> None:
     writer.write(output)
     body = output.getvalue()
     embedded = PdfReader(BytesIO(body)).pages[0].images[0]
+    assert embedded.image is not None
     png = BytesIO()
     embedded.image.save(png, format="PNG")
-    review = {
+    review: dict = {
         **MATCH,
         "quote": "Radar",
         "image_url": URL,
