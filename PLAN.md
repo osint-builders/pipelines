@@ -15,10 +15,14 @@ unchanged and unmet; image and generated-text results remain uncalibrated sugges
 The frozen evaluation has completed all 1,794 query/scope runs, including four
 explicitly rejected runs for one malformed JPEG. Text baseline checks pass.
 Compact vector storage and 160-pixel previews expand the full-archive gallery to
-9,370 images covering 7,596 entities. OCR and description analysis is finishing for
-that complete gallery. Remaining work: finish the independent offline rebuild,
-run all five native resource gates, verify publication assets, publish the latest
-single-binary CLI and original-image archives, then finalize this plan and README.
+9,370 images covering 7,596 entities. Analysis is complete with 9,370 descriptions
+and 2,598 OCR records. Two independent offline builds have identical hashes and
+zero network attempts. All 772 Cambridge Pixel pages pass source/HTML/Markdown CLI
+export comparisons. The complete production text regression preserves all 73
+required cases, recall@5 of 110/116, and baseline MRR. All five native resource jobs
+are running against dataset `9a10b95015b17b50e70a4fe5c341c002fe7be866761d3b3e4d774930545b510e`.
+Remaining work: finish native gates, verify and publish the latest single-binary
+CLI and original-image archives, then finalize this plan and README.
 
 ## Cambridge Pixel refresh — data and prerelease published
 
