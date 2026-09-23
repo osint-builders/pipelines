@@ -144,6 +144,42 @@ def test_failed_inference_is_not_cached_but_empty_results_are(gallery: Gallery) 
     assert empty.calls == 2
 
 
+def test_static_webp_observations_preserve_original_identity_and_png_cache(
+    gallery: Gallery,
+) -> None:
+    analyzer = FakeAnalyzer()
+    analyze(gallery, analyzer)
+    assert analyzer.calls == 2
+    setup = (gallery.root, gallery.entities, gallery.model)
+    webp = add(setup, "new.webp", format="WEBP", color="green")
+    members, metadata, _ = build(setup)
+    members.update(
+        (name, body)
+        for name, body in gallery.members.items()
+        if not name.startswith("image/")
+    )
+    manifest = {
+        **gallery.manifest,
+        "image": metadata,
+        "files": {name: observations.digest(body) for name, body in members.items()},
+    }
+    write_bundle(
+        gallery.bundle, {**members, "manifest.json": observations.canonical(manifest)}
+    )
+    report, analysis = analyze(gallery, analyzer)
+    assert report["states"] == {"observed": 4}
+    assert analyzer.calls == 3
+    row = next(
+        r for r in analysis["observations"] if r["media_sha256"] == webp["sha256"]
+    )
+    recipe = analysis["recipes"][row["recipe_sha256"]]
+    assert recipe["settings"]["gallery_decode"]["version"] == "static-webp-to-png-v1"
+    with MediaStore(gallery.root, read_only=True) as store:
+        assert store.body(webp["sha256"]).startswith(b"RIFF")
+    _, again = analyze(gallery, analyzer)
+    assert again == analysis and analyzer.calls == 3
+
+
 def test_selection_reads_only_chosen_original_and_keeps_exact_associations(
     gallery: Gallery, monkeypatch: pytest.MonkeyPatch
 ) -> None:

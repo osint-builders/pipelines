@@ -23,7 +23,7 @@ if TYPE_CHECKING:
 MAX_VECTORS = 10_000
 MAX_PREVIEW_BYTES = 32 * 1024 * 1024
 MAX_VIEWS = 8
-PREVIEW_EDGE = 320
+PREVIEW_EDGE = 160
 PREVIEW_QUALITY = 65
 IMAGE_LOCK_PATH = Path(__file__).with_name("image_model.lock.json")
 MODEL_KEYS = (
@@ -266,29 +266,9 @@ def _diverse(vectors: dict, owners: dict[str, set[str]]) -> list[str]:
 
 
 def _gallery_bytes(body: bytes) -> bytes:
-    if not (body.startswith(b"RIFF") and body[8:12] == b"WEBP"):
-        return body
-    from PIL import Image, ImageOps
+    from pipelines.image_preprocess import gallery_bytes
 
-    from pipelines.image_preprocess import MAX_IMAGE_BYTES, MAX_IMAGE_PIXELS
-
-    if len(body) > MAX_IMAGE_BYTES:
-        raise ValueError("Gallery image exceeds the encoded byte limit")
-    try:
-        with Image.open(BytesIO(body)) as image:
-            if (
-                getattr(image, "n_frames", 1) != 1
-                or image.width * image.height > MAX_IMAGE_PIXELS
-            ):
-                raise ValueError("Only bounded static WebP images can be indexed")
-            image.load()
-            pixels = ImageOps.exif_transpose(image)
-            pixels.info.clear()
-            stream = BytesIO()
-            pixels.save(stream, format="PNG")
-            return stream.getvalue()
-    except (OSError, SyntaxError, Image.DecompressionBombError) as exc:
-        raise ValueError("Invalid gallery WebP image") from exc
+    return gallery_bytes(body)
 
 
 def _preview(input_path: Path, output_path: Path) -> None:
@@ -470,7 +450,9 @@ def build_image_members(
             "pillow": pillow_version,
         },
     )
-    webp_decode = {"version": "static-webp-to-png-v1", "pillow": pillow_version}
+    from pipelines.image_preprocess import gallery_decode_identity
+
+    webp_decode = gallery_decode_identity()
     webp_vectors = replace(
         vector_recipe,
         settings={**vector_recipe.settings, "gallery_decode": webp_decode},

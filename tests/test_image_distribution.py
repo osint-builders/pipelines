@@ -288,8 +288,9 @@ def test_compact_preview_preserves_full_view_and_original_vectors(
     members, _, report = build(setup)
     row = json.loads(members["image/index.json"])[0]
     preview = Image.open(BytesIO(members[row["preview"]["member"]]))
-    assert preview.size == (320, 160)
-    left, right = preview.getpixel((2, 80)), preview.getpixel((317, 80))
+    assert preview.size == (160, 80)
+    left = preview.getpixel((2, preview.height // 2))
+    right = preview.getpixel((preview.width - 3, preview.height // 2))
     assert isinstance(left, tuple) and isinstance(right, tuple)
     assert left[0] > 200
     assert right[1] > 100
@@ -851,6 +852,7 @@ def test_package_default_stays_format2_and_image_changes_only_recipe(
             {
                 "format": 2,
                 "storage": distribution.STORAGE_VERSION,
+                "text_vectors": distribution.COMPACT,
                 "search": {
                     "metadata": first["search"],
                     "files": {
@@ -898,7 +900,7 @@ def test_package_default_stays_format2_and_image_changes_only_recipe(
     assert second["dataset_id"] != third["dataset_id"]
     refreshed = distribution.package(*arguments, root / "text.zip")
     assert refreshed["content_sha256"] == first["content_sha256"]
-    assert refreshed["files"]["vectors.f32"] == first["files"]["vectors.f32"]
+    assert refreshed["files"]["vectors.f16"] == first["files"]["vectors.f16"]
     assert distribution.package(*arguments, root / "text.zip")["changed"] is False
     monkeypatch.setattr(distribution, "STORAGE_VERSION", "alternative-storage-policy")
     repackaged = distribution.package(*arguments, root / "text.zip")

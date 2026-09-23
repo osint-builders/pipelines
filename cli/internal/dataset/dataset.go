@@ -16,6 +16,8 @@ import (
 	"sort"
 	"strings"
 	"unicode"
+
+	"github.com/gomlx/compute/dtypes/float16"
 )
 
 type Model struct {
@@ -39,6 +41,11 @@ type Manifest struct {
 	Search        *SearchPolicy        `json:"search,omitempty"`
 	Research      *ResearchManifest    `json:"research,omitempty"`
 	Calibration   *CalibrationManifest `json:"calibration,omitempty"`
+	TextVectors   *TextVectorStorage   `json:"text_vectors,omitempty"`
+}
+type TextVectorStorage struct {
+	Member string `json:"member"`
+	DType  string `json:"dtype"`
 }
 type Entity struct {
 	ID         string   `json:"id"`
@@ -114,6 +121,16 @@ func OpenReader(reader io.ReaderAt, size int64) (*Dataset, error) {
 	manifestFields, err := rawObject(raw)
 	if err != nil {
 		return nil, err
+	}
+	if storage, exists := manifestFields["text_vectors"]; exists {
+		fields, storageErr := rawObject(storage)
+		if storageErr != nil || len(fields) != 2 || !hasFields(fields, "member", "dtype") || d.Manifest.TextVectors == nil ||
+			d.Manifest.TextVectors.Member != "vectors.f16" || d.Manifest.TextVectors.DType != "float16-le" ||
+			d.Manifest.Files["vectors.f32"] != "" || d.members["vectors.f32"] != nil {
+			return nil, errors.New("unsupported or conflicting text vector storage")
+		}
+	} else if d.members["vectors.f16"] != nil || d.Manifest.Files["vectors.f16"] != "" {
+		return nil, errors.New("half text vectors require a storage descriptor")
 	}
 	if search, ok := manifestFields["search"]; ok {
 		fields, err := rawObject(search)
@@ -280,15 +297,19 @@ func (d *Dataset) LoadVectors() error {
 	if err := json.Unmarshal(raw, &chunks); err != nil {
 		return err
 	}
-	raw, err = d.Read("vectors.f32")
+	member, width := "vectors.f32", 4
+	if d.Manifest.TextVectors != nil {
+		member, width = d.Manifest.TextVectors.Member, 2
+	}
+	raw, err = d.Read(member)
 	if err != nil {
 		return err
 	}
 	dim := d.Manifest.Model.Dimensions
-	if len(chunks) != d.Manifest.Chunks || len(raw) != len(chunks)*dim*4 {
+	if len(chunks) != d.Manifest.Chunks || len(raw) != len(chunks)*dim*width {
 		return errors.New("vector count mismatch")
 	}
-	vectors := make([]float32, len(raw)/4)
+	vectors := make([]float32, len(raw)/width)
 	seen := make([]bool, len(d.Entities))
 	for i, chunk := range chunks {
 		if chunk.Entity < 0 || chunk.Entity >= len(d.Entities) {
@@ -298,7 +319,12 @@ func (d *Dataset) LoadVectors() error {
 		var norm float64
 		for j := range dim {
 			offset := i*dim + j
-			value := math.Float32frombits(binary.LittleEndian.Uint32(raw[offset*4:]))
+			var value float32
+			if width == 2 {
+				value = float16.FromBits(binary.LittleEndian.Uint16(raw[offset*2:])).Float32()
+			} else {
+				value = math.Float32frombits(binary.LittleEndian.Uint32(raw[offset*4:]))
+			}
 			if math.IsNaN(float64(value)) || math.IsInf(float64(value), 0) {
 				return errors.New("non-finite vector")
 			}
@@ -307,6 +333,13 @@ func (d *Dataset) LoadVectors() error {
 		}
 		if math.Abs(norm-1) > 0.002 {
 			return errors.New("vector is not normalized")
+		}
+		if width == 2 {
+			norm = math.Sqrt(norm)
+			for j := range dim {
+				offset := i*dim + j
+				vectors[offset] = float32(float64(vectors[offset]) / norm)
+			}
 		}
 	}
 	for _, present := range seen {

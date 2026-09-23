@@ -12,6 +12,7 @@ from pathlib import Path
 
 from pipelines.distribution import content_digest, validate_calibration_bundle
 from pipelines.model import evidence_id, response_member, valid_key
+from pipelines.vector_storage import search_vectors
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -124,6 +125,7 @@ def verify_bundle(bundle: Path) -> dict:
 
         validate_research_bundle(archive, manifest, entities)
         validate_calibration_bundle(archive, manifest)
+        search_vectors(archive, manifest)
         return manifest
 
 

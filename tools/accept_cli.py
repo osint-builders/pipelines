@@ -468,7 +468,9 @@ def source_probe_scores(archive: zipfile.ZipFile, manifest: dict) -> dict[str, f
 
     dimensions = manifest["model"]["dimensions"]
     query = floats(archive.read("probes.f32")[: dimensions * 4])
-    vectors = floats(archive.read("vectors.f32"))
+    from pipelines.vector_storage import search_vectors
+
+    vectors = search_vectors(archive, manifest)
     index = json.loads(archive.read("index.json"))
     scores: dict[str, float] = {}
     for position, chunk in enumerate(json.loads(archive.read("chunks.json"))):

@@ -25,6 +25,37 @@ _PRECISION = 1 << 22
 _PNG = b"\x89PNG\r\n\x1a\n"
 
 
+def gallery_decode_identity() -> dict[str, str]:
+    from PIL import __version__
+
+    return {"version": "static-webp-to-png-v1", "pillow": __version__}
+
+
+def gallery_bytes(body: bytes) -> bytes:
+    """Losslessly decode static archived WebP; query inputs stay JPEG/PNG."""
+    if not (body.startswith(b"RIFF") and body[8:12] == b"WEBP"):
+        return body
+    from PIL import ImageOps
+
+    if len(body) > MAX_IMAGE_BYTES:
+        raise ValueError("Gallery image exceeds the encoded byte limit")
+    try:
+        with Image.open(BytesIO(body)) as image:
+            if (
+                getattr(image, "n_frames", 1) != 1
+                or image.width * image.height > MAX_IMAGE_PIXELS
+            ):
+                raise ValueError("Only bounded static WebP images can be indexed")
+            image.load()
+            pixels = ImageOps.exif_transpose(image)
+            pixels.info.clear()
+            stream = BytesIO()
+            pixels.save(stream, format="PNG")
+            return stream.getvalue()
+    except (OSError, SyntaxError, Image.DecompressionBombError) as exc:
+        raise ValueError("Invalid gallery WebP image") from exc
+
+
 @dataclass(frozen=True)
 class Recipe:
     size: int = 256

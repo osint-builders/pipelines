@@ -956,6 +956,10 @@ def test_acceptance_executes_inspection_opt_in_and_original_vector_oracle(
     with zipfile.ZipFile(
         io.BytesIO(observation_archive(empty=failure == "empty"))
     ) as archive:
+        manifest["chunks"] = len(json.loads(archive.read("chunks.json")))
+        manifest["files"] = {
+            "vectors.f32": hashlib.sha256(archive.read("vectors.f32")).hexdigest()
+        }
         assert source_probe_scores(archive, manifest) == pytest.approx(
             {"source:one": 1, "source:two": 0.8, "source:three": 0}
         )

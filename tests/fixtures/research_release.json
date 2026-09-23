@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "profile": "research-search-v1",
+  "scope": "A self-contained offline research tool with text retrieval, image similarity suggestions, combined queries, generated image text, and captured evidence. Visual similarity is not verified equipment identification.",
+  "supersedes_for_release_readiness": "The original M1 identification contract remains unchanged in search_acceptance.json and must be reported separately. Failing its identification targets must never be described as passing them.",
+  "reason": "The archive grew from 4337 to 8463 entities and now embeds substantially more source evidence. Reviewed independent-photo experiments with MobileCLIP2-S0, MobileCLIP2-B, DINOv2-small, and SigLIP2-B do not support the original automatic-identification promise. Release readiness instead requires reproducible retrieval, complete evidence, measured limitations, and bounded offline operation.",
+  "required_capabilities": ["text", "image_similarity", "image_text", "observations", "facts", "filters", "relationships", "source_exports", "embedded_previews"],
+  "distribution": {
+    "executables_per_platform": 1,
+    "platforms": ["windows-amd64", "linux-amd64", "linux-arm64", "darwin-amd64", "darwin-arm64"],
+    "external_runtime_or_model_downloads": false,
+    "original_image_archives": "Optional supplementary assets; all query models, indices, evidence and selected previews must be embedded in each executable."
+  },
+  "quality_requirements": {
+    "text_regression": "All 73 required baseline cases pass; report every one of the 116 cases and compare recall@5 and MRR against M1.",
+    "independent_photo_reporting": "Execute all ready frozen held-out cases against a query-disjoint gallery. Report raw ranking and accepted-identification metrics separately, by task and scope, with Wilson intervals. Preserve missing, failed and excluded cases. No threshold tuning on held-out queries.",
+    "uncalibrated_images": "All image and combined suggestions must remain explicitly uncalibrated and no_supported_match; expose source associations and previews without asserting identity or probabilities.",
+    "integrity": "No filter leaks, duplicate entity results, broken source/media references, or fabricated observations. Validate every returned contribution against the exact bundle.",
+    "coverage": "Account for every source and every saved image outcome; provide per-source entity coverage and exclusions. Preview allocation must prioritize previously uncovered entities.",
+    "reproducibility": "Pinned models; identical cached offline dataset rebuild; verified original-image archives; source exports match captured bytes.",
+    "native": "All five platforms pass native functional, encoder parity, text regression and resource checks with network access blocked."
+  },
+  "resource_targets": {
+    "comparison_scope": "Complete 8463-entity archive with at most 10000 indexed image views; absolute budgets apply to all five native targets. The original fixed-corpus relative regression remains a separate report.",
+    "latency_seconds": {
+      "text": {"first_process_max": 15, "repeated_process_p95_max": 10},
+      "image": {"first_process_max": 15, "repeated_process_p95_max": 10},
+      "image_text": {"first_process_max": 20, "repeated_process_p95_max": 15}
+    },
+    "latency_samples": {"first_process_per_mode": 1, "repeated_process_per_mode_min": 20},
+    "latency_definition": "Complete process launches including model loading and JSON output. First observed is not cache-cleared; repeated launches are not an in-process service.",
+    "peak_resident_memory_mib_max": 2048,
+    "standalone_executable_mib_max": 512,
+    "compressed_release_mib_max": 448,
+    "embedded_previews_mib_max": 32
+  }
+}

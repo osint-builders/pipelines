@@ -240,7 +240,13 @@ def benchmark(
         }
         entities = validate_fixture(fixture, before, manifests["baseline"])
         validate_fixture(fixture, after, manifests["candidate"])
-        for name in ("index.json", "chunks.json", "vectors.f32"):
+        from pipelines.vector_storage import vector_member
+
+        if vector_member(manifests["baseline"]) != vector_member(
+            manifests["candidate"]
+        ):
+            raise ValueError("Comparison requires identical source text and vectors")
+        for name in ("index.json", "chunks.json", vector_member(manifests["baseline"])):
             if manifests["baseline"]["files"].get(name) != manifests["candidate"][
                 "files"
             ].get(name):

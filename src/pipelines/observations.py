@@ -7,7 +7,7 @@ import re
 import sys
 import zipfile
 from collections import Counter
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from pathlib import Path
 from typing import Protocol
 
@@ -327,24 +327,51 @@ def observe(
         else:
             grouped.setdefault(row["sha256"], []).append(row)
     recipes, recipe_ids = {}, {}
+    webp_recipes: dict[str, ProcessingRecipe] = {}
     for kind, analyzer in sorted(analyzers.items()):
         recipe = asdict(analyzer.recipe)
         validate_recipe(recipe)
         recipe_ids[kind] = digest(canonical(recipe))
         recipes[recipe_ids[kind]] = recipe
+        if any(
+            row["content_type"] == "image/webp"
+            for media in grouped.values()
+            for row in media
+        ):
+            from pipelines.image_preprocess import gallery_decode_identity
+
+            webp_recipes[kind] = replace(
+                analyzer.recipe,
+                settings={
+                    **analyzer.recipe.settings,
+                    "gallery_decode": gallery_decode_identity(),
+                },
+            )
+            webp_recipe = asdict(webp_recipes[kind])
+            validate_recipe(webp_recipe)
+            recipe_ids[kind + "/webp"] = digest(canonical(webp_recipe))
+            recipes[recipe_ids[kind + "/webp"]] = webp_recipe
     observations = []
     output.parent.mkdir(parents=True, exist_ok=True)
     with FileLock(output.with_suffix(".lock"), timeout=0), MediaStore(root) as store:
         for position, (sha, media) in enumerate(sorted(grouped.items()), 1):
             for kind, analyzer in sorted(analyzers.items()):
+                webp = media[0]["content_type"] == "image/webp"
+                selected_recipe = webp_recipes[kind] if webp else analyzer.recipe
+                recipe_id = recipe_ids[kind + "/webp" if webp else kind]
                 try:
 
                     def produce(source: Path, destination: Path) -> None:
-                        result = analyzer.analyze(source.read_bytes())
+                        body = source.read_bytes()
+                        if webp:
+                            from pipelines.image_preprocess import gallery_bytes
+
+                            body = gallery_bytes(body)
+                        result = analyzer.analyze(body)
                         validate_output(result, kind, allow_empty=True)
                         destination.write_bytes(canonical(result))
 
-                    artifact = store.derive(sha, analyzer.recipe, produce)
+                    artifact = store.derive(sha, selected_recipe, produce)
                     result = json.loads(artifact.read_bytes())
                     validate_output(result, kind, allow_empty=True)
                     if not result["text"].strip():
@@ -360,7 +387,7 @@ def observe(
                         "media_sha256": sha,
                         "media_ids": sorted(row["id"] for row in media),
                         "references": image_references(media),
-                        "recipe_sha256": recipe_ids[kind],
+                        "recipe_sha256": recipe_id,
                     }
                     observation["id"] = observation_id(observation)
                     observations.append(observation)

@@ -11,6 +11,7 @@ from pathlib import Path
 
 from pipelines.model import response_member
 from pipelines.snapshot import load_snapshot
+from pipelines.vector_storage import COMPACT, compact_vectors, read_vectors
 
 FORMAT_VERSION = 2
 LEGACY_SEARCH_VERSION = "bm25-minilm-v1"
@@ -313,13 +314,7 @@ def _cached_vectors(bundle: Path, chunks: list[dict]) -> bytes | None:
             raise ValueError("Existing chunk checksum mismatch")
         if previous != canonical(chunks):
             return None
-        vectors = archive.read("vectors.f32")
-        if (
-            sha256(vectors) != manifest["files"].get("vectors.f32")
-            or len(vectors) != len(chunks) * LOCK["dimensions"] * 4
-        ):
-            raise ValueError("Existing vector checksum or size mismatch")
-        return vectors
+        return read_vectors(archive, {**manifest, "chunks": len(chunks)})
 
 
 def package(
@@ -395,6 +390,7 @@ def _package(
         "format": format_version,
         "model": LOCK,
         "storage": STORAGE_VERSION,
+        "text_vectors": COMPACT,
     }
     calibration_body = calibration.read_bytes() if calibration is not None else None
     if calibration_body is not None:
@@ -524,7 +520,7 @@ def _package(
     members = {
         "index.json": canonical(index),
         "chunks.json": canonical(chunks),
-        "vectors.f32": vector_bytes,
+        COMPACT["member"]: compact_vectors(vector_bytes),
     }
     members.update(responses)
     for entity in entities:
@@ -556,6 +552,7 @@ def _package(
         "evidence_pages": len(html),
         "chunks": len(chunks),
         "model": LOCK,
+        "text_vectors": COMPACT,
         "search": search_metadata,
         "research": research_metadata,
         "sources": sorted(set(sources)),

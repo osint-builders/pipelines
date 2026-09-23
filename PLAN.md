@@ -946,6 +946,60 @@ The user's continuation verified M9 and authorized M10. No release was published
 
 ## M10 — Quality gates and compact releases
 
+### Completion work resumed September 23
+
+The release must remain one standalone executable with offline text/image search,
+embedded models, and image previews. The original M1 identification benchmark and
+targets remain preserved. The user authorized research and realignment if needed;
+any change to the release's promised capability must be explicit and supported by
+measured results, not recorded as a pass against the original targets.
+
+- [x] Reproduce the independent-photo failures with the existing compiled CLI.
+- [x] Compare SigLIP 2 on the same frozen development inputs and gallery.
+- [ ] Compact vector storage and verify ranking, cached rebuild, and native parity.
+- [x] Record the revised research-search release scope and acceptance contract before evaluation; retain the original identification contract and report its unmet targets separately.
+- [ ] Complete held-out reporting, native resource checks, and final source/media audits.
+- [ ] Publish and verify the final single-binary release and update the README.
+
+The three-query reproduction still fails top-five retrieval for all three selected
+development photos (`build/m10/realign/reproduce.py`). Google SigLIP 2 B/16 improves
+raw development first/five results to 7/27 and 12/27, versus compact MobileCLIP2-S0's
+2/27 and 7/27. Patch-mean pooling is worse. This does not justify adopting its much
+larger model or claim the M1 80%/90% identification targets pass. The model revision,
+input hashes, vectors, and complete rankings are retained in
+`build/m10/realign/siglip2/`; no held-out inputs were used for this comparison.
+The [Google model documentation](https://huggingface.co/google/siglip2-base-patch16-224)
+supports evaluating its improved visual representations, not a domain accuracy claim.
+
+The full-data bundle stores 79 MiB of float32 text vectors. An explicitly described
+float16 storage extension halves those bytes while retaining float32 search and
+the unchanged embedding model. Legacy bundles retain their original behavior;
+half vectors are normalized on load, validated, and included in dataset/calibration
+identity. Focused Python/Go tests pass; full-bundle ranking and size checks are running.
+The controlled compiled comparison now preserves all 201 expected ranks and first
+results, including the 116 baseline cases, while halving text-vector bytes. Every
+other source/model/gallery/observation member is unchanged. Report:
+`build/m10/realign/controlled-half/ranking-comparison.json`.
+
+The completion scope is [research_release.json](tests/fixtures/research_release.json),
+under the user's September 23 instruction to research and realign as necessary.
+Image search returns source-linked visual suggestions, not verified equipment
+identity. Uncalibrated image/combined responses keep `no_supported_match`; the
+original identification targets remain explicitly unmet. The final executable must
+include image/text queries, generated observations, evidence, and selected previews,
+and pass native functionality, integrity, text-regression, reproducibility, and
+resource checks. Full-corpus budgets are 512 MiB executable / 448 MiB compressed,
+with the existing 32 MiB preview and 2 GiB memory budgets retained. Full native
+measurements have not yet been run against this revised contract.
+
+A query-independent 400-original preview sample estimates 98.45 MiB for 10,000
+320-pixel previews versus 34.18 MiB at 160 pixels and the same JPEG quality. The
+smaller display previews preserve original images and vectors, enabling much
+broader gallery coverage within 32 MiB. Full-gallery counts and visual inspection
+remain required before adopting the build (`build/m10/realign/preview-sizes.json`).
+
+### Existing evidence
+
 Work is split across runtime profiling, quality/coverage evaluation, release tooling, and
 compact gallery allocation. M9 artifacts and frozen query/seed fixtures remain intact.
 The current held-out seed has seven positive photo groups, below M1's release minimum
