@@ -5,12 +5,14 @@ from pypdf import PdfReader
 
 from pipelines.media import MAX_IMAGE_BYTES, MAX_IMAGE_PIXELS
 
+MAX_PDF_BYTES = 20 * 1024 * 1024
+
 
 def extract(body: bytes, review: dict) -> tuple[bytes, str]:
     selection = review["pdf_image"]
     if (
         not body.startswith(b"%PDF-")
-        or len(body) > 10 * 1024 * 1024
+        or len(body) > MAX_PDF_BYTES
         or hashlib.sha256(body).hexdigest() != selection["document_sha256"]
         or review["image_url"] != review["page_url"]
     ):
@@ -37,6 +39,16 @@ def extract(body: bytes, review: dict) -> tuple[bytes, str]:
     ):
         raise ValueError("Reviewed radar PDF image changed")
     mime = {"JPEG": "image/jpeg", "PNG": "image/png"}.get(image.image.format or "")
+    if image.image.format == "JPEG2000" and selection.get("png_sha256"):
+        output = BytesIO()
+        image.image.save(output, format="PNG")
+        body = output.getvalue()
+        if (
+            len(body) > MAX_IMAGE_BYTES
+            or hashlib.sha256(body).hexdigest() != selection["png_sha256"]
+        ):
+            raise ValueError("Reviewed radar PNG conversion changed")
+        return body, "image/png"
     if mime is None:
         raise ValueError("Unsupported embedded radar image format")
     return image.data, mime

@@ -54,7 +54,9 @@ def test_reviewed_photo_requires_exact_captured_model_and_image_evidence() -> No
     "markup",
     [
         f'<video poster="{IMAGE}"></video>',
+        f'<img src="/blank.png" data-src-url-d="{IMAGE}">',
         f'<div style="background-image: url({IMAGE})"></div>',
+        f'<div style="background: url({IMAGE}) 50% center / cover no-repeat"></div>',
         f"<div style=\"color:red; background-image: url('{IMAGE}')\"></div>",
         f'<div role="img" data-thumbnail="{IMAGE}"></div>',
         f'<picture><source srcset="{IMAGE}"><img src="/fallback.jpg"></picture>',

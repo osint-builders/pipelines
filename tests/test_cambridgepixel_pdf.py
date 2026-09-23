@@ -3,6 +3,7 @@ from copy import deepcopy
 from io import BytesIO
 
 import pytest
+from PIL import Image
 from pypdf import PdfReader, PdfWriter
 from pypdf.generic import (
     DecodedStreamObject,
@@ -124,3 +125,70 @@ def test_reviewed_pdf_requires_exact_quote_and_document_url(
     del html_review["pdf_image"]
     with pytest.raises(ValueError, match="Mixed PDF and HTML"):
         validate_page(URL, body, [review, html_review])
+
+
+def test_reviewed_jpeg2000_requires_verified_png_conversion() -> None:
+    raster = BytesIO()
+    Image.new("RGB", (12, 8), (80, 140, 200)).save(raster, format="JPEG2000")
+    writer = PdfWriter()
+    sheet = writer.add_blank_page(width=100, height=100)
+    image = DecodedStreamObject()
+    image.set_data(raster.getvalue())
+    image.update(
+        {
+            NameObject("/Type"): NameObject("/XObject"),
+            NameObject("/Subtype"): NameObject("/Image"),
+            NameObject("/Filter"): NameObject("/JPXDecode"),
+            NameObject("/Width"): NumberObject(12),
+            NameObject("/Height"): NumberObject(8),
+            NameObject("/ColorSpace"): NameObject("/DeviceRGB"),
+            NameObject("/BitsPerComponent"): NumberObject(8),
+        }
+    )
+    sheet[NameObject("/Resources")] = DictionaryObject(
+        {
+            NameObject("/XObject"): DictionaryObject(
+                {NameObject("/Radar"): writer._add_object(image)}
+            ),
+            NameObject("/Font"): DictionaryObject(
+                {
+                    NameObject("/F1"): DictionaryObject(
+                        {
+                            NameObject("/Type"): NameObject("/Font"),
+                            NameObject("/Subtype"): NameObject("/Type1"),
+                            NameObject("/BaseFont"): NameObject("/Helvetica"),
+                        }
+                    )
+                }
+            ),
+        }
+    )
+    content = DecodedStreamObject()
+    content.set_data(b"BT /F1 10 Tf 0 50 Td (Radar) Tj ET")
+    sheet[NameObject("/Contents")] = content
+    output = BytesIO()
+    writer.write(output)
+    body = output.getvalue()
+    embedded = PdfReader(BytesIO(body)).pages[0].images[0]
+    png = BytesIO()
+    embedded.image.save(png, format="PNG")
+    review = {
+        **MATCH,
+        "quote": "Radar",
+        "image_url": URL,
+        "pdf_image": {
+            "page": 1,
+            "name": embedded.name,
+            "document_sha256": hashlib.sha256(body).hexdigest(),
+            "image_sha256": hashlib.sha256(embedded.data).hexdigest(),
+        },
+    }
+    with pytest.raises(ValueError, match="Unsupported"):
+        extract_image(body, review)
+    review["pdf_image"]["png_sha256"] = hashlib.sha256(png.getvalue()).hexdigest()
+    converted, mime = extract_image(body, review)
+    assert mime == "image/png" and converted == png.getvalue()
+    assert Image.open(BytesIO(converted)).tobytes() == embedded.image.tobytes()
+    review["pdf_image"]["png_sha256"] = "0" * 64
+    with pytest.raises(ValueError, match="PNG conversion changed"):
+        extract_image(body, review)

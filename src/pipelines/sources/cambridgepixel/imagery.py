@@ -55,7 +55,13 @@ def validate_page(url: str, body: bytes, matches: list[dict]) -> None:
         images = {
             _image_url(image_base, str(node.get(attribute, "")))
             for node in soup.select("img, video[poster]")
-            for attribute in ("src", "data-src", "data-original", "poster")
+            for attribute in (
+                "src",
+                "data-src",
+                "data-original",
+                "data-src-url-d",
+                "poster",
+            )
             if node.get(attribute)
         }
         images.update(
@@ -74,7 +80,7 @@ def validate_page(url: str, body: bytes, matches: list[dict]) -> None:
             r"--[a-z][a-z0-9-]*", css_property
         ):
             raise ValueError("Invalid reviewed image CSS property")
-        css_properties = "background-image"
+        css_properties = "background-image|background"
         if css_property:
             css_properties += "|" + re.escape(css_property)
         for node in soup.select("[style]"):

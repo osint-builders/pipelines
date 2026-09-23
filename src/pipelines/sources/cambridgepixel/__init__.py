@@ -10,6 +10,7 @@ from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 from bs4 import BeautifulSoup
 
 from pipelines.model import Entity, EntityKind, Evidence, Fact
+from pipelines.sources.cambridgepixel.pdf_image import MAX_PDF_BYTES
 from pipelines.sources.html import text
 
 if TYPE_CHECKING:
@@ -225,6 +226,7 @@ class CambridgePixel:
     media_workers = 1
     media_request_interval = 0.3
     additional_content_types = ("application/pdf",)
+    download_max_bytes = MAX_PDF_BYTES
 
     def __init__(self) -> None:
         from pipelines.sources.cambridgepixel.imagery import origins, reviews

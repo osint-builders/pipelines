@@ -3510,7 +3510,8 @@
     "image_url": "https://img.nauticexpo.com/images_ne/photo-mg/36682-397971.jpg",
     "caption": "Sea-Hawk SHN 4000 radome installed beside an offshore platform crane.",
     "quote": "SHN 4000 Polarimetric radar system.",
-    "notes": "Google Images located the manufacturer’s NauticExpo listing. Cross-checked its description with Sea-Hawk’s SHN 4000 page, whose only images are logos. Visually inspected the model-labelled offshore radome photograph; no view of the enclosed antenna is claimed."
+    "notes": "Google Images located the manufacturer’s NauticExpo listing. Cross-checked its description with Sea-Hawk’s SHN 4000 page, whose only images are logos. Visually inspected the model-labelled offshore radome photograph; no view of the enclosed antenna is claimed.",
+    "capture_method": "browser-dom"
   },
   {
     "manufacturer": "Sea Hawk",
@@ -3543,7 +3544,8 @@
     "image_url": "https://static.wixstatic.com/media/c572be_77f54b89ffcb439baf7ee3e22e2263dc~mv2.png/v1/fill/w_980,h_550,al_c,q_90,usm_0.66_1.00_0.01,enc_avif,quality_auto/c572be_77f54b89ffcb439baf7ee3e22e2263dc~mv2.png",
     "caption": "Sensrad Hugin D1 black square radar enclosure with its eye emblem, shown in Leo Store’s model-specific product illustration.",
     "quote": "Hugin D1 Advanced 4D Imaging Radar Sensor",
-    "notes": "Google Images returned the manufacturer and Leo Store product pages. The manufacturer’s image host was blocked, so no alternative fetch of that asset was attempted. Visually inspected the independent reseller illustration. Its 300 m pedestrian-range claim differs from the manufacturer and Cambridge Pixel 220 m text; no overwrite of the catalog range is inferred."
+    "notes": "Google Images returned the manufacturer and Leo Store product pages. The manufacturer’s image host was blocked, so no alternative fetch of that asset was attempted. Visually inspected the independent reseller illustration. Its 300 m pedestrian-range claim differs from the manufacturer and Cambridge Pixel 220 m text; no overwrite of the catalog range is inferred.",
+    "capture_method": "browser-dom"
   },
   {
     "manufacturer": "Simrad - Navico",
@@ -3587,7 +3589,8 @@
     "image_url": "https://gmelectronics.gr/wp-content/uploads/2022/11/p-116-TXL-25s-Radar.jpg.webp",
     "caption": "Simrad TXL-25S-7 seven-foot open-array radar and pedestal.",
     "quote": "HD Digital Radar TXL-25S-7",
-    "notes": "Google Images produced both TXL-25S and TX-25S listings. Selected GM Electronics’ exact TXL-25S-7 page and model-labelled image, then visually inspected the complete scanner. The selected member is the 25 kW seven-foot configuration, not a claim about all TXL-25S packages."
+    "notes": "Google Images produced both TXL-25S and TX-25S listings. Selected GM Electronics’ exact TXL-25S-7 page and model-labelled image, then visually inspected the complete scanner. The selected member is the 25 kW seven-foot configuration, not a claim about all TXL-25S packages.",
+    "capture_method": "browser-dom"
   },
   {
     "manufacturer": "Simrad / B&G / Lowrance - Navico",
@@ -3819,7 +3822,7 @@
     "page_url": "https://www.spotterglobal.com/blog/spotter-blog-3/spotter-global-the-leader-in-compact-surveillance-radar-launches-an-unprecedented-4-new-radars-3-radar-updates-at-isc-west-2024-10",
     "image_url": "https://www.spotterglobal.com/web/image/107761-7b492c66/New%20SPotter%20GK%20and%20GX%20Radars.jpg",
     "caption": "Manufacturer GK/GX-series launch illustration with a compact radar panel.",
-    "quote": "GK150: Detects walking targets from 150m range",
+    "quote": "Detects walking targets from 150m range",
     "notes": "Google Images returned the former GK/GX product page, which now returns 404. Recovered the manufacturer’s April 2024 launch announcement naming GX1000, GK100 and GK150. Visually inspected its explicitly labelled GK/GX product illustration; it identifies the series without asserting the displayed unit’s exact member."
   },
   {
@@ -3883,7 +3886,8 @@
     "image_url": "https://www.srcinc.com/images/thumbnails-gryphon-r1540-404x494.jpg",
     "caption": "SRC Gryphon R1540 multi-panel radar on its support frame.",
     "quote": "Gryphon R1540 Multi-Mission/Multi-Domain Radar",
-    "notes": "Exact manufacturer model page from Google Images. Visually inspected the distinct tan R1540 panels, rear electronics and deployed support legs. Kept separate from the R1430/R1440 rendering."
+    "notes": "Exact manufacturer model page from Google Images. Visually inspected the distinct tan R1540 panels, rear electronics and deployed support legs. Kept separate from the R1430/R1440 rendering.",
+    "capture_method": "browser-dom"
   },
   {
     "manufacturer": "SRC",
@@ -3940,7 +3944,8 @@
     "image_url": "https://www.stxengine.co.kr/eng/images/biz/electronic/map_2_1_3.jpg",
     "caption": "STX SPS-95K naval radar antenna photograph with a labelled system-component diagram.",
     "quote": "Surface Vessel Radar",
-    "notes": "Google Images cross-reference identified SPS-95K; followed Cambridge’s mobile manufacturer reference to its linked desktop detail page. The image alt text explicitly says Naval Navigation Radar(SPS-95K), and the inspected graphic visibly labels SPS-95K. Selected the exact image, excluding adjacent SPS-100K and SPS-300K diagrams."
+    "notes": "Google Images cross-reference identified SPS-95K; followed Cambridge’s mobile manufacturer reference to its linked desktop detail page. The image alt text explicitly says Naval Navigation Radar(SPS-95K), and the inspected graphic visibly labels SPS-95K. Selected the exact image, excluding adjacent SPS-100K and SPS-300K diagrams.",
+    "capture_method": "browser-dom"
   },
   {
     "manufacturer": "Teledyne FLIR",
@@ -3951,7 +3956,8 @@
     "image_url": "https://www.flir.com/netx-assets/r290_r190_main-image/?width=1500&quality=80",
     "caption": "FLIR Elara R190 commercial radar enclosure and mounting assembly.",
     "quote": "The Flir Elara R-190 is a compact ground radar",
-    "notes": "Google Images located the exact manufacturer R190 page. Visually inspected the square FLIR-labelled front and circular mounting assembly. Filename is shared with R290; attribution is to the exact R190 product gallery, without inferring visible differences between the two."
+    "notes": "Google Images located the exact manufacturer R190 page. Visually inspected the square FLIR-labelled front and circular mounting assembly. Filename is shared with R290; attribution is to the exact R190 product gallery, without inferring visible differences between the two.",
+    "capture_method": "browser-dom"
   },
   {
     "manufacturer": "Teledyne FLIR",
@@ -4054,5 +4060,544 @@
     "caption": "Shared Ranger R5-family radome published on the R5D page; exact visual variant unconfirmed.",
     "quote": "Ranger® R5D",
     "notes": "Independently searched R5D on Google Images and verified the exact manufacturer page. Its product image reuses the inspected R5-named enclosure photograph. Retained as explicit family context, without claiming visible hardware differentiates the dual-mode variant."
+  },
+  {
+    "manufacturer": "Teledyne FLIR",
+    "model": "Ranger R6SS",
+    "status": "matched",
+    "search_url": "https://www.google.com/search?udm=2&q=Teledyne%20FLIR%20Ranger%20R6SS%20radar",
+    "page_url": "https://defense.flir.com/defense-products/ranger-r6ss/",
+    "image_url": "https://defense.flir.com/globalassets/defense/images/product-lync-images/ranger-r6ss_thumbs.png",
+    "caption": "FLIR Ranger R6SS compact rectangular radar enclosure.",
+    "quote": "Ranger® R6SS",
+    "notes": "Google Images located the exact manufacturer R6SS page. Visually inspected its tan rectangular product enclosure; selected the dedicated product asset rather than a generic field installation."
+  },
+  {
+    "manufacturer": "Teledyne FLIR",
+    "model": "Ranger R8-3DX",
+    "status": "matched",
+    "ambiguous": true,
+    "search_url": "https://www.google.com/search?udm=2&q=Teledyne%20FLIR%20Ranger%20R8-3DX%20radar",
+    "page_url": "https://defense.flir.com/defense-products/ranger-r8-3dx/",
+    "image_url": "https://defense.flir.com/globalassets/defense/images/product-lync-images/ranger-r8ss_thumbs.png",
+    "caption": "Shared Ranger R8-series panel and pedestal published for R8-3DX; visual variant unconfirmed.",
+    "quote": "RANGER® R8-3DX",
+    "notes": "Google Images and the manufacturer’s exact R8-3DX page agree on the product identity, but both gallery images reuse R8SS filenames. Visually inspected the complete panel and pedestal. Recorded family context rather than claiming the photograph distinguishes the 3DX variant."
+  },
+  {
+    "manufacturer": "Teledyne FLIR",
+    "model": "Ranger R8SS",
+    "status": "matched",
+    "search_url": "https://www.google.com/search?udm=2&q=Teledyne%20FLIR%20Ranger%20R8SS%20radar",
+    "page_url": "https://defense.flir.com/defense-products/ranger-r8ss/",
+    "image_url": "https://defense.flir.com/globalassets/defense/images/product-lync-images/ranger-r8ss_thumbs.png",
+    "caption": "FLIR Ranger R8SS radar panel and cylindrical pedestal.",
+    "quote": "Ranger® R8SS",
+    "notes": "Independently searched R8SS and verified the exact manufacturer page. Its labelled product photo matches the R8SS filename and the visually inspected complete panel and pedestal. The image’s reuse for R8-3DX is separately qualified on that record."
+  },
+  {
+    "manufacturer": "Telephonics",
+    "model": "ARSS",
+    "status": "matched",
+    "search_url": "https://www.google.com/search?udm=2&q=Telephonics%20ARSS%20radar",
+    "page_url": "https://www.telephonics.com/product/arss",
+    "image_url": "https://www.telephonics.com/uploads/standard/whatwedo/surveillance/_1300x434_crop_top-center_none/groundsurveillance_arss.jpg",
+    "caption": "Telephonics ARSS rectangular radar panel on a tripod with portable control computer.",
+    "quote": "Advanced Radar Surveillance System",
+    "notes": "Google Images led to the exact manufacturer product page. Visually checked the complete radar panel and mount beside its field computer; the wide banner preserves the hardware."
+  },
+  {
+    "manufacturer": "Terma",
+    "model": "SCANTER 1002",
+    "status": "matched",
+    "search_url": "https://www.google.com/search?udm=2&q=Terma%20SCANTER%201002%20radar",
+    "page_url": "https://www.terma.com/media/yj1itzke/43403-terma-scanter-1002-letter-v6-low.pdf",
+    "image_url": "https://www.terma.com/media/yj1itzke/43403-terma-scanter-1002-letter-v6-low.pdf",
+    "caption": "Terma SCANTER 1002 radome and pedestal overlooking a harbor.",
+    "quote": "SCANTER 1002",
+    "notes": "Google Images found the exact manufacturer datasheet. Visually inspected its original embedded cover photograph showing the complete radome and pedestal. The brochure distinguishes standard and extended-range configurations; the cover does not identify a range variant.",
+    "media_capture_method": "pdf-image-extraction",
+    "pdf_image": {
+      "page": 1,
+      "name": "Im0.jpg",
+      "document_sha256": "b87b6a87b824e40a5f4ce24e5a75ca4bc019d7cab768d3b080375d9923bfc18c",
+      "image_sha256": "d4ef4f0a7eb126c31765d5f990991f3f4d610715bb54edb0058b6526d61e31ca",
+      "extractor": "pypdf-6.10.0"
+    }
+  },
+  {
+    "manufacturer": "Terma",
+    "model": "Scanter 2000 Series / 2001 / 2100",
+    "status": "matched",
+    "ambiguous": true,
+    "search_url": "https://www.google.com/search?udm=2&q=Terma%20Scanter%202000%202001%202100%20radar",
+    "page_url": "https://www.radioholland.com/product/scanter-2000-series/",
+    "image_url": "https://www.radioholland.com/pon-data/uploads/2022/09/Skanter2000-web.jpg",
+    "caption": "Terma SCANTER 2000-series antenna photographed from its mast; exact transceiver variant unspecified.",
+    "quote": "SCANTER 2000 series",
+    "notes": "Google Images located the supplier’s explicit series product photograph. Visually inspected the close side view of the antenna. The page discusses SCANTER 2200 and does not identify the pictured equipment as 2001 or 2100, so this is family context for the grouped catalog record."
+  },
+  {
+    "manufacturer": "Terma",
+    "model": "Scanter 2600 / 2602",
+    "status": "matched",
+    "search_url": "https://www.google.com/search?udm=2&q=Terma%20Scanter%202600%202602%20radar",
+    "page_url": "https://www.terma.com/media/cmsfqyb2/terma-brochure-naval-surveillance-and-high-performing-navigation-radar-scanter-2602-letter.pdf",
+    "image_url": "https://www.terma.com/media/cmsfqyb2/terma-brochure-naval-surveillance-and-high-performing-navigation-radar-scanter-2602-letter.pdf",
+    "caption": "SCANTER 2602 up-mast transceiver during installation, partly obscured by a technician.",
+    "quote": "Based on the SCANTER Radar Technology",
+    "notes": "The manufacturer naval radar page labels its link 2600 but the linked brochure explicitly identifies SCANTER 2602. Inspected the embedded photographs individually. Selected the close view of the up-mast transceiver on page 3; it shows a component rather than a complete antenna assembly and is partly occluded.",
+    "media_capture_method": "pdf-image-extraction",
+    "pdf_image": {
+      "page": 3,
+      "name": "Im2.jpg",
+      "document_sha256": "e6008289a564e15d198b6f6e8b741c4f5eb1ca3460cacef57791125b24d3dd6b",
+      "image_sha256": "e54d9e04d981109975eaf2aaa7d546ec3ceda6721059f3bae48e91dc8cee587b",
+      "extractor": "pypdf-6.10.0"
+    }
+  },
+  {
+    "manufacturer": "Terma",
+    "model": "Scanter 4000",
+    "status": "matched",
+    "ambiguous": true,
+    "search_url": "https://www.google.com/search?udm=2&q=Terma%20Scanter%204000%20radar",
+    "page_url": "https://www.yumpu.com/en/document/view/31701612/scanter-4000-4100-terma",
+    "image_url": "https://img.yumpu.com/31701612/1/500x640/scanter-4000-4100-terma.jpg",
+    "caption": "Terma SCANTER 4000/4100 document cover with multiple antenna configurations.",
+    "quote": "SCANTER 4000/4100 - terma",
+    "notes": "The direct Radartutorial search result has moved. Verified the publicly visible cover of Terma’s 2007 SCANTER 4000/4100 document hosted by Yumpu. The cover shows a montage of different antennas and does not distinguish 4000 from 4100, so it is retained as family context rather than an exact installed-model photograph."
+  },
+  {
+    "manufacturer": "Terma",
+    "model": "Scanter 4002",
+    "status": "matched",
+    "search_url": "https://www.google.com/search?udm=2&q=Terma%20Scanter%204002%20radar",
+    "page_url": "https://www.terma.com/news-events/news/news-archive/2026/terma-flagship-scanter-4002-now-available-as-co-mounted-psr-and-ssr-solution-for-airports/",
+    "image_url": "https://www.terma.com/media/q5xdvxwv/secondary-surveillance-radar-1000px.jpg?width=960",
+    "caption": "Manufacturer illustration of a SCANTER 4002 PSR and co-mounted MSSR installation with electronics inset.",
+    "quote": "Terma is expanding the capabilities of its flagship SCANTER 4002",
+    "notes": "Verified the manufacturer’s May 2026 announcement from Google Images. Visually inspected the tower-mounted antennas and equipment inset. This is an illustration of the newly co-mounted configuration, not a field photograph or a claim that all SCANTER 4002 installations include MSSR."
+  },
+  {
+    "manufacturer": "Terma",
+    "model": "Scanter 4603",
+    "status": "matched",
+    "search_url": "https://www.google.com/search?udm=2&q=Terma%20Scanter%204603%20radar",
+    "page_url": "https://www.terma.com/media/yfafg4vj/terma-scanter-4603-letter-v12-low.pdf",
+    "image_url": "https://www.terma.com/media/yfafg4vj/terma-scanter-4603-letter-v12-low.pdf",
+    "caption": "SCANTER 4603 dual-beam antenna with IFF antenna on a stabilized shipboard platform.",
+    "quote": "12’ Dual Beam High Gain antenna with IFF antenna",
+    "notes": "Google Images returned the exact manufacturer brochure and technical article. Selected the individually captioned photograph on page 3, visually confirming the wide central antenna and its narrow upper IFF array. Excluded the generic ship illustration on the cover.",
+    "media_capture_method": "pdf-image-extraction",
+    "pdf_image": {
+      "page": 3,
+      "name": "Im2.jpg",
+      "document_sha256": "d665485e76f3a8ae2e72293f260bc423b1b16c04172d0ccadcadf26166afcf1b",
+      "image_sha256": "5c35c24ac23cec6cd70dfa120e3cfb1560f7344ee5442b7ffd46d643842583bf",
+      "extractor": "pypdf-6.10.0"
+    }
+  },
+  {
+    "manufacturer": "Terma",
+    "model": "Scanter 5102 / 5202",
+    "status": "matched",
+    "ambiguous": true,
+    "search_url": "https://www.google.com/search?udm=2&q=Terma%20Scanter%205102%205202%20radar",
+    "page_url": "https://www.terma.com/products/radars/vessel-traffic-services/",
+    "image_url": "https://www.terma.com/media/20of3m5l/scanter5000.png?width=1920&format=webp",
+    "caption": "Terma SCANTER 5000-series antenna detail; 5102/5202 transceiver variant not visible.",
+    "quote": "The SCANTER 5102 radar system is an X-band",
+    "notes": "Independently searched the paired catalog models. The manufacturer page names both 5102 and 5202 and presents this 5000-series brochure image. Visually inspected the antenna detail; the transceiver is outside the frame, so the image is qualified as family context."
+  },
+  {
+    "manufacturer": "Terma",
+    "model": "Scanter 5502 / 5602",
+    "status": "matched",
+    "search_url": "https://www.google.com/search?udm=2&q=Terma%20Scanter%205502%205602%20radar",
+    "page_url": "https://www.terma.com/news-events/news/news-archive/2023/calgary-international-airport-upgrades-radar-system-with-terma-scanter-5502-surface-movement-radar/",
+    "image_url": "https://www.terma.com/media/iuqdjnp3/terma_scanter_5502_radar_system_calgary_international_airport.jpg?width=1920&format=webp",
+    "caption": "SCANTER 5502 antenna, orange pedestal and supporting electronics at Calgary International Airport.",
+    "quote": "installation of the SCANTER 5502 Surface Movement Radar",
+    "notes": "Google Images led to the exact manufacturer installation announcement. Visually inspected the rooftop antenna, pedestal and cabinet in the named Calgary installation. Represents the 5502 member of the grouped record; no inference about 5602 appearance."
+  },
+  {
+    "manufacturer": "Terma",
+    "model": "Scanter 6000 / 6002",
+    "status": "matched",
+    "search_url": "https://www.google.com/search?udm=2&q=Terma%20Scanter%206000%206002%20radar",
+    "page_url": "https://www.unmannedairspace.info/counter-uas-systems-and-policies/terma-augments-scanter-6002-radar-with-new-drone-detection-capability/",
+    "image_url": "https://www.unmannedairspace.info/wp-content/uploads/2022/10/Terma-6000-series-553x550.png",
+    "caption": "SCANTER 6000-series shipboard antenna illustrating the SCANTER 6002 upgrade announcement.",
+    "quote": "Terma augments SCANTER 6002 radar with new drone detection capability",
+    "notes": "Individually searched the grouped models and checked the manufacturer page and 6002 brochure. The brochure’s cover is dominated by the ship. Selected the closer antenna photograph in the model-specific report reproducing Terma’s announcement; visually inspected the full array and mount."
+  },
+  {
+    "manufacturer": "Terma",
+    "model": "Scanter Sphera (3D)",
+    "status": "matched",
+    "search_url": "https://www.google.com/search?udm=2&q=Terma%20Scanter%20Sphera%203D%20radar",
+    "page_url": "https://www.terma.com/products/radars/3d-drone-detection/",
+    "image_url": "https://www.terma.com/media/tmsoxppb/scanter_sphera_3d_radar_hero-1920x796.jpg?width=1920&format=webp",
+    "caption": "SCANTER Sphera radome on a tower in a manufacturer promotional coastal illustration.",
+    "quote": "SCANTER Sphera is Terma’s purpose-built 3D C-UAS radar",
+    "notes": "Google Images returned the exact manufacturer product page. Visually inspected the full cylindrical radome in the named Sphera hero artwork. Preserved its promotional illustration scope; it is not evidence of a particular deployed coastal site.",
+    "capture_method": "browser-dom"
+  },
+  {
+    "manufacturer": "Thales",
+    "model": "BOR-A 550",
+    "status": "matched",
+    "search_url": "https://www.google.com/search?udm=2&q=Thales%20BOR-A%20550%20radar",
+    "page_url": "https://commons.wikimedia.org/wiki/File:BOR-A_550_rannikkotutka_Kotka_2013_1.JPG",
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/e/e3/BOR-A_550_rannikkotutka_Kotka_2013_1.JPG?utm_source=commons.wikimedia.org&utm_campaign=index&utm_content=original",
+    "caption": "Thales BOR-A 550 coastal radar displayed at the Finnish Navy anniversary in Kotka, photographed by MKFI in 2013.",
+    "quote": "BOR-A 550 coastal radar on display during the Finnish Navy 2013 anniversary.",
+    "notes": "Google Images identified the photographer’s original file page. Visually inspected the complete oval antenna, electronics and deployed support legs. File description and camera metadata independently identify BOR-A 550; no substitution of the related 560 model."
+  },
+  {
+    "manufacturer": "Thales",
+    "model": "BOR-A 560",
+    "status": "matched",
+    "ambiguous": true,
+    "search_url": "https://www.google.com/search?udm=2&q=Thales%20BOR-A%20560%20radar",
+    "page_url": "https://www.redimec.com.ar/contenido/productos/pdf/1432629638_1.pdf",
+    "image_url": "https://www.redimec.com.ar/contenido/productos/pdf/1432629638_1.pdf",
+    "caption": "Thales BOR-A 550/560 family radar from the rear, on a tripod with operator terminal.",
+    "quote": "BOR-A 550/560",
+    "notes": "Independently searched 560; many results incorrectly lead to 550-only photos. The supplier links a Thales brochure explicitly covering both 20 W 550 and 40 W 560. Visually inspected its extracted full radar photo, which does not identify the installed transmitter, and retained it as family context.",
+    "media_capture_method": "pdf-image-extraction",
+    "pdf_image": {
+      "page": 1,
+      "name": "Im1.jpg",
+      "document_sha256": "3a238fabeae9f219ac2d525e186b7c2583fc14c1cf51c9ba35287d8a678fd207",
+      "image_sha256": "91c1d0819ceb98809af4d122989c85968650a8b82fc510b83aa8f2fee2f7fb2c",
+      "extractor": "pypdf-6.10.0"
+    }
+  },
+  {
+    "manufacturer": "Thales",
+    "model": "Ground Master GM200",
+    "status": "matched",
+    "search_url": "https://www.google.com/search?udm=2&q=Thales%20Ground%20Master%20GM200%20radar",
+    "page_url": "https://www.thalesgroup.com/en/solutions-catalogue/defence/air/ground-master-200",
+    "image_url": "https://www.thalesgroup.com/sites/default/files/styles/solution_page_xxl/public/acquiadam/2025-08/Thales_LAS_2022_Limours%20%2898%29.webp?h=a1e1a043&itok=YP34pmXi",
+    "caption": "Thales Ground Master 200 antenna and mounting structure outdoors.",
+    "quote": "The Ground Master 200 (GM200) is a combat-proven medium-range radar",
+    "notes": "Google Images mixed the original GM200 with MM/C and MM/A. Opened the original GM200 manufacturer page and visually inspected its exact hero image of the tilted panel and mount. The related-solution thumbnails were excluded.",
+    "capture_method": "browser-text-and-assets"
+  },
+  {
+    "manufacturer": "Thales",
+    "model": "Ground Master GM400 / GM400α / GM403 / GM406",
+    "status": "matched",
+    "search_url": "https://www.google.com/search?udm=2&q=Thales%20Ground%20Master%20GM400%20GM400%CE%B1%20GM403%20GM406%20radar",
+    "page_url": "https://www.thalesgroup.com/en/solutions-catalogue/defence/air/ground-master-400a",
+    "image_url": "https://www.thalesgroup.com/sites/default/files/styles/solution_page_xxl/public/acquiadam/2025-08/Thales_LAS_2022_Limours%20%28160%29.webp?h=a1e1a043&itok=uuPTkrtI",
+    "caption": "Ground Master 400α main antenna and narrow upper array, viewed from below.",
+    "quote": "Ground Master 400α",
+    "notes": "Searched all grouped designations and followed the manufacturer’s related-product link to the exact 400α page. Visually inspected its main antenna photograph. The selected member is 400α; no claim that the photo independently depicts GM403 or GM406.",
+    "capture_method": "browser-text-and-assets"
+  },
+  {
+    "manufacturer": "Thales",
+    "model": "Ground Observer 12 (GO12)",
+    "status": "matched",
+    "search_url": "https://www.google.com/search?udm=2&q=Thales%20Ground%20Observer%2012%20GO12%20radar",
+    "page_url": "https://www.thalesdsi.com/go12/",
+    "image_url": "https://www.thalesdsi.com/wp-content/gallery/go12/Thales_GO-12_DSC8874.jpg?t=1779044447",
+    "caption": "Thales GO12 tan radar panel on its deployed tripod with batteries and cable.",
+    "quote": "the GO12 was developed with skilled artillery/mortar Forward Observer units",
+    "notes": "Google Images led to the exact manufacturer page. Opened its linked original gallery image and inspected the full sensor, tripod and accessories. Captured the 2026 product configuration shown by the current manufacturer."
+  },
+  {
+    "manufacturer": "Thales",
+    "model": "Ground Observer 20 MM",
+    "status": "matched",
+    "search_url": "https://www.google.com/search?udm=2&q=Thales%20Ground%20Observer%2020%20MM%20radar",
+    "page_url": "https://www.microwavejournal.com/articles/36916-thales-unveils-the-ground-observer-20-multi-mission-radar",
+    "image_url": "https://www.microwavejournal.com/ext/resources/images/Newsletters/News/THales-10-12-21.webp?t=1634042563",
+    "caption": "Thales GO20 MM radar panel and deployed mount in a field.",
+    "quote": "Thales Unveils the Ground Observer 20 Multi-Mission Radar",
+    "notes": "Verified the original Thales October 2021 announcement, whose current page contains no product photograph. Microwave Journal preserves the announcement with its GO20 image. Visually inspected the rectangular radar and support assembly; distinguished it from BOR-A’s oval antenna and the smaller GO12."
+  },
+  {
+    "manufacturer": "Thales",
+    "model": "Ground Observer 80 (GO80)",
+    "status": "matched",
+    "search_url": "https://www.google.com/search?udm=2&q=Thales%20Ground%20Observer%2080%20GO80%20radar",
+    "page_url": "https://www.redimec.com.ar/contenido/productos/pdf/1432629491_1.pdf",
+    "image_url": "https://www.redimec.com.ar/contenido/productos/pdf/1432629491_1.pdf",
+    "caption": "Thales Ground Observer 80 with a wide oval antenna and deployed tripod in the manufacturer datasheet.",
+    "quote": "GROUND OBSERVER 80",
+    "notes": "Google Images led to the exact reseller page, whose main picture is only a Thales logo and was rejected. Opened its linked manufacturer datasheet and inspected the embedded cover photo showing the actual GO80 radar. No inference about optional 40/80 W transmitters.",
+    "media_capture_method": "pdf-image-extraction",
+    "pdf_image": {
+      "page": 1,
+      "name": "Im1.jpg",
+      "document_sha256": "0be4207d95b7154f7197d4ef9318c3228a7d0094265996ae8d0597f4d26ae0c4",
+      "image_sha256": "0624d6f84ac14783f1924e89b7de91fc98a8edfa7c28b4b60c9e7995b22bcb89",
+      "extractor": "pypdf-6.10.0"
+    }
+  },
+  {
+    "manufacturer": "Thales",
+    "model": "LRR / S1850M",
+    "status": "matched",
+    "search_url": "https://www.google.com/search?udm=2&q=Thales%20LRR%20S1850M%20radar",
+    "page_url": "https://en.wikipedia.org/wiki/File:S1850M_Radar_(center)_D32_Daring_2010-03-01.jpg",
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/5/52/S1850M_Radar_%28center%29_D32_Daring_2010-03-01.jpg?utm_source=en.wikipedia.org&utm_campaign=index&utm_content=original",
+    "caption": "S1850M antenna aboard HMS Daring, cropped from Brian Burnell’s 2010 photograph.",
+    "quote": "S1850M Radar (center) D32 Daring 2010-03-01.jpg",
+    "notes": "Google Images led to the S1850M article and its linked original file description. Verified the named HMS Daring installation and visually inspected the rectangular array above the central mast. This is the published 400-pixel crop, with no artificial enlargement or attribution to SMART-L variants."
+  },
+  {
+    "manufacturer": "Thales",
+    "model": "NS100",
+    "status": "matched",
+    "search_url": "https://www.google.com/search?udm=2&q=Thales%20NS100%20radar",
+    "page_url": "https://www.everythingrf.com/products/radar-systems/thales/1069-1509-ns100",
+    "image_url": "https://cdn.everythingrf.com/live/NS100_638851351854009343_300.jpg",
+    "caption": "Thales NS100 antenna enclosure and mounting base in its product listing.",
+    "quote": "The NS100 from Thales is a 4D Radar",
+    "notes": "Google Images returned the exact listing. Verified the NS100 section on its linked manufacturer site, which now redirects to the naval sensor portfolio. Visually inspected the listing’s full antenna image. The supplier’s apparent dimensions typo and generic deployment labels were not adopted as catalog facts.",
+    "capture_method": "browser-dom"
+  },
+  {
+    "manufacturer": "Thales",
+    "model": "Squire",
+    "status": "matched",
+    "search_url": "https://www.google.com/search?udm=2&q=Thales%20Squire%20radar",
+    "page_url": "https://commons.wikimedia.org/wiki/File:Italian_Army_-_41st_Regiment_%22Cordenons%22_operator_with_a_Thales_SQUIRE_ground_surveillance_radar_(cropped).jpg",
+    "image_url": "https://upload.wikimedia.org/wikipedia/commons/9/95/Italian_Army_-_41st_Regiment_%22Cordenons%22_operator_with_a_Thales_SQUIRE_ground_surveillance_radar_%28cropped%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=index&utm_content=original",
+    "caption": "Thales SQUIRE rectangular antenna on a camouflaged tripod in an Italian Army photograph.",
+    "quote": "operator with a Thales SQUIRE ground surveillance radar",
+    "notes": "Google Images led to the Italian Army file description. Inspected the published 331-pixel crop showing the square radar antenna and camouflaged support; retained the original image attribution and source link."
+  },
+  {
+    "manufacturer": "Thorm EMI Electronics (now Thales)",
+    "model": "MSTAR",
+    "status": "matched",
+    "ambiguous": true,
+    "search_url": "https://www.google.com/search?udm=2&q=Thorn%20EMI%20Thales%20MSTAR%20radar",
+    "page_url": "https://www.leonardodrs.com/what-we-do/products-and-services/manportable-surveillance-and-target-acquisition-radar-mstar-v6/",
+    "image_url": "https://cdn.leonardodrs.com/uploads/wp-content/uploads/2023/07/mstar-v6-06.jpg",
+    "caption": "Current Leonardo DRS MSTAR V6 oval antenna and tripod; MSTAR family reference.",
+    "quote": "latest addition to the highly successful MSTAR GSR series",
+    "notes": "Searched the legacy Thorn EMI designation. The MOD original photo could not be opened under browser policy. Independently verified and visually inspected the manufacturer’s MSTAR V6 gallery. This is a later family variant, not proof of the original Thorn EMI configuration."
+  },
+  {
+    "manufacturer": "Tokyo Keiki",
+    "model": "BR-3210",
+    "status": "matched",
+    "ambiguous": true,
+    "search_url": "https://www.google.com/search?udm=2&q=Tokyo%20Keiki%20BR-3210%20radar",
+    "page_url": "https://vnmec.com.vn/index.aspx?page=detail&id=71",
+    "image_url": "https://vnmec.com.vn/images/uploads/images/Radar/br-3200-220.jpg",
+    "caption": "Tokyo Keiki BR-3200 family radar display console used to illustrate the BR-3210 listing.",
+    "quote": "RADAR TOKYO KEIKI BR-3210 (IMO)",
+    "notes": "Google Images returned two exact product listings; the first timed out. Inspected the MEC console image. Its filename and page tag refer to BR-3200 while the heading says BR-3210, so the association is explicitly family context. This is a display console, not a scanner photograph."
+  },
+  {
+    "manufacturer": "Tokyo Keiki",
+    "model": "SeaKu series",
+    "status": "matched",
+    "search_url": "https://www.google.com/search?udm=2&q=Tokyo%20Keiki%20SeaKu%20series%20radar",
+    "page_url": "https://www.tokyokeiki.jp/Portals/0/html/mts/e/",
+    "image_url": "https://www.tokyokeiki.jp/Portals/0/html/mts/e/images/index/seaku-rader.jpg",
+    "caption": "Tokyo Keiki SeaKu branded radar transceiver enclosure.",
+    "quote": "Tokyo Keiki Ku Band solid state radar : SeaKu Series",
+    "notes": "Google Images led to the manufacturer’s SeaKu portfolio. Inspected the product image with visible Tokyo Keiki and SeaKu markings. The image shows the enclosure, not the external antenna; no narrower model configuration is asserted."
+  },
+  {
+    "manufacturer": "Toshiba",
+    "model": "TW-1374",
+    "status": "unresolved",
+    "search_url": "https://www.google.com/search?udm=2&q=Toshiba%20TW-1374%20radar",
+    "notes": "Google Images returned modern Toshiba C-UAS and weather radars. Opened the manufacturer long-range C-UAS page; it has no TW-1374 designation and does not support a match to this legacy naval entry. Exact-name web results confirm the designation but provide no verified photograph. No unrelated Toshiba radar is substituted."
+  },
+  {
+    "manufacturer": "Tron Future Tech",
+    "model": "T.Radar ER",
+    "status": "matched",
+    "search_url": "https://www.google.com/search?udm=2&q=Tron%20Future%20Tech%20T.Radar%20ER",
+    "page_url": "https://www.tronfuture.com/solutions/anti-drone/",
+    "image_url": "https://www.tronfuture.com/wp-content/plugins/tron-new-func/drone-solution/images/t-radar-1.jpg",
+    "caption": "Tron Future T.Radar ER panel enclosure with carry handles in the manufacturer gallery.",
+    "quote": "T.Radar ER is an advanced software-defined 4D AESA pulse-Doppler radar",
+    "notes": "Google Images initially returned the portable Pro page, which was not accepted for ER. Exact-name research located the manufacturer anti-drone portfolio and ER gallery. Inspected its panel image separately from Pro."
+  },
+  {
+    "manufacturer": "Tron Future Tech",
+    "model": "T.Radar Pro",
+    "status": "matched",
+    "search_url": "https://www.google.com/search?udm=2&q=Tron%20Future%20Tech%20T.Radar%20Pro",
+    "page_url": "https://www.tronfuture.com/product/t-radar-overview/",
+    "image_url": "https://www.tronfuture.com/wp-content/uploads/feature-1.png",
+    "caption": "Tron Future T.Radar Pro with folding wings extended, shown from the rear in a manufacturer rendering.",
+    "quote": "T.Radar Pro is a revolutionary folding wing radar",
+    "notes": "Individually searched Google Images and verified the exact product overview. Inspected the rear three-quarter rendering showing wing hinges, heat sinks and central body. Kept this distinct from the fixed-installation ER panel."
+  },
+  {
+    "manufacturer": "Wärtsilä",
+    "model": "NACOS Platinum Series",
+    "status": "matched",
+    "search_url": "https://www.google.com/search?udm=2&q=Wartsila%20NACOS%20Platinum%20radar",
+    "page_url": "https://www.wartsila.com/media/news/04-09-2018-wartsila-at-the-forefront-of-radar-technology-with-new-solid-state-offering-2262627",
+    "image_url": "https://mb.cision.com/Public/15003/2607778/9c4a91df0436b53c_800x800ar.png",
+    "caption": "Wärtsilä NACOS Platinum solid-state S-band scanner and pedestal in the manufacturer launch illustration.",
+    "quote": "The Wärtsilä Nacos Platinum solid state S-Band is a next generation radar system.",
+    "notes": "Google Images led to separate X-band and S-band announcements. The X-band article illustrates screen comparisons; selected and visually inspected the explicitly captioned S-band hardware illustration for the broad series entry. No claim that this depicts every series configuration."
+  },
+  {
+    "manufacturer": "Wärtsilä",
+    "model": "RS24",
+    "status": "matched",
+    "search_url": "https://www.google.com/search?udm=2&q=Wartsila%20RS24%20radar",
+    "page_url": "https://www.wartsila.com/media/news/09-04-2019-new-ground-breaking-wartsila-high-resolution-radar-increases-safety-in-busy-ports-3704539",
+    "image_url": "https://mb.cision.com/Public/15003/2784165/b74a109eca0dfe20_800x800ar.jpg",
+    "caption": "Guidance Marine RS24 dome with the model name visible, photographed at sea near Aberdeen.",
+    "quote": "The technology group Wärtsilä has launched its RS24 high resolution radar",
+    "notes": "Google Images led to the current Guidance Marine product page and original Wärtsilä launch. Inspected the launch photograph with clearly visible RS24 branding. Selected the hardware photograph rather than radar-screen comparison graphics."
+  },
+  {
+    "manufacturer": "WaveSonic Technology",
+    "model": "GRB101C-3100",
+    "status": "matched",
+    "search_url": "https://www.google.com/search?udm=2&q=WaveSonic%20GRB101C-3100%20radar",
+    "page_url": "https://www.wavesonics.com/Ground-Surveillance-Radar/57.html",
+    "image_url": "https://www.wavesonics.com/static/upload/image/20241227/1735263620163947.png",
+    "caption": "WaveSonic GRB101C-3100 green portable radar on a tripod with its tablet display.",
+    "quote": "The GRB101C-3100 is a lightweight, portable tactical radar system",
+    "notes": "Google Images returned the exact manufacturer product page. Inspected the portable radar and tablet gallery image, distinct from the page’s generic large-radar banner."
+  },
+  {
+    "manufacturer": "WaveSonic Technology",
+    "model": "GSR215 Series",
+    "status": "matched",
+    "search_url": "https://www.google.com/search?udm=2&q=WaveSonic%20GSR215%20radar",
+    "page_url": "https://www.wavesonics.com/Ground-Surveillance-Radar/41.html",
+    "image_url": "https://www.wavesonics.com/static/upload/image/20241101/1730426130703634.png",
+    "caption": "WaveSonic GSR215-1200C radar panel, representing the catalog’s GSR215 series entry.",
+    "quote": "The GSR215-1200C radar is a highly advanced system",
+    "notes": "Google Images separately returned 1200C, 1500C and 3200C model pages. Opened the 1200C page and visually inspected its white panel with heat sinks and connectors. Caption identifies this member explicitly rather than implying all series variants look identical."
+  },
+  {
+    "manufacturer": "Weibel Scientific",
+    "model": "MFTR-2100 family",
+    "status": "matched",
+    "search_url": "https://www.google.com/search?udm=2&q=Weibel%20MFTR-2100%20radar",
+    "page_url": "https://www.weibelradars.com/news/weibel-scientific-north-america-has-been-awarded-a-contract-for-a-second-45db-tracking-radar/",
+    "image_url": "https://www.weibelradars.com/wp-content/uploads/2025/01/45-dB-radar-order-in-US_Jan-2025.jpg",
+    "caption": "Weibel MFTR-2100/45-3840 tracking radar rear antenna assembly and pedestal.",
+    "quote": "second 45dB Multi-Frequency Tracking Radar (MFTR-2100/45-3840)",
+    "notes": "Google Images led to the manufacturer tracking portfolio and dated contract announcement. Selected the named 45 dB hardware photograph rather than the portfolio range chart. Inspected the rear antenna and pedestal; caption limits this family example to its identified variant."
+  },
+  {
+    "manufacturer": "Weibel Scientific",
+    "model": "MSTS-2100",
+    "status": "matched",
+    "ambiguous": true,
+    "search_url": "https://www.google.com/search?udm=2&q=Weibel%20MSTS-2100%20radar",
+    "page_url": "https://www.weibelradars.com/instrumentation/3d-tracking/",
+    "image_url": "https://www.weibelradars.com/wp-content/uploads/2019/12/instrumental-3D-tracking-topbillede-1920x864.jpg",
+    "caption": "Weibel tracking-radar antenna and pedestal on the shared MFTR/MSTS portfolio page; exact variant unconfirmed.",
+    "quote": "MSTS-2100 SERIES",
+    "notes": "Individually searched MSTS-2100 and checked the manufacturer portfolio and linked 2026 brochure. Both cover MFTR and MSTS together; no image caption establishes the exact MSTS variant. Inspected the portfolio hardware photo and retained it only as ambiguous family context."
+  },
+  {
+    "manufacturer": "Weibel Scientific",
+    "model": "Xenta-C",
+    "status": "matched",
+    "search_url": "https://www.google.com/search?udm=2&q=Weibel%20Xenta-C%20radar",
+    "page_url": "https://www.weibelradars.com/wp-content/uploads/2026/04/XENTA-C-UAS-Brochure2026.pdf",
+    "image_url": "https://www.weibelradars.com/wp-content/uploads/2026/04/XENTA-C-UAS-Brochure2026.pdf",
+    "caption": "Weibel XENTA-C counter-UAS radar housing and pedestal in the 2026 manufacturer brochure.",
+    "quote": "XENTA-C, COUNTER-UAS RADARS",
+    "notes": "Google Images led to the manufacturer’s product family and dedicated C-series page. Rejected the decorative drone banner. Downloaded its linked 2026 brochure and visually inspected the embedded hardware rendering on page 2; the brochure lists C5 and the image does not establish older C1/C3 configurations.",
+    "media_capture_method": "pdf-image-extraction",
+    "pdf_image": {
+      "page": 2,
+      "name": "Im0.png",
+      "document_sha256": "29cbb873e7e93f75a68a47b7cbbba78cb0c24cf887a0bfa4a9946d1569966029",
+      "image_sha256": "e26d212a807776d5b1a7b6084338cb38fd322fdf87b3ac3fd948f2a58da8e792",
+      "extractor": "pypdf-6.10.0"
+    }
+  },
+  {
+    "manufacturer": "Weibel Scientific",
+    "model": "Xenta-M",
+    "status": "matched",
+    "search_url": "https://www.google.com/search?udm=2&q=Weibel%20Xenta-M%20radar",
+    "page_url": "https://www.weibelradars.com/wp-content/uploads/2026/04/XENTA-M-Brochure2026.pdf",
+    "image_url": "https://www.weibelradars.com/wp-content/uploads/2026/04/XENTA-M-Brochure2026.pdf",
+    "caption": "Weibel XENTA-M green SHORAD radar housing and pedestal in the 2026 manufacturer brochure.",
+    "quote": "XENTA-M SHORAD RADARS",
+    "notes": "Individually searched XENTA-M and verified the dedicated manufacturer product page and linked brochure. Inspected the embedded page-2 radar rendering. Original JPEG2000 bytes and a lossless PNG decoding are both hash-bound; the brochure lists M5, without implying older configurations.",
+    "media_capture_method": "pdf-image-extraction",
+    "pdf_image": {
+      "page": 2,
+      "name": "Im1.jp2",
+      "document_sha256": "c0d82244b4c9e843c68d3417eeee40c1331a5f38f47840ebdf1179968d56db49",
+      "image_sha256": "8e6f630232ceb4140d23e103029eed41a0271795073f2a4d0b173ae772668af5",
+      "png_sha256": "5d2988bbe3fb1d6d88b0a73a08723b66f677656f5dfd76089cc3b662e9a8fc9f",
+      "extractor": "pypdf-6.10.0"
+    }
+  },
+  {
+    "manufacturer": "Yonzoe",
+    "model": "YAR15 Series",
+    "status": "matched",
+    "search_url": "https://www.google.com/search?udm=2&q=Yonzoe%20YAR15%20radar",
+    "page_url": "https://www.yonzoe.com/en/cp-info.php?classID=1&id=13",
+    "image_url": "https://www.yonzoe.com/en/uploads//image/202606/20260629171740_62456.jpg",
+    "caption": "Yonzoe YAR15 series open-array radar scanner and display in the manufacturer product illustration.",
+    "quote": "YAR15 Series IMO Radar",
+    "notes": "Google Images led to the exact series page. Inspected its model-specific cover image separately from the site-wide products banner. Preserved significant double separators in the original image URL; no assertion of a specific 12.5 or 25 kW configuration."
+  },
+  {
+    "manufacturer": "Yonzoe",
+    "model": "YAR27X/S Series",
+    "status": "matched",
+    "search_url": "https://www.google.com/search?udm=2&q=Yonzoe%20YAR27X%20S%20radar",
+    "page_url": "https://www.yonzoe.com/en/cp-info.php?classID=1&id=14",
+    "image_url": "https://www.yonzoe.com/en/uploads//image/202404/20240401145615_88687.png",
+    "caption": "Yonzoe YAR27X/S series scanner, processor, displays and control panel in the manufacturer product illustration.",
+    "quote": "YAR27X/S Series High-end IMO Radar",
+    "notes": "Individually searched the exact series and verified its manufacturer page. Visually inspected the model-specific equipment composition. The illustration does not distinguish every S/X-band scanner option or transmit-power configuration."
+  },
+  {
+    "manufacturer": "Yonzoe",
+    "model": "YR18 (MP)Series",
+    "status": "matched",
+    "search_url": "https://www.google.com/search?udm=2&q=Yonzoe%20YR18%20MP%20radar",
+    "page_url": "https://www.yonzoe.com/en/cp-info.php?classID=1&id=11",
+    "image_url": "https://www.yonzoe.com/en/uploads//image/202302/20230213092321_44076.png",
+    "caption": "Yonzoe YR18 MP solid-state radar dome in the manufacturer product rendering.",
+    "quote": "The YR18 (MP)Series Solid-State Radar",
+    "notes": "Individually searched Google Images and verified the dedicated manufacturer page. Its observed CoverIMG2 image was downloaded through HTTP after browser rendering timed out and visually inspected locally. Retained the actual dome rendering and no unrelated YAR open-array scanner."
+  },
+  {
+    "manufacturer": "Yonzoe",
+    "model": "YR19 series",
+    "status": "matched",
+    "search_url": "https://www.google.com/search?udm=2&q=Yonzoe%20YR19%20radar",
+    "page_url": "https://cirspb.ru/en/equipment-and-service/snyatye_s_proizvodstva/yonzoe-yr19/",
+    "image_url": "https://cirspb.ru/upload/iblock/93b/93b74fb603c60cded53bea9a24d9d7d9.png",
+    "caption": "Yonzoe YR19 series open-array scanner and compact radar display.",
+    "quote": "Yonzoe YR19 Radar Station",
+    "notes": "Google Images returned the exact manufacturer and supplier listings. The manufacturer page repeatedly timed out; independently verified CIR’s exact YR19 listing and inspected its full product image. The series has multiple scanner and power options, so no specific configuration is inferred.",
+    "capture_method": "browser-dom"
+  },
+  {
+    "manufacturer": "Zadar Labs",
+    "model": "zPRIME 2.0",
+    "status": "matched",
+    "search_url": "https://www.google.com/search?udm=2&q=Zadar%20Labs%20zPRIME%202.0%20radar",
+    "page_url": "https://www.zadarlabs.com/zprime-2-0",
+    "image_url": "https://images.squarespace-cdn.com/content/v1/66b113791208545b24672df6/d1ed6147-c502-4acb-9280-89c597686681/zPrime2.0-whitezadar-labs-zprime-2-0-4d-imaging-radar",
+    "caption": "Zadar Labs zPRIME 2.0 sensor housing with heat sinks, shown as the manufacturer’s perspective line drawing.",
+    "quote": "zPRIME 2.0 pairs long-range detection with ultra-fine angular resolution",
+    "notes": "Google Images returned separate zPRIME and zPRIME 2.0 pages. Verified the 2.0 page and explicitly labeled image, then inspected the original drawing. This is a product drawing rather than a photograph; the older zPRIME imagery was not substituted."
   }
 ]

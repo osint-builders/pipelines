@@ -127,7 +127,9 @@ class ArchiveSpider(Spider):
             self.logger.warning(
                 "Archived %s pages; %s URLs discovered", self.saved, len(self.scheduled)
             )
-        if not any(kind in content_type.lower() for kind in ("html", "xml", "json")) and (
+        if not any(
+            kind in content_type.lower() for kind in ("html", "xml", "json")
+        ) and (
             content_type.split(";", 1)[0].strip().lower()
             not in getattr(self.source, "additional_content_types", ())
         ):
@@ -180,7 +182,7 @@ def crawl(source: Source, archive: Archive) -> None:
             "AUTOTHROTTLE_MAX_DELAY": 30,
             "AUTOTHROTTLE_TARGET_CONCURRENCY": 1,
             "DOWNLOAD_TIMEOUT": 45,
-            "DOWNLOAD_MAXSIZE": 10 * 1024 * 1024,
+            "DOWNLOAD_MAXSIZE": getattr(source, "download_max_bytes", 10 * 1024 * 1024),
             "RETRY_TIMES": 3,
             "HTTPERROR_ALLOW_ALL": True,
             "LOG_LEVEL": "WARNING",
