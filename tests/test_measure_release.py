@@ -1,10 +1,13 @@
 import json
+import zipfile
 from copy import deepcopy
+from pathlib import Path
 
 import pytest
 from measure_release import (
     CONTRACT,
     MODES,
+    functional_acceptance,
     native_target,
     query_commands,
     reference_checks,
@@ -109,3 +112,36 @@ def test_native_architecture_names(
     monkeypatch.setattr("measure_release.platform.system", lambda: system)
     monkeypatch.setattr("measure_release.platform.machine", lambda: machine)
     assert native_target() == expected
+
+
+def test_functional_candidate_checks_preserve_full_release_gates(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    target = "windows-amd64"
+    binary = tmp_path / "pipelines-windows-amd64.exe"
+    binary.write_bytes(b"candidate")
+    bundle = tmp_path / "dataset.zip"
+    with zipfile.ZipFile(bundle, "w") as archive:
+        archive.writestr(
+            "manifest.json", json.dumps({"dataset_id": "data", "image": {}})
+        )
+    verified = {"ok": True, "dataset_id": "data", "probes": 3, "image_probes": 3}
+    monkeypatch.setattr("measure_release.native_target", lambda: target)
+    monkeypatch.setattr("measure_release.measure", lambda _: (verified, {}))
+    monkeypatch.setattr(
+        "measure_release.accept", lambda *_: print(json.dumps({"dataset_id": "data"}))
+    )
+    report = functional_acceptance(binary, bundle, target)
+    assert report["functional_checks_passed"] is True
+    assert report["kind"] == "functional"
+    assert "resource_gates_passed" not in report
+    assert "release_quality_established" not in report
+    verified["image_probes"] = 0
+    assert (
+        functional_acceptance(binary, bundle, target)["functional_checks_passed"]
+        is False
+    )
+    verified["dataset_id"] = "wrong"
+    assert functional_acceptance(binary, bundle, target)["checks"][0]["passed"] is False
+    with pytest.raises(ValueError, match="native target"):
+        functional_acceptance(binary, bundle, "linux-amd64")

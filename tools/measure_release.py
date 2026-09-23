@@ -163,6 +163,50 @@ def reference_checks(report: dict, baseline: dict, contract: dict) -> dict[str, 
     }
 
 
+def native_binary(binary: Path, target: str) -> tuple[str, str, str]:
+    selected = next(
+        (row for row in BINARY_TARGETS if "-".join(row[:2]) == target), None
+    )
+    if selected is None or native_target() != target or binary.name != selected[2]:
+        raise ValueError("Release checks require the named native target binary")
+    return selected
+
+
+def functional_acceptance(binary: Path, bundle: Path, target: str) -> dict:
+    native_binary(binary, target)
+    with zipfile.ZipFile(bundle) as archive:
+        manifest = json.loads(archive.read("manifest.json"))
+    captured = io.StringIO()
+    with contextlib.redirect_stdout(captured):
+        accept(binary, bundle)
+    accepted = json.loads(captured.getvalue())
+    verified, _ = measure([str(binary.resolve()), "verify"])
+    required_probes = ["probes"]
+    if "image" in manifest:
+        required_probes.append("image_probes")
+    if "observations" in manifest:
+        required_probes.append("observation_probes")
+    checks = {
+        "dataset_binding": accepted.get("dataset_id") == manifest["dataset_id"]
+        and verified.get("dataset_id") == manifest["dataset_id"],
+        "verification": verified.get("ok") is True
+        and all(verified.get(name, 0) > 0 for name in required_probes),
+    }
+    return {
+        "schema_version": 1,
+        "kind": "functional",
+        "target": target,
+        "native_target": native_target(),
+        "dataset_id": manifest["dataset_id"],
+        "bundle_sha256": artifact(bundle)["sha256"],
+        "binary": artifact(binary),
+        "acceptance": accepted,
+        "verification": verified,
+        "checks": [{"name": name, "passed": passed} for name, passed in checks.items()],
+        "functional_checks_passed": all(checks.values()),
+    }
+
+
 def benchmark(
     binary: Path,
     bundle: Path,
@@ -173,11 +217,7 @@ def benchmark(
 ) -> dict:
     if repeats < 20:
         raise ValueError("Release measurements require at least 20 repeat processes")
-    selected = next(
-        (row for row in BINARY_TARGETS if "-".join(row[:2]) == target), None
-    )
-    if selected is None or native_target() != target or binary.name != selected[2]:
-        raise ValueError("Release measurements require the named native target binary")
+    selected = native_binary(binary, target)
     contract = json.loads(CONTRACT.read_bytes())
     machine = hardware()
     query = json.loads((ROOT / "tests/fixtures/retrieval.json").read_bytes())[0]
@@ -262,18 +302,29 @@ def main() -> None:
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--baseline", type=Path)
     parser.add_argument("--repeats", type=int, default=20)
-    args = parser.parse_args()
-    report = benchmark(
-        args.binary,
-        args.bundle,
-        args.target,
-        repeats=args.repeats,
-        baseline=args.baseline,
+    parser.add_argument(
+        "--functional-only",
+        action="store_true",
+        help="Check candidate functionality without claiming quality or resource gates",
     )
+    args = parser.parse_args()
+    if args.functional_only:
+        report = functional_acceptance(args.binary, args.bundle, args.target)
+    else:
+        report = benchmark(
+            args.binary,
+            args.bundle,
+            args.target,
+            repeats=args.repeats,
+            baseline=args.baseline,
+        )
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
     print(json.dumps({"output": str(args.output), "checks": report["checks"]}))
-    if not report["resource_gates_passed"]:
+    passed_key = (
+        "functional_checks_passed" if args.functional_only else "resource_gates_passed"
+    )
+    if not report[passed_key]:
         raise SystemExit(1)
 
 

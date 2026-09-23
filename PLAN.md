@@ -1211,6 +1211,9 @@ record in the bundle, deduplicate content-addressed originals, and use bounded Z
 parts. Their metadata binds records and archives to the CLI dataset; validation
 checks both archive hashes and each original's hash. These changes support a
 downloadable data candidate without claiming the unfinished M10 quality gates pass.
+The existing release workflow can also run native functional checks for a candidate
+under its network restrictions. Those reports cannot satisfy the full release
+validator, and the workflow rejects stable publication in functional-only mode.
 
 - [x] Improve specification retrieval using source-backed numeric/property evidence; verify unit/value matching on development queries.
 - [ ] Improve image retrieval and qualify gallery subject evidence; current and larger-reference models remain below M1 targets on development photos.
