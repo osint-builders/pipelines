@@ -31,8 +31,10 @@ The latest captured batch covers 300 models: 288 matched records, twelve unresol
 matches, and 16 explicitly ambiguous associations. It saved 273 image URLs; one
 download failed and nine remain pending. Source extraction passes, but media
 acceptance remains open until those captures are resolved.
-Individual review has continued through Halo 20 (311 decisions, twelve unresolved
-and sixteen explicitly ambiguous associations).
+Individual review has continued through Ranger R5D (350 decisions, thirteen unresolved
+and twenty-three explicitly ambiguous associations). KuRFS, LTAMDS, and Sentinel
+source renditions were visually rechecked and exported through observed browser
+assets; the next archive audit will verify those imports.
 Garmin images retain selected part
 numbers, sizes, and power configurations; GC's X5-21FH was verified in its hardware
 catalog after Google returned unrelated vehicle parts. SuperNet and SuperNet SSR
