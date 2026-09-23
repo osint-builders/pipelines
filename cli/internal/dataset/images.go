@@ -151,7 +151,7 @@ func (d *Dataset) LoadImages() error {
 	}
 	m := d.Manifest.Image
 	if m.SchemaVersion != 1 || m.Dimensions != 512 || m.VectorDType != "float16-le" ||
-		m.Vectors < 0 || m.Vectors > 10000 || m.Records < 0 || m.PreviewBytes < 0 || m.PreviewBytes > 32<<20 ||
+		m.Vectors < 0 || m.Vectors > 10000 || m.Records < 0 || m.PreviewBytes < 0 || m.PreviewBytes > 40<<20 ||
 		!validDigest(m.ModelSHA256) || !validDigest(m.GallerySHA256) ||
 		m.Search.Fusion != "rrf-v1" || m.Search.RankConstant != 60 || string(m.Search.Calibration) != "null" {
 		return errors.New("invalid image index manifest")
