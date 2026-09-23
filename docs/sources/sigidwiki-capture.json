@@ -1,0 +1,46 @@
+{
+  "dataset_id": "292652265f9efe39e8a659b00fb25e0f0fe7020d8c82085dd0d4de8d05e37a91",
+  "baseline_dataset_id": "9a10b95015b17b50e70a4fe5c341c002fe7be866761d3b3e4d774930545b510e",
+  "entities": 9061,
+  "signals": 598,
+  "source_count": 13,
+  "signal_image_records": 580,
+  "signal_image_outcomes": {
+    "indexed": 573,
+    "unsupported_image_format": 6,
+    "selection": 1
+  },
+  "signal_indexed_vectors": 572,
+  "signal_entities_with_previews": 575,
+  "previous_entities_preserved": 8463,
+  "previous_image_vectors_preserved": 9370,
+  "previous_source_captions_preserved": 18584,
+  "total_image_vectors": 9942,
+  "sample_image_self_retrieval": [
+    {
+      "entity_id": "sigidwiki:abad3054ed0c964fd271cc08",
+      "media_id": "sigidwiki:media:1e939249a113c5280ed938eb",
+      "rank": 1
+    },
+    {
+      "entity_id": "sigidwiki:229b2b041e7b6408dec778f3",
+      "media_id": "sigidwiki:media:3b4e9d556c48035a2ad863bd",
+      "rank": 1
+    },
+    {
+      "entity_id": "sigidwiki:a7e0fddf82ed098fcefbe6b4",
+      "media_id": "sigidwiki:media:fe077945c1662ef7faa0dfbe",
+      "rank": 1
+    }
+  ],
+  "filter_checks": {
+    "modulation=FMCW": 11,
+    "bandwidth=25 kHz": 9,
+    "signal_status=Active": 388,
+    "frequency_range=162 MHz": 0
+  },
+  "named_reference_retrieval": true,
+  "existing_retrieval": true,
+  "source_audit": true,
+  "ok": true
+}

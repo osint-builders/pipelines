@@ -8,6 +8,10 @@ dataset, models, evidence, and selected image previews. `SHA256SUMS` contains do
 checksums; `dataset-manifest.json` describes the bundled data.
 Platform downloads are 373.8–388.7 MiB.
 
+Source builds also support [SigIDWiki signal references](docs/sigidwiki.md),
+including structured signal filters and waterfall images. The linked published
+release predates this addition.
+
 The executable includes offline text, image, and combined search, precomputed OCR and
 visual descriptions, source evidence, and selected image previews. No runtime,
 model download, or separate data file is required. `pipelines info` reports exact

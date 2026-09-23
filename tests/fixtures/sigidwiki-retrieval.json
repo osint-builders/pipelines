@@ -1,0 +1,42 @@
+[
+  {
+    "source": "sigidwiki",
+    "kind": "signal",
+    "query": "Automatic Identification System",
+    "mode": "hybrid",
+    "expected": "sigidwiki:abad3054ed0c964fd271cc08",
+    "max_rank": 1
+  },
+  {
+    "source": "sigidwiki",
+    "kind": "signal",
+    "query": "Automatic Dependent Surveillance-Broadcast",
+    "mode": "hybrid",
+    "expected": "sigidwiki:229b2b041e7b6408dec778f3",
+    "max_rank": 1
+  },
+  {
+    "source": "sigidwiki",
+    "kind": "signal",
+    "query": "Iridium",
+    "mode": "hybrid",
+    "expected": "sigidwiki:a7e0fddf82ed098fcefbe6b4",
+    "max_rank": 1
+  },
+  {
+    "source": "sigidwiki",
+    "kind": "signal",
+    "query": "Chinese Foghorn OTH radar",
+    "mode": "hybrid",
+    "expected": "sigidwiki:1232a5f9f2e9a029256dddf4",
+    "max_rank": 1
+  },
+  {
+    "source": "sigidwiki",
+    "kind": "signal",
+    "query": "STANAG 4285",
+    "mode": "hybrid",
+    "expected": "sigidwiki:f04eb4e4e0da51103d5f05fa",
+    "max_rank": 1
+  }
+]
