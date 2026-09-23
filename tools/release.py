@@ -45,15 +45,15 @@ def archive_matches(path: Path, binary: Path, system: str) -> bool:
     try:
         if system == "windows":
             with zipfile.ZipFile(path) as archive:
-                if archive.namelist() != ["pipelines.exe"]:
+                if archive.namelist() != ["pipeline.exe"]:
                     return False
-                with archive.open("pipelines.exe") as zip_member:
+                with archive.open("pipeline.exe") as zip_member:
                     return stream_digest(zip_member) == expected
         with tarfile.open(path, "r:xz") as archive:
             members = archive.getmembers()
             if (
                 len(members) != 1
-                or members[0].name != "pipelines"
+                or members[0].name != "pipeline"
                 or not members[0].isfile()
                 or members[0].mode != 0o755
             ):
@@ -84,7 +84,7 @@ def compress_binary(directory: Path, target: tuple[str, str, str]) -> str:
     temporary = output.with_suffix(output.suffix + ".tmp")
     if system == "windows":
         with zipfile.ZipFile(temporary, "w") as archive:
-            info = zipfile.ZipInfo("pipelines.exe", date_time=(1980, 1, 1, 0, 0, 0))
+            info = zipfile.ZipInfo("pipeline.exe", date_time=(1980, 1, 1, 0, 0, 0))
             info.external_attr = 0o100755 << 16
             archive.writestr(
                 info,
@@ -99,7 +99,7 @@ def compress_binary(directory: Path, target: tuple[str, str, str]) -> str:
                 fileobj=compressed, mode="w", format=tarfile.USTAR_FORMAT
             ) as archive,
         ):
-            tar_info = tarfile.TarInfo("pipelines")
+            tar_info = tarfile.TarInfo("pipeline")
             tar_info.size = binary.stat().st_size
             tar_info.mode = 0o755
             with binary.open("rb") as member:

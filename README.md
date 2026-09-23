@@ -1,111 +1,103 @@
 # pipelines
 
-Download the [latest CLI](https://github.com/osint-builders/pipelines/releases/latest)
-for Windows (amd64), Linux (amd64/arm64), or macOS (Intel/Apple silicon).
-Extract the platform `.zip` or `.tar.xz`, add `pipelines` (`pipelines.exe` on Windows)
-to PATH, and run `pipelines verify`. Each archive contains one executable with the
-dataset, models, evidence, and selected image previews. `SHA256SUMS` contains download
-checksums; `dataset-manifest.json` describes the bundled data.
+Offline search across the complete dataset. One executable contains the models,
+indices, saved records, and selected image previews.
 
-The executable includes offline text, image, and combined search, precomputed OCR and
-visual descriptions, source evidence, and selected image previews. No runtime,
-model download, or separate data file is required. `pipelines info` reports exact
-capabilities and counts. Image and generated-text results are **uncalibrated research
-suggestions**; inspect the linked evidence. The release's `quality.json` reports the
-frozen benchmark and original unmet identification targets; `validation-*.json`
-contains native checks.
+```sh
+./pipeline search "airborne radar"
+./pipeline search "airborne radar" --mode vector
+./pipeline search "airborne radar" --page 2 --limit 20
+./pipeline search "airborne radar" --raw --limit 3
+./pipeline search --image radar.jpg
+./pipeline search "coastal radar" --image radar.jpg
+```
+
+Search covers every source by default. `hybrid` combines semantic similarity with
+keyword and name matching; `vector` uses semantic cosine similarity alone. An image
+query searches the indexed image gallery. Adding text combines both rankings.
+Image similarity is a research suggestion, not verified identity.
+
+## Search options
+
+Options work before or after the query. Quotes are optional for multiple query
+words; use `--` before literal query words that begin with a dash.
+
+| Option | Meaning |
+| --- | --- |
+| `--mode hybrid\|vector` | Text ranking; default `hybrid` |
+| `--image PATH` | Search with a local JPEG or PNG |
+| `--page N` | Page number, starting at 1; default 1 |
+| `--limit N` | Results per page, 1–100; default 10 |
+| `--raw` | Include each returned record's full saved content and evidence |
+| `--source SOURCE` | Optional source filter; omitted means all sources |
+| `--kind KIND` | Optional entity-kind filter |
+| `--where "FIELD OP VALUE"` | Optional field condition; repeat to combine conditions |
+
+```sh
+./pipeline search radar --where "range>=100 km" --page 2
+./pipeline search aircraft --source odin --limit 5
+```
+
+Filters apply before ranking and pagination. `pipeline info` lists sources, kinds,
+and filter fields. Field operators are `=`, `!=`, `<`, `<=`, `>`, and `>=`.
+Numeric fields require compatible units except counts; unknown or approximate
+values do not satisfy strict numeric conditions. `--mode` applies to text-only
+queries; image-and-text queries use hybrid fusion.
+
+Text queries allow 1,000 characters and 256 model tokens. Query images may be up
+to 20 MiB and 40 million pixels. Search uses saved source content by default;
+generated OCR/descriptions can be included with `--observations`.
+
+## Results
+
+Commands return JSON on stdout. Search responses contain the dataset ID, query,
+ranked `results`, and `page`, `limit`, `total`, and `has_more`. `total` counts the
+eligible ranked records, including low-similarity candidates; it is not a count of
+confirmed matches. Image-only search counts records with indexed images. Use the
+same query, filters, mode, page size, and dataset to move through stable pages.
+A page beyond the end returns an empty array and `has_more: false`.
+
+Each result includes its ID, title, source URL, score, and snippet. Ranking and
+source references remain available for callers that inspect them. Scores are not
+probabilities. `--raw` adds `content`: the complete saved entity record, source
+facts, and every evidence page with Markdown and saved HTML (or base64 for
+non-UTF-8 HTML). This is captured content, not generated text.
+
+To inspect a particular result again:
+
+```sh
+./pipeline get SOURCE:ID
+```
+
+`get --format source --evidence PAGE_ID SOURCE:ID` exports the exact captured
+response bytes. This can be a source-wide response shared by several records.
+Errors return a nonzero status and JSON on stderr. `pipeline search --help` shows
+search usage. See the [full reference](docs/cli-reference.md) for specialist
+inspection commands and the [interface review](docs/cli-review.md) for the design.
+
+## Install and build
+
+The interface above is available in current source builds. The
+[latest published release](https://github.com/osint-builders/pipelines/releases/latest)
+uses the older `pipelines` command and predates pagination and `search --raw`.
+Release archives built from current source contain `pipeline` (`pipeline.exe` on
+Windows). They require no external runtime, model download, or separate data file.
+
+With a packaged dataset and the project's Python and Go build dependencies:
+
+```sh
+python tools/build_cli.py --bundle /path/to/dataset.zip --output dist/pipeline
+./dist/pipeline search "airborne radar"
+```
+
+Use `dist/pipeline.exe` on Windows. `pipeline verify` checks the embedded data and
+models. `SHA256SUMS` verifies release downloads; `dataset-manifest.json` describes
+the bundled data. Validation evidence is included with published releases.
 
 For original images, download all `images-*.zip` parts, `image-records.json`, and
 `image-dataset.json` from the same release. Extract the parts into one directory.
-`image-records.json` maps each source URL and entity/evidence reference to a SHA-256;
-the original file is `objects/<first two hash characters>/<full hash>`.
-`image-dataset.json` binds these records and archive checksums to the CLI dataset.
-
-## CLI
-
-Place options before the query or IDs. Use source-qualified IDs returned by a search.
-
-| Command | Output |
-| --- | --- |
-| `pipelines search [options] "query"` | Ranked text search results |
-| `pipelines search --image PATH [options] ["query"]` | Image or combined image-and-text suggestions |
-| `pipelines media [--id MEDIA_ID] [--output PATH] SOURCE:ID` | Image metadata or one embedded JPEG preview |
-| `pipelines observations [--id OBSERVATION_ID] SOURCE:ID` | Generated text, image references, and processing recipes |
-| `pipelines similar [options] SOURCE:ID` | Semantically similar entities |
-| `pipelines list [options]` | Entities matching filters, sorted by ID |
-| `pipelines get [options] SOURCE:ID` | Entity, original source facts, and archived evidence |
-| `pipelines facts SOURCE:ID` | Indexed claims, parsed values, and source evidence |
-| `pipelines relationships [--type TYPE] SOURCE:ID` | Evidence-backed relationships |
-| `pipelines compare SOURCE:ID OTHER:ID [...]` | Field comparisons for 2–20 distinct entities |
-| `pipelines info`, `pipelines version`, `pipelines verify` | Dataset details, executable version, or integrity/model checks |
-| `pipelines --help` | Help; also available with `pipelines COMMAND --help` |
-
-| Option | Commands | Meaning |
-| --- | --- | --- |
-| `--mode hybrid\|vector` | `search` | Names, source captions, verified numeric clauses, and semantic ranking (default `hybrid`), or semantic ranking only |
-| `--observations` | `search` | Include generated OCR/descriptions; requires a text query and can be combined with an image |
-| `--image PATH` | `search` | Local JPEG/PNG, up to 20 MiB and 40 million pixels; incompatible with `--mode` |
-| `--id MEDIA_ID`, `--output PATH` | `media` | Select a record; `--output` requires `--id` and writes its preview to a new file |
-| `--id OBSERVATION_ID` | `observations` | Inspect one generated record and its recipe |
-| `--limit N` | `search`, `similar`, `list` | 1–100 results, default 10 |
-| `--source SOURCE`, `--kind KIND`, `--category CATEGORY` | `search`, `similar`, `list` | Filter before ranking or limiting |
-| `--where "FIELD OP VALUE"` | `search`, `similar`, `list` | Repeat to require every predicate; operators: `=`, `!=`, `<`, `<=`, `>`, `>=` |
-| `--format json\|markdown\|html\|source` | `get` | Default `json`; `source` preserves captured response bytes |
-| `--evidence PAGE_ID` | `get` | Select one page; required for HTML/source export when several pages exist |
-
-Text queries allow 1,000 characters and 256 model tokens. Structured filters use
-indexed claims; unknown, approximate, or unparsed values do not satisfy strict
-filters. Numeric filters require compatible units except for counts. Use `info`
-for field names and `get` for all original specifications. Relationship types are
-`equivalent`, `family_member_of`, `variant_of`, `component_of`, and `related_system`.
-
-```sh
-pipelines search --source odin --limit 5 "HIMARS"
-pipelines search --image radar.jpg --source cambridgepixel --limit 5
-pipelines search "range: 550 km; weight: 54 t"
-pipelines search --observations "yellow helicopter with landing skids"
-pipelines list --source odin --where "origin_country=United States" --limit 5
-pipelines get --format markdown odin:0a50e596d1ad19fa32b0521d94bb31a8
-pipelines facts odin:0a50e596d1ad19fa32b0521d94bb31a8
-pipelines search --source sigidwiki "Automatic Identification System"
-pipelines list --kind signal --where "modulation=FMCW" --where "bandwidth<=50 kHz"
-pipelines search --source sigidwiki --image waterfall.png
-```
-
-## API
-
-Run the executable as a subprocess and parse JSON on stdout. Errors return a nonzero
-exit code and `{"error":"message"}` on stderr. Help and non-JSON `get` formats return
-text or captured bytes. Search responses include `dataset_id` so callers can identify
-the data used.
-
-`search` returns `query`, `query_type`, `mode`, `match_status`, and `results`.
-Results include `id`, `title`, `url`, `source`, `kind`, `categories`, `aliases`,
-`score`, `cosine`, `name_match`, `snippet`, and `evidence_id`. `matches` explains
-lexical, semantic, specification, and image contributions and links them to evidence.
-Scores are ranking signals, not probabilities. `no_supported_match` may still include
-ranked suggestions. `candidates` means results were ranked; it does not establish
-that the queried entity is present in the archive.
-
-Image queries also return `query_image_sha256` and `calibration_status`. Image,
-combined, and generated-text queries return `no_supported_match` and `uncalibrated`.
-`media` returns an array with original URLs, hashes, dimensions, captions, evidence
-references, ambiguity flags, and optional preview metadata. `--output` exports the
-preview and returns its byte count and checksum; the full originals are in the
-separate image archives.
-
-`observations` returns `dataset_id`, `entity_id`, `observations`, and `recipes`.
-Generated records include `kind`, `origin: "generated"`, text, original image hashes,
-source references, and a processing-recipe hash. OCR records also carry text regions.
-Generated text can contain errors; it is excluded from default search and source facts.
-Search `matches` identifies contributions from OCR and descriptions.
-
-`similar` returns `similar_to`, `mode`, and `results`. `list` returns `total` and
-`results`; the limit applies to the latter. `get` returns the entity, source facts,
-and evidence. `facts` returns `entity_id` and `claims`; `relationships` returns
-`entity_id` and `relationships`; `compare` returns `entity_ids` and `fields`.
-Claims preserve their raw values, parsing status, and evidence alongside parsed
-values. Missing comparison values are explicit unknowns.
+`image-records.json` maps source URLs and record references to SHA-256 hashes;
+originals are stored at `objects/<first two hash characters>/<full hash>`.
 
 ## Sources and counts
 

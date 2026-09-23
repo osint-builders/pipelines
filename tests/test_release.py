@@ -427,6 +427,14 @@ def test_release_archive_preserves_one_binary_and_rebuilds_stale_content(
     binary.write_bytes(b"\x00\xff executable bytes\r\n" * 100)
     target = (system, "amd64", name)
     archive = tmp_path / release.compress_binary(tmp_path, target)
+    if system == "windows":
+        with zipfile.ZipFile(archive) as packed:
+            assert packed.namelist() == ["pipeline.exe"]
+    else:
+        import tarfile
+
+        with tarfile.open(archive) as packed_tar:
+            assert packed_tar.getnames() == ["pipeline"]
     original = archive.read_bytes()
     assert release.archive_matches(archive, binary, system)
     release.compress_binary(tmp_path, target)
