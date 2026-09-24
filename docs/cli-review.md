@@ -98,14 +98,13 @@ behavior does not depend on its filename.
 
 Release artifact names still use the repository's `pipelines-PLATFORM` prefix;
 the executable inside new archives is singular. Previously published immutable
-archives are not modified. The README distinguishes the current source interface
-from the older published release.
+archives are not modified.
 
-One distribution issue remains outside this interface change: release identities
-and the publication gate currently key only on dataset identity. A future
-code-only release needs a release identity that also includes the CLI revision;
-reusing the existing published tag or altering the dataset solely to force a new
-tag would misrepresent what changed. This review does not bypass that gate.
+The distribution follow-up fixes the dataset-only release identity: new tags
+include the dataset identity and CLI commit, allowing code-only updates. Releases
+publish exactly five platform archives and checksums. Original-image archives and
+validation evidence remain separate from these downloads. Dataset verification,
+quality gates, and native checks are still required before publication.
 
 ## Verification
 

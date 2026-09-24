@@ -117,7 +117,7 @@ def test_export_checks_zip_members_even_when_archive_digest_is_updated(
         media_assets(output, manifest)
 
 
-def test_release_checksums_include_the_original_image_dataset(
+def test_cli_release_omits_original_images_and_build_evidence(
     image_dataset: tuple[Path, Path, dict], tmp_path: Path
 ) -> None:
     root, bundle, manifest = image_dataset
@@ -126,8 +126,15 @@ def test_release_checksums_include_the_original_image_dataset(
     (output / "dataset-manifest.json").write_bytes(canonical(manifest))
     for _, _, name in release.BINARY_TARGETS:
         (output / name).write_bytes(b"fixture executable")
+    for name in ("quality.json", "quality-evidence.zip", "validation-linux-amd64.json"):
+        (output / name).write_bytes(b"retained build evidence")
     assets = release.prepare_assets(output)
-    assert set(media_assets(output, manifest)).issubset(assets)
+    expected = {
+        release.archive_name(system, name) for system, _, name in release.BINARY_TARGETS
+    } | {"SHA256SUMS"}
+    assert set(assets) == expected
+    assert set(media_assets(output, manifest)).isdisjoint(assets)
+    assert (output / "quality-evidence.zip").read_bytes() == b"retained build evidence"
     checksums = dict(
         line.split("  ", 1)[::-1]
         for line in (output / "SHA256SUMS").read_text().splitlines()

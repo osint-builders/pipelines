@@ -5,6 +5,7 @@ import base64
 import hashlib
 import json
 import os
+import re
 import shutil
 import subprocess
 import zipfile
@@ -193,6 +194,10 @@ def main() -> None:
     notices(target / "THIRD-PARTY-NOTICES.txt")
     args.output.parent.mkdir(parents=True, exist_ok=True)
     version = "data-" + manifest["dataset_id"][:16]
+    if revision := os.environ.get("GITHUB_SHA"):
+        if not re.fullmatch(r"[0-9a-f]{40}", revision):
+            raise ValueError("GITHUB_SHA must identify the full source commit")
+        version += "-cli-" + revision[:12]
     run(
         [
             "go",

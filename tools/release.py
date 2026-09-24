@@ -116,22 +116,8 @@ def prepare_assets(directory: Path) -> list[str]:
         names = list(
             pool.map(lambda target: compress_binary(directory, target), BINARY_TARGETS)
         )
-    names.append("dataset-manifest.json")
-    names.extend(
-        name
-        for name in ("quality.json", "quality-evidence.zip", "research-contract.json")
-        if (directory / name).is_file()
-    )
-    names.extend(path.name for path in sorted(directory.glob("validation-*.json")))
-    if (directory / "image-dataset.json").exists():
-        from pipelines.media_export import media_assets
-
-        names.extend(
-            media_assets(
-                directory,
-                json.loads((directory / "dataset-manifest.json").read_bytes()),
-            )
-        )
+    # Only executables are public downloads. Other build inputs and validation
+    # artifacts stay out even when they share this directory.
     (directory / "SHA256SUMS").write_text(
         "".join(f"{asset_sha256(directory / name)}  {name}\n" for name in names),
         encoding="utf-8",
@@ -297,9 +283,6 @@ def validate_release(
                 manifest["dataset_id"],
             )
     if profile == "research":
-        from pipelines.media_export import media_assets
-
-        media_assets(directory, manifest)
         return
     reference = read_report(validation / "reference.json")
     if (
@@ -333,6 +316,17 @@ def input_tag(manifest: dict) -> str:
     return "data-" + manifest["dataset_id"]
 
 
+def cli_tag(manifest: dict, revision: str | None) -> str:
+    if not re.fullmatch(r"[0-9a-f]{40}", revision or ""):
+        raise ValueError(
+            "CLI release requires a full commit SHA (--target or GITHUB_SHA)"
+        )
+    if not re.fullmatch(r"[0-9a-f]{64}", manifest["dataset_id"]):
+        raise ValueError("Invalid dataset identity")
+    assert revision is not None
+    return f"cli-{manifest['dataset_id']}-{revision[:12]}"
+
+
 def matches_input_tag(tag: str, manifest: dict) -> bool:
     if tag == input_tag(manifest):
         return True
@@ -355,6 +349,11 @@ def latest_manifest(repo: str, directory: Path) -> dict | None:
             return None
         raise RuntimeError(result.stderr)
     release = json.loads(result.stdout)
+    identity = re.fullmatch(r"cli-([0-9a-f]{64})-([0-9a-f]{12})", release["tag_name"])
+    if identity:
+        # The dataset manifest is embedded in each executable. New releases
+        # expose their dataset and CLI identities without a separate download.
+        return {"dataset_id": identity[1], "cli_revision": identity[2]}
     gh(
         "release",
         "download",
@@ -369,7 +368,7 @@ def latest_manifest(repo: str, directory: Path) -> dict | None:
     return json.loads((directory / "dataset-manifest.json").read_text())
 
 
-def gate(repo: str, tag: str, output: Path) -> dict:
+def gate(repo: str, tag: str, output: Path, *, target: str | None = None) -> dict:
     if not re.fullmatch(r"data-[0-9a-f]{64}", tag):
         raise ValueError("Input tag must be data- followed by the full dataset ID")
     output.mkdir(parents=True, exist_ok=True)
@@ -389,11 +388,17 @@ def gate(repo: str, tag: str, output: Path) -> dict:
     manifest = verify_bundle(bundle)
     if not matches_input_tag(tag, manifest):
         raise ValueError("Input tag does not match dataset identity")
+    revision = target or os.environ.get("GITHUB_SHA")
+    release_tag = cli_tag(manifest, revision)
+    assert revision is not None
     with tempfile.TemporaryDirectory() as temporary:
         previous = latest_manifest(repo, Path(temporary))
     result = {
-        "changed": str(changed(manifest, previous)).lower(),
-        "tag": "cli-" + manifest["dataset_id"],
+        "changed": str(
+            changed(manifest, previous)
+            or (previous or {}).get("cli_revision") != revision[:12]
+        ).lower(),
+        "tag": release_tag,
         "bundle_sha256": hashlib.sha256(bundle.read_bytes()).hexdigest(),
     }
     (output / "dataset-manifest.json").write_text(
@@ -486,35 +491,12 @@ def publish(
     profile: str = "identification",
 ) -> None:
     manifest = json.loads((directory / "dataset-manifest.json").read_text())
-    if tag != "cli-" + manifest["dataset_id"]:
-        raise ValueError("Release tag does not match dataset")
     if bundle is None or validation is None:
         raise ValueError("Publication requires --bundle and --validation reports")
+    target = target or os.environ.get("GITHUB_SHA")
+    if tag != cli_tag(manifest, target):
+        raise ValueError("Release tag does not match dataset and CLI revision")
     validate_release(directory, bundle, validation, profile=profile)
-    if profile == "research":
-        from measure_release import RESEARCH_CONTRACT
-
-        shutil.copyfile(validation / "quality.json", directory / "quality.json")
-        shutil.copyfile(RESEARCH_CONTRACT, directory / "research-contract.json")
-        packed = validation / "quality-evidence.zip"
-        if packed.is_file():
-            shutil.copyfile(packed, directory / packed.name)
-        else:
-            pack_quality_evidence(
-                json.loads((validation / "quality.json").read_bytes()),
-                directory / "quality-evidence.zip",
-            )
-        for report in validation.glob("*.json"):
-            if report.stem in {
-                f"{system}-{architecture}{suffix}"
-                for system, architecture, _ in BINARY_TARGETS
-                for suffix in ("", "-text")
-            }:
-                shutil.copyfile(report, directory / ("validation-" + report.name))
-    with tempfile.TemporaryDirectory() as temporary:
-        if not changed(manifest, latest_manifest(repo, Path(temporary))):
-            print("Dataset already published; skipping.")
-            return
     asset_names = prepare_assets(directory)
     assets = [str(directory / name) for name in asset_names]
     existing = subprocess.run(
@@ -530,9 +512,7 @@ def publish(
             )
         gh("release", "upload", tag, *assets, "--repo", repo, "--clobber")
     else:
-        target = target or os.environ.get("GITHUB_SHA")
-        if not target:
-            raise ValueError("Local publication requires --target COMMIT_SHA")
+        assert target is not None
         gh(
             "release",
             "create",
@@ -543,7 +523,7 @@ def publish(
             "--target",
             target,
             "--title",
-            f"pipelines CLI {manifest['dataset_id'][:16]}",
+            f"pipeline CLI {target[:12]}",
             "--notes",
             "",
             "--draft",
@@ -604,7 +584,11 @@ def main() -> None:
             parser.error("stage requires --bundle")
         stage(args.repo, args.bundle, args.validation, profile=args.profile)
     elif args.command == "gate":
-        print(json.dumps(gate(args.repo, args.tag or "", args.directory)))
+        print(
+            json.dumps(
+                gate(args.repo, args.tag or "", args.directory, target=args.target)
+            )
+        )
     elif args.command == "validate":
         if args.bundle is None or args.validation is None:
             parser.error("validate requires --bundle and --validation")

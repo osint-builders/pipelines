@@ -92,6 +92,87 @@ def test_release_gate_validates_input_tag_before_network(
         release.gate("owner/repo", "arbitrary-release", tmp_path)
 
 
+def test_cli_identity_changes_with_code_or_dataset() -> None:
+    manifest = manifest_for()
+    assert release.cli_tag(manifest, "a" * 40) != release.cli_tag(manifest, "b" * 40)
+    assert release.cli_tag(manifest, "a" * 40) != release.cli_tag(
+        manifest_for({"image": {"views": 1}}), "a" * 40
+    )
+    for revision in (None, "", "main", "a" * 12, "z" * 40):
+        with pytest.raises(ValueError, match="commit SHA"):
+            release.cli_tag(manifest, revision)
+
+
+def test_latest_compact_release_needs_no_manifest_asset(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    manifest = manifest_for()
+    tag = release.cli_tag(manifest, "c" * 40)
+    monkeypatch.setattr(
+        release.subprocess,
+        "run",
+        lambda *a, **k: subprocess.CompletedProcess(
+            a, 0, json.dumps({"tag_name": tag}), ""
+        ),
+    )
+
+    def forbidden(*args: str) -> str:
+        raise AssertionError("compact release should not download a manifest")
+
+    monkeypatch.setattr(release, "gh", forbidden)
+    assert release.latest_manifest("owner/repo", tmp_path) == {
+        "dataset_id": manifest["dataset_id"],
+        "cli_revision": "c" * 12,
+    }
+
+
+@pytest.mark.parametrize(
+    "previous_revision,expected",
+    [(None, "true"), ("a" * 12, "true"), ("b" * 12, "false")],
+)
+def test_gate_allows_cli_updates_with_the_same_dataset(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    previous_revision: str | None,
+    expected: str,
+) -> None:
+    manifest = manifest_for()
+    (tmp_path / "dataset.zip").write_bytes(b"verified dataset")
+    monkeypatch.setattr(release, "verify_bundle", lambda path: manifest)
+    monkeypatch.setattr(release, "gh", lambda *args: "")
+    monkeypatch.setattr(
+        release,
+        "latest_manifest",
+        lambda *args: {**manifest, "cli_revision": previous_revision},
+    )
+    result = release.gate(
+        "owner/repo", release.input_tag(manifest), tmp_path, target="b" * 40
+    )
+    assert result["changed"] == expected
+    assert result["tag"] == release.cli_tag(manifest, "b" * 40)
+
+
+def test_publication_rejects_the_wrong_revision_before_validation(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    manifest = manifest_for()
+    (tmp_path / "dataset-manifest.json").write_text(json.dumps(manifest))
+
+    def forbidden(*args: object, **kwargs: object) -> None:
+        raise AssertionError("invalid release identity reached validation")
+
+    monkeypatch.setattr(release, "validate_release", forbidden)
+    with pytest.raises(ValueError, match="dataset and CLI revision"):
+        release.publish(
+            "owner/repo",
+            tmp_path,
+            release.cli_tag(manifest, "a" * 40),
+            target="b" * 40,
+            bundle=tmp_path / "dataset.zip",
+            validation=tmp_path,
+        )
+
+
 def test_unchanged_content_cannot_upload_an_input(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -143,7 +224,6 @@ def test_publication_waits_for_complete_draft_assets(
                     release.archive_name(system, name)
                     for system, _, name in release.BINARY_TARGETS
                 ),
-                "dataset-manifest.json",
                 "SHA256SUMS",
             ]
             if not complete:
@@ -184,7 +264,7 @@ def test_publication_waits_for_complete_draft_assets(
         release.publish(
             "owner/repo",
             tmp_path,
-            "cli-" + manifest["dataset_id"],
+            release.cli_tag(manifest, ("d" if local else "c") * 40),
             target="d" * 40 if local else None,
             bundle=tmp_path / "dataset.zip",
             validation=tmp_path / "validation",
@@ -199,7 +279,7 @@ def test_publication_waits_for_complete_draft_assets(
             release.publish(
                 "owner/repo",
                 tmp_path,
-                "cli-" + manifest["dataset_id"],
+                release.cli_tag(manifest, ("d" if local else "c") * 40),
                 target="d" * 40 if local else None,
                 bundle=tmp_path / "dataset.zip",
                 validation=tmp_path / "validation",

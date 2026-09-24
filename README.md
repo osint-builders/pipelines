@@ -77,11 +77,14 @@ inspection commands and the [interface review](docs/cli-review.md) for the desig
 
 ## Install and build
 
-The interface above is available in current source builds. The
-[latest published release](https://github.com/osint-builders/pipelines/releases/latest)
-uses the older `pipelines` command and predates pagination and `search --raw`.
-Release archives built from current source contain `pipeline` (`pipeline.exe` on
-Windows). They require no external runtime, model download, or separate data file.
+Download the archive for your platform from the
+[latest release](https://github.com/osint-builders/pipelines/releases/latest).
+Extract it and run `pipeline` (`pipeline.exe` on Windows). Each executable includes
+the dataset, models, search indexes, and selected image previews. It requires no
+external runtime, model download, image archive, or separate data file.
+
+CLI releases contain five platform archives and `SHA256SUMS`. Text search,
+pagination, full-content results, and image lookup work from that single executable.
 
 With a packaged dataset and the project's Python and Go build dependencies:
 
@@ -91,11 +94,14 @@ python tools/build_cli.py --bundle /path/to/dataset.zip --output dist/pipeline
 ```
 
 Use `dist/pipeline.exe` on Windows. `pipeline verify` checks the embedded data and
-models. `SHA256SUMS` verifies release downloads; `dataset-manifest.json` describes
-the bundled data. Validation evidence is included with published releases.
+models. `SHA256SUMS` verifies release downloads; `pipeline info` describes the
+embedded dataset. Quality and native-platform checks run before publication;
+their build reports are kept separately from the CLI downloads.
 
-For original images, download all `images-*.zip` parts, `image-records.json`, and
-`image-dataset.json` from the same release. Extract the parts into one directory.
+Optional original images for this dataset remain in the
+[earlier dataset-bearing release](https://github.com/osint-builders/pipelines/releases/tag/cli-292652265f9efe39e8a659b00fb25e0f0fe7020d8c82085dd0d4de8d05e37a91).
+Download its `images-*.zip` parts, `image-records.json`, and `image-dataset.json`.
+Extract the parts into one directory.
 `image-records.json` maps source URLs and record references to SHA-256 hashes;
 originals are stored at `objects/<first two hash characters>/<full hash>`.
 
