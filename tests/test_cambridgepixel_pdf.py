@@ -2,6 +2,7 @@ import hashlib
 from copy import deepcopy
 from io import BytesIO
 
+import pypdf
 import pytest
 from PIL import Image
 from pypdf import PdfReader, PdfWriter
@@ -67,7 +68,7 @@ def reviewed_pdf() -> tuple[bytes, dict]:
             "name": raster.name,
             "document_sha256": hashlib.sha256(body).hexdigest(),
             "image_sha256": hashlib.sha256(raster.data).hexdigest(),
-            "extractor": "pypdf-6.10.0",
+            "extractor": f"pypdf-{pypdf.__version__}",
         },
     }
     return body, review
