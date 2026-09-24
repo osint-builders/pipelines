@@ -12,6 +12,7 @@ import tarfile
 import tempfile
 import zipfile
 from concurrent.futures import ThreadPoolExecutor
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import IO
 
@@ -328,7 +329,63 @@ def cli_tag(manifest: dict, revision: str | None) -> str:
     if not re.fullmatch(r"[0-9a-f]{64}", manifest["dataset_id"]):
         raise ValueError("Invalid dataset identity")
     assert revision is not None
-    return f"cli-{manifest['dataset_id']}-{revision[:12]}"
+    return f"cli-{manifest['dataset_id'][:12]}-{revision[:12]}"
+
+
+def release_notes(manifest: dict, revision: str) -> str:
+    # Keep full identities readable without adding another downloadable asset.
+    cli_tag(manifest, revision)
+    return (
+        "Offline text and image search. Download the archive for your platform; "
+        "the executable includes its dataset, models, and image previews.\n\n"
+        f"Dataset: `{manifest['dataset_id']}`\n\n"
+        f"Source commit: `{revision}`\n"
+    )
+
+
+def verify_binary_revision(directory: Path, revision: str) -> None:
+    """Read build metadata on any host, including cross-compiled executables."""
+    for system, architecture, name in BINARY_TARGETS:
+        output = subprocess.run(
+            ["go", "version", "-m", str(directory / name)],
+            check=True,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+        ).stdout
+        settings = dict(re.findall(r"^\s*build\s+(\S+?)=(\S+)\s*$", output, re.M))
+        expected = {
+            "GOOS": system,
+            "GOARCH": architecture,
+            "CGO_ENABLED": "0",
+            "vcs": "git",
+            "vcs.revision": revision,
+            "vcs.modified": "false",
+        }
+        if any(settings.get(key) != value for key, value in expected.items()):
+            raise ValueError(f"Release binary source or platform mismatch: {name}")
+
+
+def verify_tag_target(repo: str, tag: str, revision: str) -> None:
+    # GitHub ignores --target when the tag already exists. Resolve both lightweight
+    # and annotated tags through the commits endpoint before changing any assets.
+    result = subprocess.run(
+        ["gh", "api", f"repos/{repo}/commits/{tag}"],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+    )
+    if result.returncode:
+        if "HTTP 404" in result.stderr or "HTTP 422" in result.stderr:
+            # GitHub returns 422 for a ref that does not exist.
+            if (
+                "HTTP 404" in result.stderr
+                or "No commit found for SHA" in result.stdout
+            ):
+                return
+        raise RuntimeError(result.stderr)
+    if json.loads(result.stdout).get("sha") != revision:
+        raise ValueError("Existing release tag points to a different source commit")
 
 
 def matches_input_tag(tag: str, manifest: dict) -> bool:
@@ -358,6 +415,20 @@ def latest_manifest(repo: str, directory: Path) -> dict | None:
         # The dataset manifest is embedded in each executable. New releases
         # expose their dataset and CLI identities without a separate download.
         return {"dataset_id": identity[1], "cli_revision": identity[2]}
+    if re.fullmatch(r"cli-[0-9a-f]{12}-[0-9a-f]{12}", release["tag_name"]):
+        datasets = re.findall(
+            r"^Dataset: `([0-9a-f]{64})`$", release.get("body") or "", re.M
+        )
+        revisions = re.findall(
+            r"^Source commit: `([0-9a-f]{40})`$", release.get("body") or "", re.M
+        )
+        if (
+            len(datasets) != 1
+            or len(revisions) != 1
+            or cli_tag({"dataset_id": datasets[0]}, revisions[0]) != release["tag_name"]
+        ):
+            raise ValueError("Release notes do not match the release identity")
+        return {"dataset_id": datasets[0], "cli_revision": revisions[0][:12]}
     gh(
         "release",
         "download",
@@ -469,7 +540,7 @@ def stage(
             "--prerelease",
             "--latest=false",
             "--title",
-            f"Dataset input {manifest['dataset_id'][:16]}",
+            f"Dataset input - {datetime.now(UTC):%Y-%m-%d} ({manifest['dataset_id'][:12]})",
             "--notes",
             "",
         )
@@ -501,6 +572,9 @@ def publish(
     if tag != cli_tag(manifest, target):
         raise ValueError("Release tag does not match dataset and CLI revision")
     validate_release(directory, bundle, validation, profile=profile)
+    assert target is not None
+    verify_binary_revision(directory, target)
+    verify_tag_target(repo, tag, target)
     asset_names = prepare_assets(directory)
     assets = [str(directory / name) for name in asset_names]
     existing = subprocess.run(
@@ -516,7 +590,11 @@ def publish(
             )
         gh("release", "upload", tag, *assets, "--repo", repo, "--clobber")
     else:
-        assert target is not None
+        if (
+            "HTTP 404" not in existing.stderr
+            and "release not found" not in existing.stderr.lower()
+        ):
+            raise RuntimeError(existing.stderr or "Unable to inspect existing release")
         gh(
             "release",
             "create",
@@ -527,9 +605,9 @@ def publish(
             "--target",
             target,
             "--title",
-            f"pipeline CLI {target[:12]}",
+            f"pipeline CLI - {datetime.now(UTC):%Y-%m-%d}",
             "--notes",
-            "",
+            release_notes(manifest, target),
             "--draft",
         )
     # GitHub's REST lookup by tag omits unpublished drafts. The CLI resolves both.
@@ -537,6 +615,8 @@ def publish(
         gh("release", "view", tag, "--repo", repo, "--json", "databaseId")
     )["databaseId"]
     uploaded = json.loads(gh("api", f"repos/{repo}/releases/{release_id}"))
+    if uploaded.get("tag_name") != tag or uploaded.get("target_commitish") != target:
+        raise ValueError("Draft release does not match the source commit and tag")
     sizes = {asset["name"]: asset["size"] for asset in uploaded["assets"]}
     if not uploaded["draft"] or sizes != {
         name: (directory / name).stat().st_size for name in asset_names
@@ -558,7 +638,7 @@ def publish(
         "--draft=false",
         "--latest",
         "--notes",
-        "",
+        release_notes(manifest, target),
     )
 
 

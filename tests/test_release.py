@@ -103,6 +103,133 @@ def test_cli_identity_changes_with_code_or_dataset() -> None:
             release.cli_tag(manifest, revision)
 
 
+@pytest.mark.parametrize("legacy", [True, False])
+def test_release_identity_preserves_full_dataset_without_download(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, legacy: bool
+) -> None:
+    manifest = manifest_for()
+    revision = "c" * 40
+    tag = (
+        f"cli-{manifest['dataset_id']}-{revision[:12]}"
+        if legacy
+        else release.cli_tag(manifest, revision)
+    )
+    monkeypatch.setattr(
+        release.subprocess,
+        "run",
+        lambda *a, **k: subprocess.CompletedProcess(
+            a,
+            0,
+            json.dumps(
+                {"tag_name": tag, "body": release.release_notes(manifest, revision)}
+            ),
+            "",
+        ),
+    )
+    assert release.latest_manifest("owner/repo", tmp_path) == {
+        "dataset_id": manifest["dataset_id"],
+        "cli_revision": revision[:12],
+    }
+
+
+@pytest.mark.parametrize("fault", ["missing", "dataset", "revision", "duplicate"])
+def test_short_release_tags_require_matching_full_identities(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, fault: str
+) -> None:
+    manifest = manifest_for()
+    body = release.release_notes(manifest, "c" * 40)
+    if fault == "missing":
+        body = ""
+    elif fault == "dataset":
+        body = body.replace(manifest["dataset_id"], "a" * 64)
+    elif fault == "revision":
+        body = body.replace("c" * 40, "d" * 40)
+    else:
+        body += body
+    monkeypatch.setattr(
+        release.subprocess,
+        "run",
+        lambda *a, **k: subprocess.CompletedProcess(
+            a,
+            0,
+            json.dumps({"tag_name": release.cli_tag(manifest, "c" * 40), "body": body}),
+            "",
+        ),
+    )
+    with pytest.raises(ValueError, match="Release notes"):
+        release.latest_manifest("owner/repo", tmp_path)
+
+
+@pytest.mark.parametrize("fault", [None, "revision", "dirty", "platform", "missing"])
+def test_publication_checks_embedded_build_identity(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, fault: str | None
+) -> None:
+    revision = "c" * 40
+    calls = []
+
+    def metadata(args: list[str], **kwargs: object) -> subprocess.CompletedProcess:
+        calls.append(args)
+        system, arch, name = next(
+            row for row in release.BINARY_TARGETS if row[2] == Path(args[-1]).name
+        )
+        settings = {
+            "GOOS": system,
+            "GOARCH": arch,
+            "CGO_ENABLED": "0",
+            "vcs": "git",
+            "vcs.revision": revision,
+            "vcs.modified": "false",
+        }
+        # Corrupt only the last platform: all five binaries must be checked.
+        if name.endswith(".exe"):
+            if fault == "revision":
+                settings["vcs.revision"] = "d" * 40
+            elif fault == "dirty":
+                settings["vcs.modified"] = "true"
+            elif fault == "platform":
+                settings["GOARCH"] = "arm64"
+            elif fault == "missing":
+                settings.pop("vcs.revision")
+        body = "binary: go1.27.0\n" + "".join(
+            f"\tbuild\t{k}={v}\n" for k, v in settings.items()
+        )
+        return subprocess.CompletedProcess(args, 0, body, "")
+
+    monkeypatch.setattr(release.subprocess, "run", metadata)
+    if fault:
+        with pytest.raises(ValueError, match="source or platform mismatch"):
+            release.verify_binary_revision(tmp_path, revision)
+    else:
+        release.verify_binary_revision(tmp_path, revision)
+    assert len(calls) == 5
+
+
+@pytest.mark.parametrize("case", ["missing", "matching", "wrong", "denied"])
+def test_existing_tag_must_resolve_to_the_validated_commit(
+    monkeypatch: pytest.MonkeyPatch, case: str
+) -> None:
+    revision = "c" * 40
+    response = {
+        "missing": (1, "", "HTTP 404"),
+        "matching": (0, json.dumps({"sha": revision}), ""),
+        "wrong": (0, json.dumps({"sha": "d" * 40}), ""),
+        "denied": (1, "", "HTTP 403 forbidden"),
+    }[case]
+    monkeypatch.setattr(
+        release.subprocess,
+        "run",
+        lambda *a, **k: subprocess.CompletedProcess(a, *response),
+    )
+    if case == "wrong":
+        with pytest.raises(ValueError, match="different source commit"):
+            release.verify_tag_target("owner/repo", "cli-test", revision)
+    elif case == "denied":
+        with pytest.raises(RuntimeError, match="403"):
+            release.verify_tag_target("owner/repo", "cli-test", revision)
+    else:
+        release.verify_tag_target("owner/repo", "cli-test", revision)
+
+
 def test_latest_compact_release_needs_no_manifest_asset(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -112,7 +239,12 @@ def test_latest_compact_release_needs_no_manifest_asset(
         release.subprocess,
         "run",
         lambda *a, **k: subprocess.CompletedProcess(
-            a, 0, json.dumps({"tag_name": tag}), ""
+            a,
+            0,
+            json.dumps(
+                {"tag_name": tag, "body": release.release_notes(manifest, "c" * 40)}
+            ),
+            "",
         ),
     )
 
@@ -173,6 +305,33 @@ def test_publication_rejects_the_wrong_revision_before_validation(
         )
 
 
+def test_old_executables_cannot_be_published_under_a_new_revision(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    manifest = manifest_for()
+    (tmp_path / "dataset-manifest.json").write_text(json.dumps(manifest))
+    monkeypatch.setattr(release, "validate_release", lambda *a, **k: None)
+
+    def run(args: list[str], **kwargs: object) -> subprocess.CompletedProcess:
+        assert args[:3] == ["go", "version", "-m"], (
+            "network access before source validation"
+        )
+        return subprocess.CompletedProcess(
+            args, 0, "\tbuild\tvcs.revision=" + "a" * 40 + "\n", ""
+        )
+
+    monkeypatch.setattr(release.subprocess, "run", run)
+    with pytest.raises(ValueError, match="source or platform mismatch"):
+        release.publish(
+            "owner/repo",
+            tmp_path,
+            release.cli_tag(manifest, "b" * 40),
+            target="b" * 40,
+            bundle=tmp_path / "dataset.zip",
+            validation=tmp_path,
+        )
+
+
 def test_unchanged_content_cannot_upload_an_input(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -190,12 +349,14 @@ def test_unchanged_content_cannot_upload_an_input(
 @pytest.mark.parametrize("complete", [True, False])
 @pytest.mark.parametrize("local", [True, False])
 @pytest.mark.parametrize("corrupted", [False, True])
+@pytest.mark.parametrize("draft_identity", ["matching", "wrong_tag", "wrong_commit"])
 def test_publication_waits_for_complete_draft_assets(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     complete: bool,
     local: bool,
     corrupted: bool,
+    draft_identity: str,
 ) -> None:
     manifest: dict = {
         "content_sha256": "a" * 64,
@@ -231,6 +392,12 @@ def test_publication_waits_for_complete_draft_assets(
             return json.dumps(
                 {
                     "draft": True,
+                    "tag_name": release.cli_tag(manifest, ("d" if local else "c") * 40)
+                    if draft_identity != "wrong_tag"
+                    else "cli-other",
+                    "target_commitish": ("d" if local else "c") * 40
+                    if draft_identity != "wrong_commit"
+                    else "a" * 40,
                     "assets": [
                         {
                             "name": name,
@@ -254,13 +421,14 @@ def test_publication_waits_for_complete_draft_assets(
         monkeypatch.setenv("GITHUB_SHA", "c" * 40)
     monkeypatch.setattr(release, "latest_manifest", lambda repo, path: None)
     monkeypatch.setattr(release, "validate_release", lambda *args, **kwargs: None)
+    monkeypatch.setattr(release, "verify_binary_revision", lambda *args: None)
     monkeypatch.setattr(release, "gh", fake_gh)
     monkeypatch.setattr(
         release.subprocess,
         "run",
         lambda *a, **k: subprocess.CompletedProcess(a, 1, "", "HTTP 404"),
     )
-    if complete and not corrupted:
+    if complete and not corrupted and draft_identity == "matching":
         release.publish(
             "owner/repo",
             tmp_path,
@@ -271,10 +439,17 @@ def test_publication_waits_for_complete_draft_assets(
         )
         assert calls[-1][:2] == ("release", "edit")
         assert "--draft=false" in calls[-1]
-        assert calls[-1][calls[-1].index("--notes") + 1] == ""
+        assert calls[-1][calls[-1].index("--notes") + 1] == release.release_notes(
+            manifest, ("d" if local else "c") * 40
+        )
     else:
         with pytest.raises(
-            ValueError, match="incomplete" if not complete else "checksum mismatch"
+            ValueError,
+            match="source commit and tag"
+            if draft_identity != "matching"
+            else "incomplete"
+            if not complete
+            else "checksum mismatch",
         ):
             release.publish(
                 "owner/repo",
@@ -288,7 +463,9 @@ def test_publication_waits_for_complete_draft_assets(
     assert calls[0][:2] == ("release", "create")
     assert "--draft" in calls[0] and "--latest" not in calls[0]
     assert calls[0][calls[0].index("--target") + 1] == ("d" if local else "c") * 40
-    assert calls[0][calls[0].index("--notes") + 1] == ""
+    assert calls[0][calls[0].index("--notes") + 1] == release.release_notes(
+        manifest, ("d" if local else "c") * 40
+    )
     assert not list(tmp_path.glob("*.md"))
 
 
