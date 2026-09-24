@@ -72,8 +72,7 @@ To inspect a particular result again:
 `get --format source --evidence PAGE_ID SOURCE:ID` exports the exact captured
 response bytes. This can be a source-wide response shared by several records.
 Errors return a nonzero status and JSON on stderr. `pipeline search --help` shows
-search usage. See the [full reference](docs/cli-reference.md) for specialist
-inspection commands and the [interface review](docs/cli-review.md) for the design.
+search usage.
 
 ## Install and build
 
