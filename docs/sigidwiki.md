@@ -20,11 +20,11 @@ Download the [latest CLI](https://github.com/osint-builders/pipelines/releases/l
 to use the signal references and embedded waterfall previews offline.
 
 ```sh
-pipelines search --source sigidwiki "over the horizon radar"
-pipelines search --source sigidwiki "Automatic Identification System"
-pipelines list --source sigidwiki --where "modulation=FMCW" --where "bandwidth<=50 kHz"
-pipelines list --kind signal --where "signal_status=Active"
-pipelines search --source sigidwiki --image waterfall.png
+pipeline search --source sigidwiki "over the horizon radar"
+pipeline search --source sigidwiki "Automatic Identification System"
+pipeline list --source sigidwiki --where "modulation=FMCW" --where "bandwidth<=50 kHz"
+pipeline list --kind signal --where "signal_status=Active"
+pipeline search --source sigidwiki --image waterfall.png
 ```
 
 Use a returned `sigidwiki:ID` with `get`, `facts`, `media`, or `compare`.
@@ -97,9 +97,12 @@ sources. The source provides 579 sample-image URLs for 581 signals; 17 profiles
 use its missing-waterfall placeholder. Six samples are GIFs. The JPEG/PNG samples
 produce 572 distinct searchable image vectors, with duplicate bytes stored once.
 
-The release includes executables for Windows, Linux, and macOS, manifests,
-original-image archives, validation reports, and `SHA256SUMS`. Local build inputs
-and verification reports are retained in `dist/sigidwiki/` outside Git.
+CLI releases contain five platform archives and `SHA256SUMS`. Each executable
+includes the data, models, evidence, and selected previews needed for search.
+Optional original-image archives and the capture's validation reports remain in
+the [original dataset release](https://github.com/osint-builders/pipelines/releases/tag/cli-292652265f9efe39e8a659b00fb25e0f0fe7020d8c82085dd0d4de8d05e37a91).
+Local capture inputs and verification reports are retained in `dist/sigidwiki/`
+outside Git.
 The capture and preservation checks are recorded in
 [`sources/sigidwiki-capture.json`](sources/sigidwiki-capture.json).
 
