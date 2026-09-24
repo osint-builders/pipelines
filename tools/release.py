@@ -283,6 +283,10 @@ def validate_release(
                 manifest["dataset_id"],
             )
     if profile == "research":
+        from pipelines.media_export import media_assets
+
+        # Verify supplementary source images without including them in downloads.
+        media_assets(directory, manifest)
         return
     reference = read_report(validation / "reference.json")
     if (
